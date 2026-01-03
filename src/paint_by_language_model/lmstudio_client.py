@@ -22,9 +22,9 @@ class LMStudioClient:
         Initialize the LMStudio client.
         
         Args:
-            base_url: LMStudio server URL
-            model: Model identifier to use
-            timeout: Request timeout in seconds
+            base_url (str): LMStudio server URL
+            model (str): Model identifier to use
+            timeout (int): Request timeout in seconds
         """
         self.base_url = base_url.rstrip('/')
         self.model = model
@@ -36,11 +36,11 @@ class LMStudioClient:
         Send a prompt to LMStudio and return the response.
         
         Args:
-            prompt: The prompt to send to the LLM
-            max_tokens: Maximum tokens in the response
+            prompt (str): The prompt to send to the LLM
+            max_tokens (int): Maximum tokens in the response
             
         Returns:
-            The LLM's response text
+            str: The LLM's response text
             
         Raises:
             ConnectionError: If LMStudio is not running or unreachable
@@ -77,7 +77,7 @@ class LMStudioClient:
         Check if LMStudio server is available.
         
         Returns:
-            True if server is reachable, False otherwise
+            bool: True if server is reachable, False otherwise
         """
         try:
             response = requests.get(
