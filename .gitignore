@@ -208,6 +208,8 @@ __marimo__/
 
 _notes/
 
+# Generated output from paint-by-language-model
+src/output/
 
 # macOS
 .DS_Store

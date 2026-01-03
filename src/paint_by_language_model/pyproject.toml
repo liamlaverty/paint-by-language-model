@@ -1,10 +1,16 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
 [project]
 name = "paint-by-language-model"
 version = "0.1.0"
 description = "Add your description here"
-readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "requests>=2.31.0",
     "pydantic>=2.0.0",
 ]
+
+[tool.setuptools]
+py-modules = ["config", "prompt_builder", "lmstudio_client", "file_writer", "response_parser", "artist_loader", "main"]
