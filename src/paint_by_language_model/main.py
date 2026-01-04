@@ -1,4 +1,5 @@
 """Main entry point for paint-by-language-model."""
+import logging
 import sys
 
 from config import ARTISTS_FILE, OUTPUT_DIR, LMSTUDIO_MODEL
@@ -16,29 +17,32 @@ def main() -> int:
     Returns:
         (int) Exit code (0 for success, 1 for failure)
     """
-    print("Paint by Language Model - Artist Analysis")
-    print("=" * 50)
+    logging.basicConfig(level=logging.INFO, format='%(message)s', stream=sys.stdout)
+    logger = logging.getLogger(__name__)
+
+    logger.info("Paint by Language Model - Artist Analysis")
+    logger.info("=" * 50)
     
     # Initialize LMStudio client
     client = LMStudioClient()
     
     # Check if LMStudio is available
     if not client.is_available():
-        print("ERROR: LMStudio is not available.")
-        print("Please ensure LMStudio is running with the local server enabled.")
+        logger.error("LMStudio is not available.")
+        logger.error("Please ensure LMStudio is running with the local server enabled.")
         return 1
     
-    print("✓ Connected to LMStudio")
+    logger.info("✓ Connected to LMStudio")
     
     # Load artists
     try:
         artists = load_artists(ARTISTS_FILE)
-        print(f"✓ Loaded {len(artists)} artists from {ARTISTS_FILE}")
+        logger.info(f"✓ Loaded {len(artists)} artists from {ARTISTS_FILE}")
     except FileNotFoundError:
-        print(f"ERROR: Artists file not found: {ARTISTS_FILE}")
+        logger.error(f"Artists file not found: {ARTISTS_FILE}")
         return 1
     except Exception as e:
-        print(f"ERROR: Failed to load artists: {e}")
+        logger.error(f"Failed to load artists: {e}")
         return 1
     
     # Process each artist
@@ -46,14 +50,14 @@ def main() -> int:
     failed = 0
     
     for i, artist in enumerate(artists, 1):
-        print(f"\n[{i}/{len(artists)}] Processing: {artist}")
+        logger.info(f"[{i}/{len(artists)}] Processing: {artist}")
         
         try:
             # Build prompt
             prompt = build_artist_prompt(artist)
             
             # Query LLM
-            print("  → Querying LLM...")
+            logger.info("  → Querying LLM...")
             response = client.query(prompt)
             
             # Parse response
@@ -65,19 +69,19 @@ def main() -> int:
             
             # Save to file
             filepath = save_artist_result(analysis)
-            print(f"  ✓ Saved to: {filepath}")
+            logger.info(f"  ✓ Saved to: {filepath}")
             successful += 1
             
         except Exception as e:
-            print(f"  ✗ Failed: {e}")
+            logger.error(f"  ✗ Failed: {e}")
             failed += 1
     
     # Summary
-    print("\n" + "=" * 50)
-    print(f"Complete! Processed {successful} artists successfully.")
+    logger.info("=" * 50)
+    logger.info(f"Complete! Processed {successful} artists successfully.")
     if failed > 0:
-        print(f"Failed: {failed} artists")
-    print(f"Output directory: {OUTPUT_DIR}")
+        logger.warning(f"Failed: {failed} artists")
+    logger.info(f"Output directory: {OUTPUT_DIR}")
     
     return 0 if failed == 0 else 1
 
