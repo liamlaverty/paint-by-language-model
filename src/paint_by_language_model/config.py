@@ -40,3 +40,7 @@ MAX_STROKE_THICKNESS = 10
 MIN_STROKE_THICKNESS = 1
 MAX_STROKE_OPACITY = 1.0
 MIN_STROKE_OPACITY = 0.1
+
+# VLM (Vision Language Model) settings
+VLM_MODEL = "lmistralai/ministral-3-3b"  # Or other multimodal model loaded in LMStudio
+VLM_TIMEOUT = 180  # VLM queries are slower than text-only (3 minutes)

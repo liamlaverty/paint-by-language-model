@@ -1,4 +1,6 @@
 """Client for communicating with LMStudio's OpenAI-compatible API."""
+import base64
+import logging
 import requests
 
 from config import (
@@ -7,6 +9,8 @@ from config import (
     REQUEST_TIMEOUT,
     MAX_TOKENS,
 )
+
+logger = logging.getLogger(__name__)
 
 
 class LMStudioClient:
@@ -87,3 +91,94 @@ class LMStudioClient:
             return response.status_code == 200
         except requests.RequestException:
             return False
+    
+    def query_multimodal(self, prompt: str, image_bytes: bytes, max_tokens: int = MAX_TOKENS) -> str:
+        """
+        Send an image and text prompt to the VLM and return the response.
+        
+        Args:
+            prompt (str): The text prompt to send with the image
+            image_bytes (bytes): Image data as bytes (PNG, JPEG, etc.)
+            max_tokens (int): Maximum tokens in response (default from config)
+            
+        Returns:
+            str: The VLM's response text
+            
+        Raises:
+            ConnectionError: If LMStudio server is not reachable
+            ValueError: If image encoding fails
+            requests.RequestException: For other HTTP errors
+        """
+        logger.info(f"Sending multimodal query to LMStudio VLM (image size: {len(image_bytes)} bytes)")
+        
+        try:
+            # Encode image to base64
+            image_data_url = self._encode_image_to_base64(image_bytes)
+            
+            # Build multimodal message content
+            message_content = [
+                {
+                    "type": "text",
+                    "text": prompt
+                },
+                {
+                    "type": "image_url",
+                    "image_url": {
+                        "url": image_data_url
+                    }
+                }
+            ]
+            
+            # Build request payload
+            payload = {
+                "model": self.model,
+                "messages": [
+                    {
+                        "role": "user",
+                        "content": message_content
+                    }
+                ],
+                "max_tokens": max_tokens,
+                "temperature": 0.7
+            }
+            
+            # Send request
+            response = requests.post(
+                self.chat_endpoint,
+                json=payload,
+                timeout=self.timeout
+            )
+            response.raise_for_status()
+            
+            # Extract response text
+            response_data = response.json()
+            response_text = response_data["choices"][0]["message"]["content"]
+            
+            logger.info(f"Received VLM response ({len(response_text)} characters)")
+            return response_text
+            
+        except requests.ConnectionError as e:
+            logger.error(f"Failed to connect to LMStudio: {e}")
+            raise ConnectionError(
+                f"Could not connect to LMStudio at {self.base_url}. "
+                "Make sure LMStudio is running with the server enabled."
+            ) from e
+        except Exception as e:
+            if "base64" in str(type(e).__name__).lower():
+                logger.error(f"Failed to encode image: {e}")
+                raise ValueError("Failed to encode image to base64") from e
+            logger.error(f"LMStudio multimodal request failed: {e}")
+            raise
+    
+    def _encode_image_to_base64(self, image_bytes: bytes) -> str:
+        """
+        Encode image bytes to base64 data URL format.
+        
+        Args:
+            image_bytes (bytes): Raw image bytes
+            
+        Returns:
+            str: Base64-encoded data URL
+        """
+        base64_image = base64.b64encode(image_bytes).decode('utf-8')
+        return f"data:image/png;base64,{base64_image}"
