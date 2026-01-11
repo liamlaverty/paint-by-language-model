@@ -24,3 +24,19 @@ Please provide a structured response covering:
 5. Most famous works
 
 Respond in a clear, informative manner."""
+
+
+# ============================================================================
+# PHASE 2: Image Generation System
+# ============================================================================
+
+# Canvas settings
+CANVAS_WIDTH = 800
+CANVAS_HEIGHT = 600
+CANVAS_BACKGROUND_COLOR = "#FFFFFF"
+
+# Stroke constraints
+MAX_STROKE_THICKNESS = 10
+MIN_STROKE_THICKNESS = 1
+MAX_STROKE_OPACITY = 1.0
+MIN_STROKE_OPACITY = 0.1
