@@ -32,6 +32,15 @@ uv pip install -e .
 
 This will install the required dependencies.
 
+### 3. Install Development Tools (Optional)
+
+For linting, type checking, and testing:
+
+```sh
+cd src/paint_by_language_model
+uv pip install -e ".[dev]"
+```
+
 ## Running the App
 
 ### Phase 1: Artist Analysis (Text-based LLM)
@@ -113,6 +122,59 @@ Outputs are organized in `test_output/by_date/{run_datetime}/`:
 ```
 
 **Canvas Snapshots**: PNG images showing progressive stroke application
+
+## Development Tools
+
+### Linting & Formatting (Ruff)
+
+```sh
+conda activate paint-by-language-model
+cd src/paint_by_language_model
+
+# Check for issues
+ruff check .
+
+# Auto-fix issues
+ruff check --fix .
+
+# Format code
+ruff format .
+```
+
+**Configuration**: Line length 100, includes pycodestyle, pyflakes, isort, pep8-naming, pyupgrade, bugbear checks.
+
+### Type Checking (Mypy)
+
+```sh
+conda activate paint-by-language-model
+cd src/paint_by_language_model
+
+# Check types
+mypy .
+```
+
+**Configuration**: Strict mode with required type annotations on all function definitions.
+
+### Testing (Pytest)
+
+```sh
+conda activate paint-by-language-model
+cd src/paint_by_language_model
+
+# Run all tests
+pytest
+
+# Run with coverage report
+pytest --cov-report=term-missing
+
+# Skip slow tests
+pytest -m "not slow"
+
+# Generate HTML coverage report
+pytest --cov-report=html
+```
+
+**Test locations**: `tests/` directory at project root.
 
 ## Configuration
 
