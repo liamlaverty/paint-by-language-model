@@ -1,11 +1,12 @@
 """Generation metadata type definition for artwork sessions."""
-from typing import TypedDict, Any
+
+from typing import Any, TypedDict
 
 
 class GenerationMetadata(TypedDict):
     """
     Complete metadata for an artwork generation session.
-    
+
     Attributes:
         artwork_id (str): Unique identifier for this artwork
         artist_name (str): Target artist name
@@ -19,6 +20,7 @@ class GenerationMetadata(TypedDict):
         score_progression (list[float]): Evaluation scores from each iteration
         total_strokes (int): Total number of strokes applied
     """
+
     artwork_id: str
     artist_name: str
     subject: str

@@ -1,4 +1,5 @@
 """Configuration settings for the paint-by-language-model application."""
+
 from pathlib import Path
 
 # LMStudio API settings
@@ -15,7 +16,7 @@ ARTISTS_FILE = PROJECT_ROOT / "datafiles" / "artists.json"
 OUTPUT_DIR = PROJECT_ROOT / "output"
 
 # Prompt template
-PROMPT_TEMPLATE = """What are the notable features of {artist_name}'s artwork? 
+PROMPT_TEMPLATE = """What are the notable features of {artist_name}'s artwork?
 Please provide a structured response covering:
 1. Artistic style and techniques
 2. Common themes and subjects
