@@ -189,4 +189,4 @@ STRICT_STROKE_VALIDATION = True
 ALLOW_ZERO_LENGTH_STROKES = False
 
 # Color hex pattern for validation
-COLOR_HEX_PATTERN = r"^#[0-9A-Fa-f]{6}$"
+COLOR_HEX_PATTERN = r"^#[0-9A-Fa-f]{6}([0-9A-Fa-f]{2})?$"  # Accepts 6 or 8 chars (with alpha)
