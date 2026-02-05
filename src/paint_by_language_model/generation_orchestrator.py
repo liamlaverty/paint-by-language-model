@@ -62,11 +62,20 @@ class GenerationOrchestrator:
         self.evaluations: list[EvaluationResult] = []
         self.strokes: list[Stroke] = []
         self.generation_start_time = datetime.now()
+        self.starting_iteration = 1
 
         # Create output directories
         self._create_output_directories()
 
+        # Check for existing work and resume if present
+        self._load_existing_state()
+
         logger.info(f"Orchestrator initialized for artwork: {artwork_id}")
+        if self.starting_iteration > 1:
+            logger.info(
+                f"Resuming from iteration {self.starting_iteration} "
+                f"({len(self.strokes)} strokes, {len(self.evaluations)} evaluations)"
+            )
 
     def generate(self) -> dict[str, Any]:
         """
@@ -83,12 +92,14 @@ class GenerationOrchestrator:
         logger.info(f"Starting generation: {self.artwork_id}")
         logger.info(f"Artist: {self.artist_name}")
         logger.info(f"Subject: {self.subject}")
+        if self.starting_iteration > 1:
+            logger.info(f"Resuming from iteration {self.starting_iteration}")
         logger.info("=" * 80)
 
         try:
             # Main iteration loop
             iteration = 1
-            for iteration in range(1, MAX_ITERATIONS + 1):
+            for iteration in range(self.starting_iteration, MAX_ITERATIONS + 1):
                 logger.info(f"\n{'=' * 80}")
                 logger.info(f"Iteration {iteration}/{MAX_ITERATIONS}")
                 logger.info(f"{'=' * 80}")
@@ -276,6 +287,58 @@ class GenerationOrchestrator:
                 dir_path.mkdir(parents=True, exist_ok=True)
 
         logger.debug(f"Created output directories in {self.artwork_dir}")
+
+    def _load_existing_state(self) -> None:
+        """Load existing strokes and evaluations to resume generation."""
+        # Check if strokes directory exists and has files
+        strokes_dir = self.artwork_dir / OUTPUT_STRUCTURE["strokes"]
+        if not strokes_dir.exists():
+            logger.debug("No existing state found, starting fresh")
+            return
+
+        # Load existing strokes
+        stroke_files = sorted(strokes_dir.glob("iteration-*.json"))
+        if not stroke_files:
+            logger.debug("No existing strokes found, starting fresh")
+            return
+
+        logger.info(f"Found {len(stroke_files)} existing stroke files, loading state...")
+
+        # Load all strokes
+        for stroke_file in stroke_files:
+            try:
+                with open(stroke_file, encoding="utf-8") as f:
+                    stroke = json.load(f)
+                    self.strokes.append(stroke)
+                    # Replay stroke on canvas
+                    self.canvas_manager.apply_stroke(stroke)
+            except Exception as e:
+                logger.error(f"Failed to load stroke from {stroke_file}: {e}")
+                raise
+
+        logger.info(f"Replayed {len(self.strokes)} strokes on canvas")
+
+        # Load existing evaluations
+        eval_dir = self.artwork_dir / OUTPUT_STRUCTURE["evaluations"]
+        if eval_dir.exists():
+            eval_files = sorted(eval_dir.glob("iteration-*.json"))
+            for eval_file in eval_files:
+                try:
+                    with open(eval_file, encoding="utf-8") as f:
+                        evaluation = json.load(f)
+                        self.evaluations.append(evaluation)
+                except Exception as e:
+                    logger.error(f"Failed to load evaluation from {eval_file}: {e}")
+                    raise
+
+            logger.info(f"Loaded {len(self.evaluations)} evaluations")
+
+        # Set starting iteration to next after loaded state
+        if self.strokes:
+            # Determine the highest iteration from loaded strokes
+            max_iteration = len(self.strokes)
+            self.starting_iteration = max_iteration + 1
+            logger.info(f"Will resume from iteration {self.starting_iteration}")
 
     def _save_evaluation(self, evaluation: EvaluationResult) -> None:
         """
