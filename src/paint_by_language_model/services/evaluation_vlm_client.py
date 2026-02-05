@@ -4,6 +4,7 @@ import json
 import logging
 import re
 from datetime import datetime
+from typing import Any
 
 from config import LMSTUDIO_BASE_URL, VLM_MODEL, VLM_TIMEOUT
 from lmstudio_client import LMStudioClient
@@ -29,6 +30,12 @@ class EvaluationVLMClient:
         self.lmstudio_client = LMStudioClient(base_url=base_url, model=model, timeout=timeout)
         self.model = model
         self.timeout = timeout
+
+        # Storage for interaction history (for debugging and tracing)
+        self.interaction_history: list[dict[str, Any]] = []
+        self.last_raw_response: str | None = None
+        self.last_parsed_response: EvaluationResult | None = None
+
         logger.info(f"Initialized EvaluationVLMClient with model: {model}")
 
     def evaluate_style(
@@ -67,6 +74,20 @@ class EvaluationVLMClient:
             # Parse response
             evaluation = self._parse_evaluation_response(
                 response_text=response_text, iteration=iteration
+            )
+
+            # Store raw and parsed responses
+            self.last_raw_response = response_text
+            self.last_parsed_response = evaluation
+
+            # Store in interaction history
+            self._record_interaction(
+                iteration=iteration,
+                artist_name=artist_name,
+                subject=subject,
+                prompt=prompt,
+                raw_response=response_text,
+                parsed_response=evaluation,
             )
 
             logger.info(f"Evaluation score: {evaluation['score']:.1f}/100")
@@ -186,3 +207,56 @@ IMPORTANT: Respond ONLY with valid JSON. Do not include any text before or after
         }
 
         return result
+
+    def _record_interaction(
+        self,
+        iteration: int,
+        artist_name: str,
+        subject: str,
+        prompt: str,
+        raw_response: str,
+        parsed_response: EvaluationResult,
+    ) -> None:
+        """
+        Record an interaction in the history for tracing and debugging.
+
+        Args:
+            iteration (int): Iteration number
+            artist_name (str): Target artist name
+            subject (str): Subject being painted
+            prompt (str): The prompt sent to the VLM
+            raw_response (str): Raw VLM response text
+            parsed_response (EvaluationResult): Parsed evaluation response
+        """
+        interaction = {
+            "timestamp": datetime.now().isoformat(),
+            "iteration": iteration,
+            "artist_name": artist_name,
+            "subject": subject,
+            "prompt": prompt,
+            "raw_response": raw_response,
+            "parsed_response": parsed_response,
+            "model": self.model,
+        }
+        self.interaction_history.append(interaction)
+        logger.debug(f"Recorded evaluation interaction for iteration {iteration}")
+
+    def get_interaction_history(self) -> list[dict[str, Any]]:
+        """
+        Get the full interaction history.
+
+        Returns:
+            list[dict[str, Any]]: List of all recorded interactions
+        """
+        return self.interaction_history
+
+    def clear_history(self) -> None:
+        """
+        Clear the interaction history.
+
+        Useful when starting a new generation session.
+        """
+        self.interaction_history.clear()
+        self.last_raw_response = None
+        self.last_parsed_response = None
+        logger.info("Cleared evaluation interaction history")
