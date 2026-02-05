@@ -45,3 +45,7 @@ MIN_STROKE_OPACITY = 0.1
 # VLM (Vision Language Model) settings
 VLM_MODEL = "lmistralai/ministral-3-3b"  # Or other multimodal model loaded in LMStudio
 VLM_TIMEOUT = 180  # VLM queries are slower than text-only (3 minutes)
+
+# Strategy management settings
+STRATEGY_CONTEXT_WINDOW = 5  # Number of recent strategies to include in prompts
+STRATEGY_DIR_NAME = "strategies"  # Subdirectory name for strategy files
