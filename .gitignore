@@ -221,3 +221,5 @@ output/
 ehthumbs.db
 Thumbs.db
 .github/copilot-instructions.md
+
+test_output/
