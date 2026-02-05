@@ -1,11 +1,12 @@
 """Stroke type definition for canvas drawing operations."""
+
 from typing import TypedDict
 
 
 class Stroke(TypedDict):
     """
     Represents a single drawing operation on the canvas.
-    
+
     Attributes:
         type (str): Stroke type - "line", "curve", or "fill"
         start_x (int): Starting X coordinate in pixels
@@ -17,6 +18,7 @@ class Stroke(TypedDict):
         opacity (float): Opacity value (0.0 to 1.0)
         reasoning (str): VLM's explanation for this stroke
     """
+
     type: str
     start_x: int
     start_y: int
