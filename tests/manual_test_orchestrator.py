@@ -24,9 +24,9 @@ sys.path.insert(
 from generation_orchestrator import GenerationOrchestrator
 
 # Configuration
-ARTIST_NAME = "Vincent van Gogh"
-SUBJECT = "Starry Landscape"
-ARTWORK_ID = "vangogh-test-001"
+ARTIST_NAME = "LS Lowry"
+SUBJECT = "An industrial city, with people & factories"
+ARTWORK_ID = "lowry-test-001"
 OUTPUT_DIR = Path("test_output")
 
 if __name__ == "__main__":

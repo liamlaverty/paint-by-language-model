@@ -158,6 +158,16 @@ class GenerationOrchestrator:
             self.strokes.append(stroke)
             logger.info(f"Applied stroke (total: {len(self.strokes)})")
 
+            # Step 4b: Save individual stroke
+            self._save_stroke(stroke, iteration)
+
+            # Also save as current stroke for easy viewing
+            strokes_dir = self.artwork_dir / OUTPUT_STRUCTURE["strokes"]
+            current_stroke_path = strokes_dir / "current-stroke.json"
+            with open(current_stroke_path, "w", encoding="utf-8") as f:
+                json.dump(stroke, f, indent=2)
+            logger.debug("Updated current-stroke.json")
+
             # Step 5: Save canvas snapshot
             snapshot_dir = self.artwork_dir / OUTPUT_STRUCTURE["snapshots"]
             snapshot_path = self.canvas_manager.save_snapshot(
@@ -165,10 +175,22 @@ class GenerationOrchestrator:
             )
             logger.info(f"Saved snapshot: {snapshot_path.name}")
 
+            # Also save as current iteration for easy viewing
+            current_snapshot_path = snapshot_dir / "current-iteration.png"
+            self.canvas_manager.image.save(current_snapshot_path, "PNG")
+            logger.debug("Updated current-iteration.png")
+
             # Step 6: Update strategy if provided
             updated_strategy = stroke_response.get("updated_strategy")
             if updated_strategy:
-                self.strategy_manager.save_strategy(iteration=iteration, strategy=updated_strategy)
+                # Handle both string and dict types
+                if isinstance(updated_strategy, dict):
+                    # Convert dict to formatted string
+                    strategy_text = json.dumps(updated_strategy, indent=2)
+                else:
+                    strategy_text = str(updated_strategy)
+
+                self.strategy_manager.save_strategy(iteration=iteration, strategy=strategy_text)
                 self.strategy_manager.save_current_strategy_link()
                 logger.info("Updated strategy")
 
@@ -190,6 +212,13 @@ class GenerationOrchestrator:
 
             # Step 9: Save evaluation
             self._save_evaluation(evaluation)
+
+            # Also save as current evaluation for easy viewing
+            eval_dir = self.artwork_dir / OUTPUT_STRUCTURE["evaluations"]
+            current_eval_path = eval_dir / "current-evaluation.json"
+            with open(current_eval_path, "w", encoding="utf-8") as f:
+                json.dump(evaluation, f, indent=2)
+            logger.debug("Updated current-evaluation.json")
 
             # Step 10: Check stopping conditions
             should_stop = self._check_stopping_conditions(iteration, evaluation)
@@ -263,6 +292,23 @@ class GenerationOrchestrator:
             json.dump(evaluation, f, indent=2)
 
         logger.debug(f"Saved evaluation: {filename}")
+
+    def _save_stroke(self, stroke: Stroke, iteration: int) -> None:
+        """
+        Save individual stroke to JSON file.
+
+        Args:
+            stroke (Stroke): Stroke to save
+            iteration (int): Current iteration number
+        """
+        strokes_dir = self.artwork_dir / OUTPUT_STRUCTURE["strokes"]
+        filename = f"iteration-{iteration:03d}.json"
+        filepath = strokes_dir / filename
+
+        with open(filepath, "w", encoding="utf-8") as f:
+            json.dump(stroke, f, indent=2)
+
+        logger.debug(f"Saved stroke: {filename}")
 
     def _finalize_generation(
         self, final_iteration: int, interrupted: bool = False
