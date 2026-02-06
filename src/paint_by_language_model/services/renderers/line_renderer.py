@@ -1,10 +1,10 @@
 """Line renderer for drawing straight lines on canvas."""
 
 import logging
-import re
 from typing import TYPE_CHECKING
 
 from .base_renderer import StrokeRenderer
+from .renderer_utils import stroke_color_to_rgba, validate_common_stroke_fields
 
 if TYPE_CHECKING:
     from PIL import ImageDraw
@@ -36,7 +36,15 @@ class LineRenderer(StrokeRenderer):
         width, height = canvas_size
 
         # Check required fields exist
-        required_fields = ["start_x", "start_y", "end_x", "end_y", "color_hex", "thickness", "opacity"]
+        required_fields = [
+            "start_x",
+            "start_y",
+            "end_x",
+            "end_y",
+            "color_hex",
+            "thickness",
+            "opacity",
+        ]
         for field in required_fields:
             if field not in stroke:
                 raise ValueError(f"Line stroke missing required field: {field}")
@@ -70,25 +78,8 @@ class LineRenderer(StrokeRenderer):
         if not (0 <= end_y < height):
             raise ValueError(f"end_y {end_y} out of bounds [0, {height})")
 
-        # Validate color format (hex pattern #RRGGBB or #RRGGBBAA)
-        color_hex = stroke["color_hex"]
-        hex_pattern = re.compile(r"^#[0-9A-Fa-f]{6}([0-9A-Fa-f]{2})?$")
-        if not hex_pattern.match(color_hex):
-            raise ValueError(f"Invalid hex color format: {color_hex} (expected #RRGGBB or #RRGGBBAA)")
-
-        # Validate thickness
-        thickness = stroke["thickness"]
-        if not isinstance(thickness, int):
-            raise ValueError(f"thickness must be an integer, got {type(thickness).__name__}")
-        if not (1 <= thickness <= 50):
-            raise ValueError(f"thickness {thickness} out of range [1, 50]")
-
-        # Validate opacity
-        opacity = stroke["opacity"]
-        if not isinstance(opacity, (int, float)):
-            raise ValueError(f"opacity must be a number, got {type(opacity).__name__}")
-        if not (0.0 <= opacity <= 1.0):
-            raise ValueError(f"opacity {opacity} out of range [0.0, 1.0]")
+        # Validate common stroke fields (color, thickness, opacity)
+        validate_common_stroke_fields(stroke)
 
         logger.debug(f"Line stroke validated: ({start_x},{start_y}) to ({end_x},{end_y})")
 
@@ -112,19 +103,8 @@ class LineRenderer(StrokeRenderer):
         if end_x is None or end_y is None:
             raise ValueError("Line stroke requires end_x and end_y")
 
-        # Convert hex color to RGBA tuple
-        # Handle both 6-digit (#RRGGBB) and 8-digit (#RRGGBBAA) formats
-        hex_color = stroke["color_hex"]
-        opacity = stroke["opacity"]
-
-        if len(hex_color) == 9:  # #RRGGBBAA format (8 hex digits + #)
-            color_rgba = self._hex_to_rgba(hex_color)
-            # VLM-provided alpha overrides opacity field for 8-digit colors
-        else:  # #RRGGBB format (6 hex digits + #)
-            color_rgb = self._hex_to_rgb(hex_color)
-            # Apply opacity by converting to RGBA (alpha channel)
-            alpha = int(opacity * 255)
-            color_rgba = color_rgb + (alpha,)
+        # Convert hex color to RGBA tuple with opacity
+        color_rgba = stroke_color_to_rgba(stroke["color_hex"], stroke["opacity"])
 
         # Draw line
         thickness = stroke["thickness"]
@@ -136,38 +116,5 @@ class LineRenderer(StrokeRenderer):
 
         logger.debug(
             f"Rendered line: ({start_x},{start_y}) to ({end_x},{end_y}), "
-            f"color={stroke['color_hex']}, thickness={thickness}, opacity={opacity}"
+            f"color={stroke['color_hex']}, thickness={thickness}, opacity={stroke['opacity']}"
         )
-
-    def _hex_to_rgb(self, hex_color: str) -> tuple[int, int, int]:
-        """
-        Convert 6-digit hex color string to RGB tuple.
-
-        Args:
-            hex_color (str): Hex color string (e.g., "#FF5733")
-
-        Returns:
-            tuple[int, int, int]: RGB tuple (e.g., (255, 87, 51))
-        """
-        hex_color = hex_color.lstrip("#")
-        r = int(hex_color[0:2], 16)
-        g = int(hex_color[2:4], 16)
-        b = int(hex_color[4:6], 16)
-        return (r, g, b)
-
-    def _hex_to_rgba(self, hex_color: str) -> tuple[int, int, int, int]:
-        """
-        Convert 8-digit hex color string to RGBA tuple.
-
-        Args:
-            hex_color (str): Hex color string with alpha (e.g., "#FF5733CC")
-
-        Returns:
-            tuple[int, int, int, int]: RGBA tuple (e.g., (255, 87, 51, 204))
-        """
-        hex_color = hex_color.lstrip("#")
-        r = int(hex_color[0:2], 16)
-        g = int(hex_color[2:4], 16)
-        b = int(hex_color[4:6], 16)
-        a = int(hex_color[6:8], 16)
-        return (r, g, b, a)
