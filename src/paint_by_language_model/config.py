@@ -88,6 +88,10 @@ SUPPORTED_STROKE_TYPES = ["line"]  # Future: ["line", "curve", "fill"]
 MAX_ARC_ANGLE = 360
 MIN_ARC_ANGLE = 1
 
+# Polyline constraints
+MAX_POLYLINE_POINTS = 50
+MIN_POLYLINE_POINTS = 2
+
 
 # ----------------------------------------------------------------------------
 # VLM (Vision Language Model) Settings
