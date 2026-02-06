@@ -1,9 +1,9 @@
 """Canvas management for image generation."""
 
 import logging
-import re
 from io import BytesIO
 from pathlib import Path
+from typing import Any
 
 from PIL import Image, ImageDraw
 
@@ -11,12 +11,9 @@ from config import (
     CANVAS_BACKGROUND_COLOR,
     CANVAS_HEIGHT,
     CANVAS_WIDTH,
-    MAX_STROKE_OPACITY,
-    MAX_STROKE_THICKNESS,
-    MIN_STROKE_OPACITY,
-    MIN_STROKE_THICKNESS,
 )
 from models import CanvasState, Stroke
+from services.renderers import StrokeRendererFactory
 
 logger = logging.getLogger(__name__)
 
@@ -59,120 +56,129 @@ class CanvasManager:
             stroke (Stroke): Stroke TypedDict containing stroke parameters
 
         Raises:
-            ValueError: If stroke parameters are invalid
+            ValueError: If stroke validation fails
+            RuntimeError: If canvas is not initialized
         """
-        # Validate stroke
-        self._validate_stroke(stroke)
+        if self.image is None:
+            raise RuntimeError("Canvas is not initialized")
 
-        if stroke["type"] == "line":
-            self._draw_line(stroke)
-        else:
-            raise ValueError(f"Unsupported stroke type: {stroke['type']}")
+        # Get appropriate renderer for stroke type
+        renderer = StrokeRendererFactory.get_renderer(stroke["type"])
+
+        # Validate stroke using renderer's validation
+        renderer.validate(stroke, (self.width, self.height))
+
+        # Render stroke using renderer
+        renderer.render(stroke, self.draw)
 
         self.stroke_count += 1
         logger.info(f"Applied stroke {self.stroke_count}: type={stroke['type']}")
 
-    def _validate_stroke(self, stroke: Stroke) -> None:
+    def apply_strokes(
+        self,
+        strokes: list[Stroke],
+        save_snapshots: bool = True,
+        snapshot_dir: Path | None = None,
+        base_iteration: int = 0,
+    ) -> list[dict[str, Any]]:
         """
-        Validate stroke parameters before applying.
+        Apply multiple strokes to the canvas with optional snapshots.
+
+        Applies strokes in order. Failed strokes are skipped without
+        stopping the batch.
 
         Args:
-            stroke (Stroke): Stroke to validate
-
-        Raises:
-            ValueError: If any validation fails with descriptive message
-        """
-        # Validate required fields are present
-        required_fields = ["type", "start_x", "start_y", "color_hex", "thickness", "opacity"]
-        for field in required_fields:
-            if field not in stroke:
-                raise ValueError(f"Missing required field: {field}")
-
-        # Validate stroke type
-        if stroke["type"] not in ["line", "curve", "fill"]:
-            raise ValueError(f"Invalid stroke type: {stroke['type']}")
-
-        # Validate coordinates for line strokes
-        if stroke["type"] == "line":
-            if "end_x" not in stroke or "end_y" not in stroke:
-                raise ValueError("Line stroke requires end_x and end_y")
-
-            start_x = stroke["start_x"]
-            start_y = stroke["start_y"]
-            end_x = stroke.get("end_x")
-            end_y = stroke.get("end_y")
-
-            if not (0 <= start_x < self.width):
-                raise ValueError(f"start_x {start_x} out of bounds [0, {self.width})")
-            if not (0 <= start_y < self.height):
-                raise ValueError(f"start_y {start_y} out of bounds [0, {self.height})")
-            if end_x is not None and not (0 <= end_x < self.width):
-                raise ValueError(f"end_x {end_x} out of bounds [0, {self.width})")
-            if end_y is not None and not (0 <= end_y < self.height):
-                raise ValueError(f"end_y {end_y} out of bounds [0, {self.height})")
-
-        # Validate color format
-        hex_pattern = re.compile(r"^#[0-9A-Fa-f]{6}$")
-        if not hex_pattern.match(stroke["color_hex"]):
-            raise ValueError(f"Invalid hex color format: {stroke['color_hex']}")
-
-        # Validate thickness
-        if not (MIN_STROKE_THICKNESS <= stroke["thickness"] <= MAX_STROKE_THICKNESS):
-            raise ValueError(
-                f"Thickness {stroke['thickness']} out of range "
-                f"[{MIN_STROKE_THICKNESS}, {MAX_STROKE_THICKNESS}]"
-            )
-
-        # Validate opacity
-        if not (MIN_STROKE_OPACITY <= stroke["opacity"] <= MAX_STROKE_OPACITY):
-            raise ValueError(
-                f"Opacity {stroke['opacity']} out of range "
-                f"[{MIN_STROKE_OPACITY}, {MAX_STROKE_OPACITY}]"
-            )
-
-    def _draw_line(self, stroke: Stroke) -> None:
-        """
-        Draw a line on the canvas.
-
-        Args:
-            stroke (Stroke): Stroke containing line parameters
-        """
-        # Convert hex color to RGB tuple
-        color = self._hex_to_rgb(stroke["color_hex"])
-
-        # Apply opacity by converting to RGBA
-        color_rgba = color + (int(stroke["opacity"] * 255),)
-
-        # Draw line - ensure coordinates are integers
-        start_x = stroke["start_x"]
-        start_y = stroke["start_y"]
-        end_x = stroke.get("end_x")
-        end_y = stroke.get("end_y")
-
-        if end_x is None or end_y is None:
-            raise ValueError("Line stroke requires end_x and end_y")
-
-        self.draw.line(
-            [(start_x, start_y), (end_x, end_y)],
-            fill=color_rgba,
-            width=stroke["thickness"],
-        )
-
-    def _hex_to_rgb(self, hex_color: str) -> tuple[int, int, int]:
-        """
-        Convert hex color string to RGB tuple.
-
-        Args:
-            hex_color (str): Hex color string (e.g., "#FF5733")
+            strokes (list[Stroke]): Strokes to apply in order
+            save_snapshots (bool): Save snapshot after each successful stroke
+            snapshot_dir (Path | None): Directory for snapshots
+            base_iteration (int): Base iteration number for snapshot naming
 
         Returns:
-            tuple[int, int, int]: RGB tuple (e.g., (255, 87, 51))
+            list[dict[str, Any]]: Results for each stroke with keys:
+                - "index": int - Position in input list
+                - "success": bool - Whether stroke was applied
+                - "error": str | None - Error message if failed
+                - "snapshot_path": Path | None - Path to snapshot if saved
+
+        Raises:
+            RuntimeError: If canvas is not initialized
+            ValueError: If save_snapshots=True but snapshot_dir is None
         """
-        hex_color = hex_color.lstrip("#")
-        r = int(hex_color[0:2], 16)
-        g = int(hex_color[2:4], 16)
-        b = int(hex_color[4:6], 16)
-        return (r, g, b)
+        if self.image is None:
+            raise RuntimeError("Canvas is not initialized")
+
+        if save_snapshots and snapshot_dir is None:
+            raise ValueError("snapshot_dir is required when save_snapshots=True")
+
+        results: list[dict[str, Any]] = []
+
+        for idx, stroke in enumerate(strokes):
+            result: dict[str, Any] = {
+                "index": idx,
+                "success": False,
+                "error": None,
+                "snapshot_path": None,
+            }
+
+            try:
+                # Apply stroke using renderer factory
+                self.apply_stroke(stroke)
+                result["success"] = True
+
+                # Save snapshot if requested
+                if save_snapshots and snapshot_dir is not None:
+                    snapshot_path = self._save_batch_snapshot(base_iteration, idx, snapshot_dir)
+                    result["snapshot_path"] = snapshot_path
+
+                logger.info(
+                    f"Stroke {idx + 1}/{len(strokes)} applied successfully "
+                    f"(type={stroke.get('type', 'unknown')})"
+                )
+
+            except Exception as e:
+                # Log error and skip stroke without stopping batch
+                error_msg = str(e)
+                result["error"] = error_msg
+                logger.warning(
+                    f"Stroke {idx + 1}/{len(strokes)} failed: {error_msg} "
+                    f"(type={stroke.get('type', 'unknown')})"
+                )
+
+            results.append(result)
+
+        # Log batch summary
+        successful = sum(1 for r in results if r["success"])
+        failed = len(results) - successful
+        logger.info(
+            f"Batch complete: {successful} successful, {failed} failed "
+            f"out of {len(strokes)} strokes"
+        )
+
+        return results
+
+    def _save_batch_snapshot(
+        self, base_iteration: int, stroke_index: int, output_dir: Path
+    ) -> Path:
+        """
+        Save a snapshot during batch stroke processing.
+
+        Args:
+            base_iteration (int): Base iteration number
+            stroke_index (int): Index of stroke within batch
+            output_dir (Path): Directory to save snapshot in
+
+        Returns:
+            Path: Path to saved snapshot file
+        """
+        output_dir.mkdir(parents=True, exist_ok=True)
+
+        filename = f"snapshot_{base_iteration:03d}_{stroke_index:02d}.png"
+        filepath = output_dir / filename
+
+        self.image.save(filepath, format="PNG")
+        logger.debug(f"Saved batch snapshot to {filepath}")
+
+        return filepath
 
     def save_snapshot(self, iteration: int, output_dir: Path) -> Path:
         """
