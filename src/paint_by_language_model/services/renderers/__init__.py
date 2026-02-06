@@ -2,6 +2,7 @@
 
 from .arc_renderer import ArcRenderer
 from .base_renderer import StrokeRenderer, StrokeRendererFactory
+from .circle_renderer import CircleRenderer
 from .line_renderer import LineRenderer
 from .polyline_renderer import PolylineRenderer
 from .renderer_utils import (
@@ -18,6 +19,7 @@ from .renderer_utils import (
 StrokeRendererFactory.register_renderer("line", LineRenderer)
 StrokeRendererFactory.register_renderer("arc", ArcRenderer)
 StrokeRendererFactory.register_renderer("polyline", PolylineRenderer)
+StrokeRendererFactory.register_renderer("circle", CircleRenderer)
 
 __all__ = [
     "StrokeRenderer",
@@ -25,6 +27,7 @@ __all__ = [
     "LineRenderer",
     "ArcRenderer",
     "PolylineRenderer",
+    "CircleRenderer",
     "hex_to_rgb",
     "hex_to_rgba",
     "stroke_color_to_rgba",

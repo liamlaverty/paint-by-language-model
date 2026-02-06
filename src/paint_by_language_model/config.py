@@ -92,6 +92,10 @@ MIN_ARC_ANGLE = 1
 MAX_POLYLINE_POINTS = 50
 MIN_POLYLINE_POINTS = 2
 
+# Circle constraints
+MAX_CIRCLE_RADIUS = 400
+MIN_CIRCLE_RADIUS = 1
+
 
 # ----------------------------------------------------------------------------
 # VLM (Vision Language Model) Settings
