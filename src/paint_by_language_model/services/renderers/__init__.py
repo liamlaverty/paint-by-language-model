@@ -14,12 +14,14 @@ from .renderer_utils import (
     validate_opacity,
     validate_thickness,
 )
+from .splatter_renderer import SplatterRenderer
 
 # Register renderers with factory on module import
 StrokeRendererFactory.register_renderer("line", LineRenderer)
 StrokeRendererFactory.register_renderer("arc", ArcRenderer)
 StrokeRendererFactory.register_renderer("polyline", PolylineRenderer)
 StrokeRendererFactory.register_renderer("circle", CircleRenderer)
+StrokeRendererFactory.register_renderer("splatter", SplatterRenderer)
 
 __all__ = [
     "StrokeRenderer",
@@ -28,6 +30,7 @@ __all__ = [
     "ArcRenderer",
     "PolylineRenderer",
     "CircleRenderer",
+    "SplatterRenderer",
     "hex_to_rgb",
     "hex_to_rgba",
     "stroke_color_to_rgba",
