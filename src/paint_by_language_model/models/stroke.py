@@ -1,6 +1,9 @@
 """Stroke type definition for canvas drawing operations."""
 
-from typing import TypedDict
+from typing import Literal, TypedDict
+
+# Define supported stroke types
+StrokeType = Literal["line", "arc", "polyline", "circle", "splatter"]
 
 
 class Stroke(TypedDict, total=False):
@@ -8,11 +11,13 @@ class Stroke(TypedDict, total=False):
     Represents a single drawing operation on the canvas.
 
     Core Attributes (all stroke types):
-        type (str): Stroke type - "line", "arc", "polyline", "circle", or "splatter"
+        type (StrokeType): Stroke type - "line", "arc", "polyline", "circle", or "splatter"
         color_hex (str): Color in hex format "#RRGGBB" or "#RRGGBBAA"
         thickness (int): Line thickness in pixels (1-50)
         opacity (float): Opacity value (0.0 to 1.0)
-        reasoning (str): VLM's explanation for this stroke
+
+    Note: The 'reasoning' field has been moved to batch-level in StrokeVLMResponse.
+          Individual strokes no longer have reasoning - use batch_reasoning instead.
 
     Line-specific Attributes:
         start_x (int): Starting X coordinate in pixels
@@ -41,12 +46,11 @@ class Stroke(TypedDict, total=False):
         dot_size_max (int): Maximum dot size
     """
 
-    # Core fields (all stroke types) - marked as required
-    type: str
+    # Core fields (all stroke types)
+    type: StrokeType
     color_hex: str
     thickness: int
     opacity: float
-    reasoning: str
 
     # Line-specific fields (optional)
     start_x: int

@@ -97,7 +97,7 @@ class StrokeVLMClient:
                 parsed_response=stroke_response,
             )
 
-            logger.info(f"Received stroke suggestion: {stroke_response['stroke']['reasoning']}")
+            logger.info(f"Received stroke suggestion: {stroke_response['batch_reasoning']}")
             return stroke_response
 
         except ConnectionError:
@@ -220,27 +220,29 @@ IMPORTANT: Respond ONLY with valid JSON. Do not include any text before or after
             "color_hex",
             "thickness",
             "opacity",
-            "reasoning",
         ]
 
         for field in required_fields:
             if field not in stroke:
                 raise ValueError(f"Stroke missing required field: {field}")
 
-        # Build response
+        # Build response - wrap single stroke in list for Phase 3 compatibility
+        # TODO (Task 9): Refactor to handle multiple strokes properly
         response: StrokeVLMResponse = {
-            "stroke": {
-                "type": stroke["type"],
-                "start_x": int(stroke["start_x"]),
-                "start_y": int(stroke["start_y"]),
-                "end_x": int(stroke["end_x"]) if stroke["end_x"] is not None else None,
-                "end_y": int(stroke["end_y"]) if stroke["end_y"] is not None else None,
-                "color_hex": str(stroke["color_hex"]),
-                "thickness": int(stroke["thickness"]),
-                "opacity": float(stroke["opacity"]),
-                "reasoning": str(stroke["reasoning"]),
-            },
+            "strokes": [
+                {
+                    "type": stroke["type"],
+                    "start_x": int(stroke["start_x"]),
+                    "start_y": int(stroke["start_y"]),
+                    "end_x": int(stroke["end_x"]) if stroke["end_x"] is not None else None,
+                    "end_y": int(stroke["end_y"]) if stroke["end_y"] is not None else None,
+                    "color_hex": str(stroke["color_hex"]),
+                    "thickness": int(stroke["thickness"]),
+                    "opacity": float(stroke["opacity"]),
+                }
+            ],
             "updated_strategy": data.get("updated_strategy"),
+            "batch_reasoning": str(stroke["reasoning"]),  # Use stroke reasoning as batch reasoning
         }
 
         return response

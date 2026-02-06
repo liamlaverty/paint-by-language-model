@@ -70,7 +70,7 @@ class CanvasManager:
             raise ValueError(f"Unsupported stroke type: {stroke['type']}")
 
         self.stroke_count += 1
-        logger.info(f"Applied stroke {self.stroke_count}: {stroke['reasoning']}")
+        logger.info(f"Applied stroke {self.stroke_count}: type={stroke['type']}")
 
     def _validate_stroke(self, stroke: Stroke) -> None:
         """
