@@ -1,0 +1,45 @@
+{
+  // Python configuration
+  "python.defaultInterpreterPath": "${workspaceFolder}/../../../opt/homebrew/anaconda3/envs/paint-by-language-model/bin/python",
+
+  // Ruff extension settings
+  "ruff.enable": true,
+  "ruff.lint.enable": true,
+  "ruff.format.enable": true,
+  "ruff.organizeImports": true,
+  "ruff.fixAll": true,
+  "ruff.path": ["${workspaceFolder}/src/paint_by_language_model/.venv/bin/ruff"],
+  "ruff.importStrategy": "fromEnvironment",
+
+  // Mypy extension settings
+  "mypy-type-checker.importStrategy": "fromEnvironment",
+  "mypy-type-checker.path": ["${workspaceFolder}/src/paint_by_language_model/.venv/bin/mypy"],
+  "mypy-type-checker.args": [
+    "--config-file=${workspaceFolder}/src/paint_by_language_model/pyproject.toml"
+  ],
+
+  // Python editor settings
+  "[python]": {
+    "editor.formatOnSave": true,
+    "editor.defaultFormatter": "charliermarsh.ruff",
+    "editor.codeActionsOnSave": {
+      "source.fixAll": "explicit",
+      "source.organizeImports": "explicit"
+    }
+  },
+
+  // File associations
+  "files.exclude": {
+    "**/__pycache__": true,
+    "**/*.pyc": true,
+    "**/.mypy_cache": true,
+    "**/.pytest_cache": true,
+    "**/.ruff_cache": true,
+    "**/*.egg-info": true
+  },
+
+  // Editor settings
+  "editor.rulers": [100],
+  "files.trimTrailingWhitespace": true,
+  "files.insertFinalNewline": true
+}
