@@ -122,6 +122,11 @@ EVALUATION_VLM_MODEL = "lmistralai/ministral-3-3b"
 STROKE_PROMPT_TEMPERATURE = 0.7  # Higher for creativity in stroke generation
 EVALUATION_PROMPT_TEMPERATURE = 0.3  # Lower for consistency in scoring
 
+# Multi-stroke query settings (Phase 3)
+DEFAULT_STROKES_PER_QUERY = 5  # Default number of strokes to request per VLM query
+MAX_STROKES_PER_QUERY = 20  # Maximum strokes allowed in a single query
+MIN_STROKES_PER_QUERY = 1  # Minimum strokes (1 for backward compatibility)
+
 
 # ----------------------------------------------------------------------------
 # Generation Loop Settings
