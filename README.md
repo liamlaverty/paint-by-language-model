@@ -194,6 +194,13 @@ Output Directory: src/output/vangogh-001
 }
 ```
 
+### Result
+
+**"Millet style drawing of a person at a computer desk"**
+
+<img width="515" height="383" alt="image" src="https://github.com/user-attachments/assets/03923116-8e5e-4851-9cd9-cb9997b61a8f" />
+
+
 ## Development Tools
 
 ### Linting & Formatting (Ruff)
