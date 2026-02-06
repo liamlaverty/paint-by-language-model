@@ -163,14 +163,17 @@ class GenerationOrchestrator:
                     strategy_context=strategy_context,
                 )
 
-                stroke = stroke_response["stroke"]
+                # TODO (Task 10): Handle multiple strokes properly
+                stroke = stroke_response["strokes"][
+                    0
+                ]  # Get first stroke for backward compatibility
             except (ValueError, RuntimeError) as e:
                 # Stroke VLM failed - log and skip this iteration
                 logger.error(f"Stroke generation failed in iteration {iteration}: {e}")
                 self._log_exception(iteration, e, "stroke_generation")
                 logger.warning("Skipping this iteration and continuing...")
                 return False  # Continue to next iteration
-            logger.info(f"Received stroke: {stroke['reasoning']}")
+            logger.info(f"Received stroke batch: {stroke_response['batch_reasoning']}")
 
             # Step 4: Apply stroke to canvas
             self.canvas_manager.apply_stroke(stroke)
