@@ -108,7 +108,7 @@ EVALUATION_PROMPT_TEMPERATURE = 0.3  # Lower for consistency in scoring
 # ----------------------------------------------------------------------------
 
 # Maximum iterations before stopping (safety limit)
-MAX_ITERATIONS = 100
+MAX_ITERATIONS = 10000
 
 # Minimum iterations before considering early stopping
 MIN_ITERATIONS = 20

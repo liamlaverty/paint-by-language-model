@@ -2,6 +2,7 @@
 
 import json
 import logging
+import traceback
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -153,15 +154,22 @@ class GenerationOrchestrator:
 
             # Step 3: Query Stroke VLM for next stroke
             logger.info("Requesting stroke suggestion from VLM...")
-            stroke_response = self.stroke_vlm.suggest_stroke(
-                canvas_image=canvas_bytes,
-                artist_name=self.artist_name,
-                subject=self.subject,
-                iteration=iteration,
-                strategy_context=strategy_context,
-            )
+            try:
+                stroke_response = self.stroke_vlm.suggest_stroke(
+                    canvas_image=canvas_bytes,
+                    artist_name=self.artist_name,
+                    subject=self.subject,
+                    iteration=iteration,
+                    strategy_context=strategy_context,
+                )
 
-            stroke = stroke_response["stroke"]
+                stroke = stroke_response["stroke"]
+            except (ValueError, RuntimeError) as e:
+                # Stroke VLM failed - log and skip this iteration
+                logger.error(f"Stroke generation failed in iteration {iteration}: {e}")
+                self._log_exception(iteration, e, "stroke_generation")
+                logger.warning("Skipping this iteration and continuing...")
+                return False  # Continue to next iteration
             logger.info(f"Received stroke: {stroke['reasoning']}")
 
             # Step 4: Apply stroke to canvas
@@ -210,29 +218,37 @@ class GenerationOrchestrator:
 
             # Step 8: Query Evaluation VLM
             logger.info("Requesting style evaluation from VLM...")
-            evaluation = self.eval_vlm.evaluate_style(
-                canvas_image=canvas_bytes,
-                artist_name=self.artist_name,
-                subject=self.subject,
-                iteration=iteration,
-            )
+            try:
+                evaluation = self.eval_vlm.evaluate_style(
+                    canvas_image=canvas_bytes,
+                    artist_name=self.artist_name,
+                    subject=self.subject,
+                    iteration=iteration,
+                )
 
-            self.evaluations.append(evaluation)
-            logger.info(f"Evaluation score: {evaluation['score']:.1f}/100")
-            logger.info(f"Feedback: {evaluation['feedback'][:100]}...")
+                self.evaluations.append(evaluation)
+                logger.info(f"Evaluation score: {evaluation['score']:.1f}/100")
+                logger.info(f"Feedback: {evaluation['feedback'][:100]}...")
 
-            # Step 9: Save evaluation
-            self._save_evaluation(evaluation)
+                # Step 9: Save evaluation
+                self._save_evaluation(evaluation)
 
-            # Also save as current evaluation for easy viewing
-            eval_dir = self.artwork_dir / OUTPUT_STRUCTURE["evaluations"]
-            current_eval_path = eval_dir / "current-evaluation.json"
-            with open(current_eval_path, "w", encoding="utf-8") as f:
-                json.dump(evaluation, f, indent=2)
-            logger.debug("Updated current-evaluation.json")
+                # Also save as current evaluation for easy viewing
+                eval_dir = self.artwork_dir / OUTPUT_STRUCTURE["evaluations"]
+                current_eval_path = eval_dir / "current-evaluation.json"
+                with open(current_eval_path, "w", encoding="utf-8") as f:
+                    json.dump(evaluation, f, indent=2)
+                logger.debug("Updated current-evaluation.json")
 
-            # Step 10: Check stopping conditions
-            should_stop = self._check_stopping_conditions(iteration, evaluation)
+                # Step 10: Check stopping conditions
+                should_stop = self._check_stopping_conditions(iteration, evaluation)
+
+            except (ValueError, RuntimeError) as e:
+                # VLM evaluation failed - log and continue
+                logger.error(f"Evaluation failed in iteration {iteration}: {e}")
+                self._log_exception(iteration, e, "evaluation")
+                logger.warning("Skipping evaluation for this iteration and continuing...")
+                should_stop = False  # Continue despite evaluation failure
 
             return should_stop
 
@@ -339,6 +355,40 @@ class GenerationOrchestrator:
             max_iteration = len(self.strokes)
             self.starting_iteration = max_iteration + 1
             logger.info(f"Will resume from iteration {self.starting_iteration}")
+
+    def _log_exception(self, iteration: int, exception: Exception, error_type: str) -> None:
+        """
+        Log exception details to file for debugging.
+
+        Args:
+            iteration (int): Iteration number where error occurred
+            exception (Exception): The exception that was raised
+            error_type (str): Type of error (e.g., "evaluation", "stroke")
+        """
+        # Create exception log directory
+        exception_log_dir = self.output_dir / "exception_logs" / self.artwork_id
+        exception_log_dir.mkdir(parents=True, exist_ok=True)
+
+        # Generate log filename with timestamp
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        log_filename = f"iteration-{iteration:03d}_{error_type}_{timestamp}.log"
+        log_filepath = exception_log_dir / log_filename
+
+        # Write exception details
+        with open(log_filepath, "w", encoding="utf-8") as f:
+            f.write(f"Exception Log - {self.artwork_id}\n")
+            f.write("=" * 80 + "\n\n")
+            f.write(f"Iteration: {iteration}\n")
+            f.write(f"Error Type: {error_type}\n")
+            f.write(f"Timestamp: {timestamp}\n")
+            f.write(f"Exception: {type(exception).__name__}\n")
+            f.write(f"Message: {str(exception)}\n\n")
+            f.write("Traceback:\n")
+            f.write("-" * 80 + "\n")
+            f.write(traceback.format_exc())
+            f.write("-" * 80 + "\n")
+
+        logger.info(f"Exception logged to: {log_filepath}")
 
     def _save_evaluation(self, evaluation: EvaluationResult) -> None:
         """
