@@ -84,6 +84,10 @@ MIN_STROKE_OPACITY = 0.1
 # Supported stroke types (Phase 1 implementation)
 SUPPORTED_STROKE_TYPES = ["line"]  # Future: ["line", "curve", "fill"]
 
+# Arc constraints
+MAX_ARC_ANGLE = 360
+MIN_ARC_ANGLE = 1
+
 
 # ----------------------------------------------------------------------------
 # VLM (Vision Language Model) Settings
