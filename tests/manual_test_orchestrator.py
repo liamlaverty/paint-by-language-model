@@ -24,9 +24,9 @@ sys.path.insert(
 from generation_orchestrator import GenerationOrchestrator
 
 # Configuration
-ARTIST_NAME = "kandinsky"
-SUBJECT = "abstract composition"
-ARTWORK_ID = "kandinsky-test-001"
+ARTIST_NAME = "a childlike style"
+SUBJECT = "A stick figure person standing next to a simple house with a tree, under a bright sun in the sky"
+ARTWORK_ID = "child-painting-test-001"
 OUTPUT_DIR = Path("test_output")
 
 if __name__ == "__main__":
