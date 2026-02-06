@@ -108,7 +108,7 @@ EVALUATION_PROMPT_TEMPERATURE = 0.3  # Lower for consistency in scoring
 # ----------------------------------------------------------------------------
 
 # Maximum iterations before stopping (safety limit)
-MAX_ITERATIONS = 100
+MAX_ITERATIONS = 10000
 
 # Minimum iterations before considering early stopping
 MIN_ITERATIONS = 20
@@ -189,4 +189,4 @@ STRICT_STROKE_VALIDATION = True
 ALLOW_ZERO_LENGTH_STROKES = False
 
 # Color hex pattern for validation
-COLOR_HEX_PATTERN = r"^#[0-9A-Fa-f]{6}$"
+COLOR_HEX_PATTERN = r"^#[0-9A-Fa-f]{6}([0-9A-Fa-f]{2})?$"  # Accepts 6 or 8 chars (with alpha)
