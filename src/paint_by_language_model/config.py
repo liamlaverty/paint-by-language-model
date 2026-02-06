@@ -96,6 +96,14 @@ MIN_POLYLINE_POINTS = 2
 MAX_CIRCLE_RADIUS = 400
 MIN_CIRCLE_RADIUS = 1
 
+# Splatter constraints
+MAX_SPLATTER_COUNT = 100
+MIN_SPLATTER_COUNT = 1
+MAX_SPLATTER_RADIUS = 200
+MIN_SPLATTER_RADIUS = 5
+MAX_DOT_SIZE = 20
+MIN_DOT_SIZE = 1
+
 
 # ----------------------------------------------------------------------------
 # VLM (Vision Language Model) Settings
