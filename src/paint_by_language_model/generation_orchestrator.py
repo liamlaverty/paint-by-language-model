@@ -164,7 +164,9 @@ class GenerationOrchestrator:
                 )
 
                 # TODO (Task 10): Handle multiple strokes properly
-                stroke = stroke_response["strokes"][0]  # Get first stroke for backward compatibility
+                stroke = stroke_response["strokes"][
+                    0
+                ]  # Get first stroke for backward compatibility
             except (ValueError, RuntimeError) as e:
                 # Stroke VLM failed - log and skip this iteration
                 logger.error(f"Stroke generation failed in iteration {iteration}: {e}")
