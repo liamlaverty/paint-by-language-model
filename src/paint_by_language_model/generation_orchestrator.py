@@ -10,6 +10,7 @@ from typing import Any
 from config import (
     CANVAS_HEIGHT,
     CANVAS_WIDTH,
+    DEFAULT_STROKES_PER_QUERY,
     EVALUATION_VLM_MODEL,
     IMAGE_EXPORT_FORMATS,
     MAX_ITERATIONS,
@@ -35,6 +36,7 @@ class GenerationOrchestrator:
         subject: str,
         artwork_id: str,
         output_dir: Path = OUTPUT_DIR,
+        strokes_per_query: int = DEFAULT_STROKES_PER_QUERY,
     ) -> None:
         """
         Initialize Generation Orchestrator.
@@ -44,12 +46,14 @@ class GenerationOrchestrator:
             subject (str): Subject to paint
             artwork_id (str): Unique artwork identifier
             output_dir (Path): Base output directory
+            strokes_per_query (int): Number of strokes to request per VLM query
         """
         self.artist_name = artist_name
         self.subject = subject
         self.artwork_id = artwork_id
         self.output_dir = output_dir
         self.artwork_dir = output_dir / artwork_id
+        self.strokes_per_query = strokes_per_query
 
         # Initialize components
         logger.info(f"Initializing generation for '{subject}' in style of {artist_name}")
@@ -64,6 +68,12 @@ class GenerationOrchestrator:
         self.strokes: list[Stroke] = []
         self.generation_start_time = datetime.now()
         self.starting_iteration = 1
+
+        # Batch statistics tracking
+        self.total_strokes_requested = 0
+        self.total_strokes_applied = 0
+        self.total_strokes_skipped = 0
+        self.stroke_type_counts: dict[str, int] = {}
 
         # Create output directories
         self._create_output_directories()
@@ -152,52 +162,91 @@ class GenerationOrchestrator:
             canvas_bytes = self.canvas_manager.get_image_bytes()
             logger.debug(f"Canvas image: {len(canvas_bytes)} bytes")
 
-            # Step 3: Query Stroke VLM for next stroke
-            logger.info("Requesting stroke suggestion from VLM...")
+            # Step 3: Query Stroke VLM for batch of strokes
+            logger.info(f"Requesting {self.strokes_per_query} strokes from VLM...")
             try:
-                stroke_response = self.stroke_vlm.suggest_stroke(
+                stroke_response = self.stroke_vlm.suggest_strokes(
                     canvas_image=canvas_bytes,
                     artist_name=self.artist_name,
                     subject=self.subject,
                     iteration=iteration,
                     strategy_context=strategy_context,
+                    num_strokes=self.strokes_per_query,
                 )
-
-                # TODO (Task 10): Handle multiple strokes properly
-                stroke = stroke_response["strokes"][
-                    0
-                ]  # Get first stroke for backward compatibility
+                strokes_batch = stroke_response["strokes"]
+                batch_reasoning = stroke_response.get("batch_reasoning", "")
             except (ValueError, RuntimeError) as e:
                 # Stroke VLM failed - log and skip this iteration
                 logger.error(f"Stroke generation failed in iteration {iteration}: {e}")
                 self._log_exception(iteration, e, "stroke_generation")
                 logger.warning("Skipping this iteration and continuing...")
                 return False  # Continue to next iteration
-            logger.info(f"Received stroke batch: {stroke_response['batch_reasoning']}")
 
-            # Step 4: Apply stroke to canvas
-            self.canvas_manager.apply_stroke(stroke)
-            self.strokes.append(stroke)
-            logger.info(f"Applied stroke (total: {len(self.strokes)})")
+            logger.info(f"Received {len(strokes_batch)} strokes from VLM")
+            if batch_reasoning:
+                logger.info(f"Batch reasoning: {batch_reasoning[:100]}...")
 
-            # Step 4b: Save individual stroke
-            self._save_stroke(stroke, iteration)
+            # Update statistics
+            self.total_strokes_requested += self.strokes_per_query
 
-            # Also save as current stroke for easy viewing
-            strokes_dir = self.artwork_dir / OUTPUT_STRUCTURE["strokes"]
-            current_stroke_path = strokes_dir / "current-stroke.json"
-            with open(current_stroke_path, "w", encoding="utf-8") as f:
-                json.dump(stroke, f, indent=2)
-            logger.debug("Updated current-stroke.json")
-
-            # Step 5: Save canvas snapshot
+            # Step 4: Apply strokes individually using batch method
             snapshot_dir = self.artwork_dir / OUTPUT_STRUCTURE["snapshots"]
-            snapshot_path = self.canvas_manager.save_snapshot(
-                iteration=iteration, output_dir=snapshot_dir
-            )
-            logger.info(f"Saved snapshot: {snapshot_path.name}")
+            logger.info(f"Applying {len(strokes_batch)} strokes...")
 
-            # Also save as current iteration for easy viewing
+            try:
+                results = self.canvas_manager.apply_strokes(
+                    strokes=strokes_batch,
+                    save_snapshots=True,
+                    snapshot_dir=snapshot_dir,
+                    base_iteration=iteration,
+                )
+            except Exception as e:
+                logger.error(f"Failed to apply stroke batch: {e}")
+                self._log_exception(iteration, e, "stroke_batch_application")
+                logger.warning("Skipping this iteration and continuing...")
+                return False
+
+            # Process results
+            successful_strokes = [r for r in results if r["success"]]
+            failed_strokes = [r for r in results if not r["success"]]
+
+            # Log each stroke result
+            for i, result in enumerate(results, 1):
+                stroke = result["stroke"]
+                if result["success"]:
+                    logger.info(f"  [{i}/{len(results)}] {stroke['type']}: ✓ applied")
+                    self.strokes.append(stroke)
+                    self.total_strokes_applied += 1
+
+                    # Track stroke type counts
+                    stroke_type = stroke["type"]
+                    self.stroke_type_counts[stroke_type] = (
+                        self.stroke_type_counts.get(stroke_type, 0) + 1
+                    )
+                else:
+                    logger.warning(
+                        f"  [{i}/{len(results)}] {stroke['type']}: ✗ skipped ({result['error']})"
+                    )
+                    self.total_strokes_skipped += 1
+
+            logger.info(
+                f"Batch complete: {len(successful_strokes)}/{len(strokes_batch)} applied, "
+                f"{len(failed_strokes)} skipped (total strokes: {self.total_strokes_applied})"
+            )
+
+            # Step 4b: Save batch metadata
+            self._save_stroke_batch(strokes_batch, iteration, batch_reasoning, results)
+
+            # Update current stroke file with last successful stroke
+            if successful_strokes:
+                strokes_dir = self.artwork_dir / OUTPUT_STRUCTURE["strokes"]
+                current_stroke_path = strokes_dir / "current-stroke.json"
+                with open(current_stroke_path, "w", encoding="utf-8") as f:
+                    json.dump(successful_strokes[-1]["stroke"], f, indent=2)
+                logger.debug("Updated current-stroke.json")
+
+            # Step 5: Save current iteration snapshot
+            snapshot_dir = self.artwork_dir / OUTPUT_STRUCTURE["snapshots"]
             current_snapshot_path = snapshot_dir / "current-iteration.png"
             self.canvas_manager.image.save(current_snapshot_path, "PNG")
             logger.debug("Updated current-iteration.png")
@@ -315,27 +364,85 @@ class GenerationOrchestrator:
             logger.debug("No existing state found, starting fresh")
             return
 
-        # Load existing strokes
-        stroke_files = sorted(strokes_dir.glob("iteration-*.json"))
-        if not stroke_files:
-            logger.debug("No existing strokes found, starting fresh")
-            return
+        # Check for batch files first (new format)
+        batch_files = sorted(strokes_dir.glob("iteration-*_batch.json"))
 
-        logger.info(f"Found {len(stroke_files)} existing stroke files, loading state...")
+        if batch_files:
+            logger.info(f"Found {len(batch_files)} batch files, loading state...")
 
-        # Load all strokes
-        for stroke_file in stroke_files:
-            try:
-                with open(stroke_file, encoding="utf-8") as f:
-                    stroke = json.load(f)
-                    self.strokes.append(stroke)
-                    # Replay stroke on canvas
-                    self.canvas_manager.apply_stroke(stroke)
-            except Exception as e:
-                logger.error(f"Failed to load stroke from {stroke_file}: {e}")
-                raise
+            # Load batch metadata and replay strokes
+            for batch_file in batch_files:
+                try:
+                    with open(batch_file, encoding="utf-8") as f:
+                        batch_data = json.load(f)
 
-        logger.info(f"Replayed {len(self.strokes)} strokes on canvas")
+                    # Update statistics from batch metadata
+                    self.total_strokes_requested += batch_data["total_requested"]
+                    self.total_strokes_applied += batch_data["applied_count"]
+                    self.total_strokes_skipped += batch_data["skipped_count"]
+
+                    # Replay only successful strokes
+                    for result in batch_data["results"]:
+                        if result["success"]:
+                            stroke_idx = result["stroke_index"]
+                            stroke = batch_data["strokes"][stroke_idx]
+                            self.strokes.append(stroke)
+                            self.canvas_manager.apply_stroke(stroke)
+
+                            # Track stroke type
+                            stroke_type = stroke["type"]
+                            self.stroke_type_counts[stroke_type] = (
+                                self.stroke_type_counts.get(stroke_type, 0) + 1
+                            )
+
+                except Exception as e:
+                    logger.error(f"Failed to load batch from {batch_file}: {e}")
+                    raise
+
+            logger.info(
+                f"Replayed {len(self.strokes)} strokes on canvas from {len(batch_files)} batches"
+            )
+
+            # Set starting iteration based on batch files
+            self.starting_iteration = len(batch_files) + 1
+
+        else:
+            # Fall back to old single-stroke format for backward compatibility
+            stroke_files = sorted(strokes_dir.glob("iteration-*.json"))
+            if not stroke_files:
+                logger.debug("No existing strokes found, starting fresh")
+                return
+
+            logger.info(
+                f"Found {len(stroke_files)} existing stroke files (legacy format), loading state..."
+            )
+
+            # Load all strokes
+            for stroke_file in stroke_files:
+                try:
+                    with open(stroke_file, encoding="utf-8") as f:
+                        stroke = json.load(f)
+                        self.strokes.append(stroke)
+                        # Replay stroke on canvas
+                        self.canvas_manager.apply_stroke(stroke)
+
+                        # Track stroke type
+                        stroke_type = stroke["type"]
+                        self.stroke_type_counts[stroke_type] = (
+                            self.stroke_type_counts.get(stroke_type, 0) + 1
+                        )
+                except Exception as e:
+                    logger.error(f"Failed to load stroke from {stroke_file}: {e}")
+                    raise
+
+            logger.info(f"Replayed {len(self.strokes)} strokes on canvas")
+
+            # Set statistics for legacy format
+            self.total_strokes_applied = len(self.strokes)
+            self.total_strokes_requested = len(self.strokes)  # Assume 1:1 for legacy
+
+            # Set starting iteration to next after loaded state
+            self.starting_iteration = len(self.strokes) + 1
 
         # Load existing evaluations
         eval_dir = self.artwork_dir / OUTPUT_STRUCTURE["evaluations"]
@@ -352,12 +459,7 @@ class GenerationOrchestrator:
 
             logger.info(f"Loaded {len(self.evaluations)} evaluations")
 
-        # Set starting iteration to next after loaded state
-        if self.strokes:
-            # Determine the highest iteration from loaded strokes
-            max_iteration = len(self.strokes)
-            self.starting_iteration = max_iteration + 1
-            logger.info(f"Will resume from iteration {self.starting_iteration}")
+        logger.info(f"Will resume from iteration {self.starting_iteration}")
 
     def _log_exception(self, iteration: int, exception: Exception, error_type: str) -> None:
         """
@@ -425,6 +527,53 @@ class GenerationOrchestrator:
             json.dump(stroke, f, indent=2)
 
         logger.debug(f"Saved stroke: {filename}")
+
+    def _save_stroke_batch(
+        self,
+        strokes: list[Stroke],
+        iteration: int,
+        batch_reasoning: str,
+        results: list[dict[str, Any]],
+    ) -> None:
+        """
+        Save batch of strokes with metadata to JSON file.
+
+        Args:
+            strokes (list[Stroke]): Strokes in batch
+            iteration (int): Current iteration number
+            batch_reasoning (str): VLM reasoning for this batch
+            results (list[dict[str, Any]]): Application results for each stroke
+        """
+        strokes_dir = self.artwork_dir / OUTPUT_STRUCTURE["strokes"]
+        filename = f"iteration-{iteration:03d}_batch.json"
+        filepath = strokes_dir / filename
+
+        applied_count = sum(1 for r in results if r["success"])
+        skipped_count = sum(1 for r in results if not r["success"])
+
+        batch_data = {
+            "iteration": iteration,
+            "strokes": strokes,
+            "batch_reasoning": batch_reasoning,
+            "applied_count": applied_count,
+            "skipped_count": skipped_count,
+            "total_requested": len(strokes),
+            "timestamp": datetime.now().isoformat(),
+            "results": [
+                {
+                    "stroke_index": i,
+                    "stroke_type": r["stroke"]["type"],
+                    "success": r["success"],
+                    "error": r["error"] if not r["success"] else None,
+                }
+                for i, r in enumerate(results)
+            ],
+        }
+
+        with open(filepath, "w", encoding="utf-8") as f:
+            json.dump(batch_data, f, indent=2)
+
+        logger.debug(f"Saved batch: {filename}")
 
     def _finalize_generation(
         self, final_iteration: int, interrupted: bool = False
@@ -516,6 +665,11 @@ class GenerationOrchestrator:
         generation_end_time = datetime.now()
         duration = (generation_end_time - self.generation_start_time).total_seconds()
 
+        # Calculate stroke statistics
+        avg_applied_per_iteration = (
+            self.total_strokes_applied / final_iteration if final_iteration > 0 else 0
+        )
+
         metadata: dict[str, Any] = {
             "artwork_id": self.artwork_id,
             "artist_name": self.artist_name,
@@ -535,9 +689,18 @@ class GenerationOrchestrator:
                 "max_iterations": MAX_ITERATIONS,
                 "target_style_score": TARGET_STYLE_SCORE,
                 "min_iterations": MIN_ITERATIONS,
+                "strokes_per_query": self.strokes_per_query,
             },
             "score_progression": [e["score"] for e in self.evaluations],
             "total_strokes": len(self.strokes),
+            "batch_statistics": {
+                "strokes_per_query_configured": self.strokes_per_query,
+                "total_strokes_requested": self.total_strokes_requested,
+                "total_strokes_applied": self.total_strokes_applied,
+                "total_strokes_skipped": self.total_strokes_skipped,
+                "average_applied_per_iteration": round(avg_applied_per_iteration, 2),
+                "stroke_type_breakdown": self.stroke_type_counts,
+            },
         }
 
         return metadata
@@ -565,6 +728,8 @@ class GenerationOrchestrator:
         """
         filepath = self.artwork_dir / OUTPUT_STRUCTURE["report"]
 
+        batch_stats = metadata["batch_statistics"]
+
         report = f"""# Generation Report: {self.artwork_id}
 
 ## Artwork Information
@@ -580,6 +745,20 @@ class GenerationOrchestrator:
 - **Total Strokes**: {metadata["total_strokes"]}
 - **Interrupted**: {metadata["interrupted"]}
 
+## Batch Statistics
+- **Strokes Per Query (Configured)**: {batch_stats["strokes_per_query_configured"]}
+- **Total Strokes Requested**: {batch_stats["total_strokes_requested"]}
+- **Total Strokes Applied**: {batch_stats["total_strokes_applied"]}
+- **Total Strokes Skipped**: {batch_stats["total_strokes_skipped"]}
+- **Average Applied Per Iteration**: {batch_stats["average_applied_per_iteration"]:.2f}
+
+### Stroke Type Breakdown
+"""
+
+        for stroke_type, count in sorted(batch_stats["stroke_type_breakdown"].items()):
+            report += f"- **{stroke_type}**: {count}\n"
+
+        report += f"""
 ## Results
 - **Final Score**: {metadata["final_score"]:.1f}/100
 - **Canvas Dimensions**: {metadata["canvas_dimensions"]["width"]}x{metadata["canvas_dimensions"]["height"]}
