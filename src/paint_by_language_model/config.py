@@ -81,8 +81,8 @@ MIN_STROKE_THICKNESS = 1
 MAX_STROKE_OPACITY = 1.0
 MIN_STROKE_OPACITY = 0.1
 
-# Supported stroke types (Phase 1 implementation)
-SUPPORTED_STROKE_TYPES = ["line"]  # Future: ["line", "curve", "fill"]
+# Supported stroke types (Phase 3 - all types implemented)
+SUPPORTED_STROKE_TYPES = ["line", "arc", "polyline", "circle", "splatter"]
 
 # Arc constraints
 MAX_ARC_ANGLE = 360

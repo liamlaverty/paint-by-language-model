@@ -212,7 +212,9 @@ class GenerationOrchestrator:
 
             # Log each stroke result
             for i, result in enumerate(results, 1):
-                stroke = result["stroke"]
+                stroke = strokes_batch[
+                    result["index"]
+                ]  # Get stroke from original batch using index
                 if result["success"]:
                     logger.info(f"  [{i}/{len(results)}] {stroke['type']}: ✓ applied")
                     self.strokes.append(stroke)
@@ -241,8 +243,11 @@ class GenerationOrchestrator:
             if successful_strokes:
                 strokes_dir = self.artwork_dir / OUTPUT_STRUCTURE["strokes"]
                 current_stroke_path = strokes_dir / "current-stroke.json"
+                # Get the last successful stroke from the original batch
+                last_successful_index = successful_strokes[-1]["index"]
+                last_stroke = strokes_batch[last_successful_index]
                 with open(current_stroke_path, "w", encoding="utf-8") as f:
-                    json.dump(successful_strokes[-1]["stroke"], f, indent=2)
+                    json.dump(last_stroke, f, indent=2)
                 logger.debug("Updated current-stroke.json")
 
             # Step 5: Save current iteration snapshot
@@ -562,7 +567,7 @@ class GenerationOrchestrator:
             "results": [
                 {
                     "stroke_index": i,
-                    "stroke_type": r["stroke"]["type"],
+                    "stroke_type": strokes[r["index"]]["type"],  # Get stroke from original batch
                     "success": r["success"],
                     "error": r["error"] if not r["success"] else None,
                 }
