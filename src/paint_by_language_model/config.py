@@ -22,19 +22,16 @@ Organization:
         - Validation: Input checking rules
 """
 
+import os
 from pathlib import Path
+
+from dotenv import load_dotenv
+
+load_dotenv()
 
 # ============================================================================
 # PHASE 1: Artist Analysis (Existing)
 # ============================================================================
-
-# LMStudio API settings
-LMSTUDIO_BASE_URL = "http://localhost:1234/v1"
-LMSTUDIO_MODEL = "local-model"  # LMStudio uses this as default
-
-# Request settings
-REQUEST_TIMEOUT = 120  # seconds - LLM responses can be slow
-MAX_TOKENS = 1024
 
 # File paths (relative to project root)
 PROJECT_ROOT = Path(__file__).parent.parent
@@ -51,6 +48,45 @@ Please provide a structured response covering:
 5. Most famous works
 
 Respond in a clear, informative manner."""
+
+
+# ============================================================================
+# PROVIDER CONFIGURATION
+# ============================================================================
+
+# Provider selection ("mistral" or "lmstudio")
+PROVIDER = os.getenv("PROVIDER", "mistral")
+
+# Mistral API settings
+MISTRAL_BASE_URL = "https://api.mistral.ai/v1"
+MISTRAL_API_KEY = os.getenv("MISTRAL_API_KEY", "")
+MISTRAL_DEFAULT_MODEL = "mistral-small-latest"
+MISTRAL_VLM_MODEL = "pixtral-large-latest"
+MISTRAL_EVALUATION_VLM_MODEL = "pixtral-large-latest"
+
+# LMStudio API settings (for local development)
+LMSTUDIO_BASE_URL = "http://localhost:1234/v1"
+LMSTUDIO_MODEL = "local-model"
+LMSTUDIO_VLM_MODEL = "lmistralai/ministral-3-3b"
+LMSTUDIO_EVALUATION_VLM_MODEL = "lmistralai/ministral-3-3b"
+
+# Resolved settings based on active provider
+if PROVIDER == "mistral":
+    API_BASE_URL = MISTRAL_BASE_URL
+    API_KEY = MISTRAL_API_KEY
+    DEFAULT_MODEL = MISTRAL_DEFAULT_MODEL
+    VLM_MODEL = MISTRAL_VLM_MODEL
+    EVALUATION_VLM_MODEL = MISTRAL_EVALUATION_VLM_MODEL
+else:  # lmstudio
+    API_BASE_URL = LMSTUDIO_BASE_URL
+    API_KEY = ""  # No auth for LMStudio
+    DEFAULT_MODEL = LMSTUDIO_MODEL
+    VLM_MODEL = LMSTUDIO_VLM_MODEL
+    EVALUATION_VLM_MODEL = LMSTUDIO_EVALUATION_VLM_MODEL
+
+# Request settings
+REQUEST_TIMEOUT = 120  # seconds - LLM responses can be slow
+MAX_TOKENS = 1024
 
 
 # ============================================================================
@@ -109,14 +145,8 @@ MIN_DOT_SIZE = 1
 # VLM (Vision Language Model) Settings
 # ----------------------------------------------------------------------------
 
-# VLM model identifier
-VLM_MODEL = "lmistralai/ministral-3-3b"  # Or other multimodal model loaded in LMStudio
-
 # VLM request timeout (VLMs are significantly slower than text-only LLMs)
 VLM_TIMEOUT = 180  # 3 minutes
-
-# Evaluation VLM (can be same as or different from stroke VLM)
-EVALUATION_VLM_MODEL = "lmistralai/ministral-3-3b"
 
 # VLM prompt temperature settings
 STROKE_PROMPT_TEMPERATURE = 0.7  # Higher for creativity in stroke generation

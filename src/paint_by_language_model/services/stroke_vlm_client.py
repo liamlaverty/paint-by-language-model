@@ -7,18 +7,20 @@ from datetime import datetime
 from typing import Any
 
 from config import (
+    API_BASE_URL,
+    API_KEY,
     CANVAS_HEIGHT,
     CANVAS_WIDTH,
     DEFAULT_STROKES_PER_QUERY,
-    LMSTUDIO_BASE_URL,
     MAX_STROKES_PER_QUERY,
     MIN_STROKES_PER_QUERY,
+    STROKE_PROMPT_TEMPERATURE,
     VLM_MODEL,
     VLM_TIMEOUT,
 )
-from lmstudio_client import LMStudioClient
 from models.stroke import Stroke
 from models.stroke_vlm_response import StrokeVLMResponse
+from vlm_client import VLMClient
 
 logger = logging.getLogger(__name__)
 
@@ -27,17 +29,30 @@ class StrokeVLMClient:
     """Client for querying VLMs to suggest artistic strokes."""
 
     def __init__(
-        self, base_url: str = LMSTUDIO_BASE_URL, model: str = VLM_MODEL, timeout: int = VLM_TIMEOUT
+        self,
+        base_url: str = API_BASE_URL,
+        model: str = VLM_MODEL,
+        timeout: int = VLM_TIMEOUT,
+        api_key: str = API_KEY,
+        temperature: float = STROKE_PROMPT_TEMPERATURE,
     ):
         """
         Initialize Stroke VLM Client.
 
         Args:
-            base_url (str): LMStudio server URL
+            base_url (str): VLM API server URL
             model (str): VLM model identifier
             timeout (int): Request timeout in seconds
+            api_key (str): API key for authentication
+            temperature (float): Sampling temperature for stroke generation
         """
-        self.lmstudio_client = LMStudioClient(base_url=base_url, model=model, timeout=timeout)
+        self.client = VLMClient(
+            base_url=base_url,
+            model=model,
+            timeout=timeout,
+            api_key=api_key,
+            temperature=temperature,
+        )
         self.model = model
         self.timeout = timeout
 
@@ -101,7 +116,7 @@ class StrokeVLMClient:
 
         # Query VLM
         try:
-            response_text = self.lmstudio_client.query_multimodal(
+            response_text = self.client.query_multimodal(
                 prompt=prompt, image_bytes=canvas_image
             )
 

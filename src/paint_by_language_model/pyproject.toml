@@ -14,7 +14,7 @@ dependencies = [
     "requests>=2.31.0",
     "pillow>=10.0.0",
     "numpy>=1.24.0",
-    "openai>=1.0.0",
+    "python-dotenv>=1.0.0",
 ]
 
 [project.optional-dependencies]
@@ -35,7 +35,7 @@ advanced = [
 paint-by-lm = "paint_by_language_model.main:main"
 
 [tool.setuptools]
-py-modules = ["config", "prompt_builder", "lmstudio_client", "file_writer", "response_parser", "artist_loader", "main"]
+py-modules = ["config", "prompt_builder", "vlm_client", "file_writer", "response_parser", "artist_loader", "main"]
 
 # Ruff configuration
 [tool.ruff]
