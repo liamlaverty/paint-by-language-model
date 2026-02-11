@@ -3,8 +3,9 @@
 Run this script to test the complete iterative image generation workflow.
 
 Prerequisites:
-    - LMStudio running with local server on port 1234
-    - Vision Language Model loaded (e.g., LLaVA, MiniStral)
+    - VLM API access (Mistral API key or LMStudio running locally)
+    - For LMStudio: Vision Language Model loaded (e.g., LLaVA, MiniStral)
+    - For Mistral: MISTRAL_API_KEY set in .env or passed via --api-key
     - Model name in config.py matches loaded model
 
 Usage:
@@ -21,6 +22,7 @@ sys.path.insert(
     0, str(Path(__file__).parent.parent / "src" / "paint_by_language_model")
 )
 
+import config
 from generation_orchestrator import GenerationOrchestrator
 
 # Configuration
@@ -67,7 +69,11 @@ if __name__ == "__main__":
         print("\n\n✗ Test interrupted by user")
     except ConnectionError as e:
         print(f"\n\n✗ Connection error: {e}")
-        print("Make sure LMStudio is running with a VLM loaded!")
+        print(f"Cannot connect to VLM API at {config.API_BASE_URL}")
+        if config.PROVIDER == "mistral":
+            print("Check your MISTRAL_API_KEY in .env or pass --api-key")
+        else:
+            print("Make sure LMStudio is running with a VLM loaded!")
     except Exception as e:
         print(f"\n\n✗ Test failed: {e}")
         import traceback

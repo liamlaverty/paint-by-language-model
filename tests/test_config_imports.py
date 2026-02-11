@@ -165,6 +165,33 @@ class TestConfigSettings(unittest.TestCase):
         self.assertIsInstance(config.IMAGE_EXPORT_FORMATS, list)
         self.assertGreater(len(config.IMAGE_EXPORT_FORMATS), 0)
 
+    def test_provider_config_exists(self) -> None:
+        """Provider configuration constants exist."""
+        self.assertTrue(hasattr(config, "PROVIDER"))
+        self.assertTrue(hasattr(config, "API_BASE_URL"))
+        self.assertTrue(hasattr(config, "API_KEY"))
+        self.assertTrue(hasattr(config, "DEFAULT_MODEL"))
+
+    def test_mistral_config_exists(self) -> None:
+        """Mistral-specific constants exist."""
+        self.assertTrue(hasattr(config, "MISTRAL_BASE_URL"))
+        self.assertTrue(hasattr(config, "MISTRAL_API_KEY"))
+        self.assertTrue(hasattr(config, "MISTRAL_VLM_MODEL"))
+        self.assertTrue(hasattr(config, "MISTRAL_EVALUATION_VLM_MODEL"))
+
+    def test_lmstudio_config_exists(self) -> None:
+        """LMStudio-specific constants still exist for local dev."""
+        self.assertTrue(hasattr(config, "LMSTUDIO_BASE_URL"))
+        self.assertTrue(hasattr(config, "LMSTUDIO_MODEL"))
+        self.assertTrue(hasattr(config, "LMSTUDIO_VLM_MODEL"))
+
+    def test_provider_resolves_correctly(self) -> None:
+        """API_BASE_URL matches PROVIDER setting."""
+        if config.PROVIDER == "mistral":
+            self.assertEqual(config.API_BASE_URL, config.MISTRAL_BASE_URL)
+        else:
+            self.assertEqual(config.API_BASE_URL, config.LMSTUDIO_BASE_URL)
+
 
 if __name__ == "__main__":
     unittest.main()

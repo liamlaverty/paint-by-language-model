@@ -10,6 +10,7 @@ sys.path.insert(
     0, str(Path(__file__).parent.parent / "src" / "paint_by_language_model")
 )
 
+import config
 from services.canvas_manager import CanvasManager
 from services.stroke_vlm_client import StrokeVLMClient
 
@@ -129,10 +130,11 @@ def main():
         print("CONNECTION ERROR")
         print("=" * 60)
         print(f"Error: {e}")
-        print("\nMake sure:")
-        print("  1. LMStudio is running")
-        print("  2. Local server is enabled (port 1234)")
-        print("  3. A VLM model is loaded")
+        print(f"\nCannot connect to VLM API at {config.API_BASE_URL}")
+        if config.PROVIDER == "mistral":
+            print("Check your MISTRAL_API_KEY in .env or pass --api-key")
+        else:
+            print("Make sure LMStudio is running with the local server enabled")
         return 1
 
     except ValueError as e:
