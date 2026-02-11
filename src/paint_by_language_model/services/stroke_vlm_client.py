@@ -116,9 +116,7 @@ class StrokeVLMClient:
 
         # Query VLM
         try:
-            response_text = self.client.query_multimodal(
-                prompt=prompt, image_bytes=canvas_image
-            )
+            response_text = self.client.query_multimodal(prompt=prompt, image_bytes=canvas_image)
 
             # Parse response
             stroke_response = self._parse_stroke_response(response_text)

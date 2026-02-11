@@ -80,6 +80,14 @@ class TestConfigSettings(unittest.TestCase):
         self.assertTrue(hasattr(config, "ALLOW_ZERO_LENGTH_STROKES"))
         self.assertTrue(hasattr(config, "COLOR_HEX_PATTERN"))
 
+    def test_phase5_gif_settings_exist(self) -> None:
+        """Test Phase 5 GIF generation settings are present."""
+        self.assertTrue(hasattr(config, "GIF_FRAME_DURATION_MS"))
+        self.assertTrue(hasattr(config, "GIF_FINAL_FRAME_HOLD_MS"))
+        self.assertTrue(hasattr(config, "GIF_MAX_DIMENSION"))
+        self.assertTrue(hasattr(config, "GIF_FILENAME"))
+        self.assertTrue(hasattr(config, "GIF_LOOP_COUNT"))
+
     def test_canvas_dimensions_positive(self) -> None:
         """Test canvas dimensions are positive integers."""
         self.assertGreater(config.CANVAS_WIDTH, 0)
@@ -164,6 +172,15 @@ class TestConfigSettings(unittest.TestCase):
         """Test image export formats is a list."""
         self.assertIsInstance(config.IMAGE_EXPORT_FORMATS, list)
         self.assertGreater(len(config.IMAGE_EXPORT_FORMATS), 0)
+
+    def test_gif_settings_valid(self) -> None:
+        """Test GIF generation settings have valid values."""
+        self.assertGreater(config.GIF_FRAME_DURATION_MS, 0)
+        self.assertGreater(config.GIF_FINAL_FRAME_HOLD_MS, 0)
+        self.assertGreater(config.GIF_MAX_DIMENSION, 0)
+        self.assertIsInstance(config.GIF_FILENAME, str)
+        self.assertTrue(config.GIF_FILENAME.endswith(".gif"))
+        self.assertGreaterEqual(config.GIF_LOOP_COUNT, 0)
 
     def test_provider_config_exists(self) -> None:
         """Provider configuration constants exist."""
