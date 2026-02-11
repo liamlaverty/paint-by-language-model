@@ -88,8 +88,7 @@ def run_generation(
     # Validate that Mistral has an API key
     if config.PROVIDER == "mistral" and not config.API_KEY:
         logger.error(
-            "Mistral provider requires an API key. "
-            "Set MISTRAL_API_KEY in .env or pass --api-key."
+            "Mistral provider requires an API key. Set MISTRAL_API_KEY in .env or pass --api-key."
         )
         sys.exit(1)
 
