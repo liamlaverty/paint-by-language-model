@@ -44,6 +44,8 @@ def run_generation(
     target_score: float | None = None,
     strokes_per_query: int = DEFAULT_STROKES_PER_QUERY,
     stroke_types: list[str] | None = None,
+    provider: str | None = None,
+    api_key: str | None = None,
 ) -> None:
     """
     Run image generation mode.
@@ -58,9 +60,44 @@ def run_generation(
         target_score (float | None): Override TARGET_STYLE_SCORE
         strokes_per_query (int): Number of strokes to request per VLM query
         stroke_types (list[str] | None): Allowed stroke types filter
+        provider (str | None): VLM provider ("mistral" or "lmstudio")
+        api_key (str | None): API key for VLM provider
     """
+    import config
+
+    # Apply provider override
+    if provider:
+        config.PROVIDER = provider
+        if provider == "mistral":
+            config.API_BASE_URL = config.MISTRAL_BASE_URL
+            config.API_KEY = config.MISTRAL_API_KEY
+            config.DEFAULT_MODEL = config.MISTRAL_DEFAULT_MODEL
+            config.VLM_MODEL = config.MISTRAL_VLM_MODEL
+            config.EVALUATION_VLM_MODEL = config.MISTRAL_EVALUATION_VLM_MODEL
+        else:  # lmstudio
+            config.API_BASE_URL = config.LMSTUDIO_BASE_URL
+            config.API_KEY = ""
+            config.DEFAULT_MODEL = config.LMSTUDIO_MODEL
+            config.VLM_MODEL = config.LMSTUDIO_VLM_MODEL
+            config.EVALUATION_VLM_MODEL = config.LMSTUDIO_EVALUATION_VLM_MODEL
+
+    # Apply API key override (overrides both env var and provider default)
+    if api_key:
+        config.API_KEY = api_key
+
+    # Validate that Mistral has an API key
+    if config.PROVIDER == "mistral" and not config.API_KEY:
+        logger.error(
+            "Mistral provider requires an API key. "
+            "Set MISTRAL_API_KEY in .env or pass --api-key."
+        )
+        sys.exit(1)
+
     logger.info("Starting image generation")
     logger.info("=" * 80)
+    logger.info(f"Provider: {config.PROVIDER}")
+    logger.info(f"API Base URL: {config.API_BASE_URL}")
+    logger.info(f"VLM Model: {config.VLM_MODEL}")
     logger.info(f"Artist: {artist}")
     logger.info(f"Subject: {subject}")
     logger.info(f"Output ID: {output_id}")
@@ -137,24 +174,31 @@ def parse_arguments() -> argparse.Namespace:
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  # Generate artwork with default settings
+  # Generate using Mistral (default)
   python main.py \\
     --artist "Vincent van Gogh" \\
     --subject "Starry Night Landscape" \\
     --output-id vangogh-001
 
-  # Generate with 10 strokes per query
+  # Generate using LMStudio (local)
   python main.py \\
     --artist "Claude Monet" \\
     --subject "Water Lilies" \\
     --output-id monet-001 \\
-    -n 10
+    --provider lmstudio
 
-  # Generate with custom iterations and stroke count
+  # Override API key at runtime
   python main.py \\
     --artist "Pablo Picasso" \\
     --subject "Abstract Portrait" \\
     --output-id picasso-001 \\
+    --api-key sk-your-key-here
+
+  # Generate with custom iterations and stroke count
+  python main.py \\
+    --artist "Georgia O'Keeffe" \\
+    --subject "Flower Close-up" \\
+    --output-id okeeffe-001 \\
     --strokes-per-query 3 \\
     -i 50
 
@@ -210,6 +254,21 @@ Examples:
         type=str,
         default=None,
         help=f"Comma-separated list of allowed stroke types (default: all types). Supported: {', '.join(SUPPORTED_STROKE_TYPES)}",
+    )
+
+    parser.add_argument(
+        "--provider",
+        type=str,
+        default=None,
+        choices=["mistral", "lmstudio"],
+        help="VLM provider (default: from PROVIDER env var or 'mistral')",
+    )
+
+    parser.add_argument(
+        "--api-key",
+        type=str,
+        default=None,
+        help="API key for VLM provider (overrides MISTRAL_API_KEY env var)",
     )
 
     return parser.parse_args()
@@ -281,6 +340,8 @@ def main() -> None:
         target_score=args.target_score,
         strokes_per_query=args.strokes_per_query,
         stroke_types=stroke_types,
+        provider=args.provider,
+        api_key=args.api_key,
     )
 
 

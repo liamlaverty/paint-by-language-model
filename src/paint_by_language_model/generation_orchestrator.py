@@ -63,6 +63,11 @@ class GenerationOrchestrator:
         self.eval_vlm = EvaluationVLMClient()
         self.strategy_manager = StrategyManager(artwork_id=artwork_id, output_dir=output_dir)
 
+        # Log provider information
+        import config
+
+        logger.info(f"Using provider: {config.PROVIDER} ({config.API_BASE_URL})")
+
         # Tracking
         self.evaluations: list[EvaluationResult] = []
         self.strokes: list[Stroke] = []
