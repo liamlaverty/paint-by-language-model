@@ -2,12 +2,14 @@
 
 import json
 import logging
+import shutil
 import traceback
 from datetime import datetime
 from pathlib import Path
 from typing import Any
 
 from config import (
+    CANVAS_BACKGROUND_COLOR,
     CANVAS_HEIGHT,
     CANVAS_WIDTH,
     DEFAULT_STROKES_PER_QUERY,
@@ -20,6 +22,7 @@ from config import (
     OUTPUT_DIR,
     OUTPUT_STRUCTURE,
     TARGET_STYLE_SCORE,
+    VIEWER_DATA_FILENAME,
     VLM_MODEL,
 )
 from models import EvaluationResult, Stroke
@@ -616,6 +619,9 @@ class GenerationOrchestrator:
         # Save all strokes
         self._save_all_strokes()
 
+        # Save viewer data for HTML Canvas viewer
+        self._save_viewer_data()
+
         # Save all evaluations summary
         self._save_evaluations_summary()
 
@@ -667,6 +673,79 @@ class GenerationOrchestrator:
             json.dump(self.strokes, f, indent=2)
 
         logger.info(f"Saved {len(self.strokes)} strokes")
+
+    def _save_viewer_data(self) -> None:
+        """Save enriched stroke data and viewer HTML for the interactive HTML Canvas viewer.
+
+        Assembles stroke rendering data with iteration context, batch reasoning,
+        and evaluation scores into a single ``viewer_data.json`` file.  Also copies
+        the viewer HTML template into the artwork's ``viewer/`` directory so the
+        result is self-contained and can be opened directly in a browser.
+        """
+        viewer_dir = self.artwork_dir / OUTPUT_STRUCTURE["viewer"]
+        viewer_dir.mkdir(parents=True, exist_ok=True)
+
+        # Build enriched strokes by cross-referencing batch files
+        strokes_dir = self.artwork_dir / OUTPUT_STRUCTURE["strokes"]
+        batch_files = sorted(strokes_dir.glob("iteration-*_batch.json"))
+
+        enriched_strokes: list[dict[str, Any]] = []
+        global_index = 0
+
+        for batch_file in batch_files:
+            with open(batch_file, encoding="utf-8") as f:
+                batch: dict[str, Any] = json.load(f)
+
+            iteration: int = batch["iteration"]
+            reasoning: str = batch.get("batch_reasoning", "")
+
+            for i, result in enumerate(batch["results"]):
+                if result["success"]:
+                    stroke = batch["strokes"][result["stroke_index"]]
+                    enriched_stroke: dict[str, Any] = {
+                        "index": global_index,
+                        "iteration": iteration,
+                        "batch_position": i,
+                        "batch_reasoning": reasoning,
+                        **stroke,
+                    }
+                    enriched_strokes.append(enriched_stroke)
+                    global_index += 1
+
+        viewer_data: dict[str, Any] = {
+            "metadata": {
+                "artwork_id": self.artwork_id,
+                "artist_name": self.artist_name,
+                "subject": self.subject,
+                "canvas_width": CANVAS_WIDTH,
+                "canvas_height": CANVAS_HEIGHT,
+                "background_color": CANVAS_BACKGROUND_COLOR,
+                "total_strokes": len(enriched_strokes),
+                "total_iterations": len(batch_files),
+                "score_progression": [e["score"] for e in self.evaluations],
+            },
+            "strokes": enriched_strokes,
+        }
+
+        # Write viewer data JSON
+        data_path = viewer_dir / VIEWER_DATA_FILENAME
+        with open(data_path, "w", encoding="utf-8") as f:
+            json.dump(viewer_data, f, indent=2)
+
+        logger.info(
+            f"Saved viewer data: {len(enriched_strokes)} enriched strokes to {data_path}"
+        )
+
+        # Copy viewer HTML template if it exists
+        viewer_template = Path(__file__).parent / "viewer" / "index.html"
+        if viewer_template.exists():
+            viewer_dest = viewer_dir / "index.html"
+            shutil.copy2(viewer_template, viewer_dest)
+            logger.info(f"Copied viewer HTML to {viewer_dest}")
+        else:
+            logger.debug(
+                f"Viewer HTML template not found at {viewer_template}, skipping copy"
+            )
 
     def _save_evaluations_summary(self) -> None:
         """Save all evaluations to summary JSON file."""
