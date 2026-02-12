@@ -732,9 +732,7 @@ class GenerationOrchestrator:
         with open(data_path, "w", encoding="utf-8") as f:
             json.dump(viewer_data, f, indent=2)
 
-        logger.info(
-            f"Saved viewer data: {len(enriched_strokes)} enriched strokes to {data_path}"
-        )
+        logger.info(f"Saved viewer data: {len(enriched_strokes)} enriched strokes to {data_path}")
 
         # Copy viewer HTML template if it exists
         viewer_template = Path(__file__).parent / "viewer" / "index.html"
@@ -743,9 +741,7 @@ class GenerationOrchestrator:
             shutil.copy2(viewer_template, viewer_dest)
             logger.info(f"Copied viewer HTML to {viewer_dest}")
         else:
-            logger.debug(
-                f"Viewer HTML template not found at {viewer_template}, skipping copy"
-            )
+            logger.debug(f"Viewer HTML template not found at {viewer_template}, skipping copy")
 
     def _save_evaluations_summary(self) -> None:
         """Save all evaluations to summary JSON file."""
