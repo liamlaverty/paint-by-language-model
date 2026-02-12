@@ -156,10 +156,7 @@ export default function InspectorClient({ artworkId }: InspectorClientProps): Re
   const stepForward = useCallback(() => navigateTo(visibleCount + 1), [navigateTo, visibleCount]);
 
   /** Step backward one stroke. */
-  const stepBackward = useCallback(
-    () => navigateTo(visibleCount - 1),
-    [navigateTo, visibleCount]
-  );
+  const stepBackward = useCallback(() => navigateTo(visibleCount - 1), [navigateTo, visibleCount]);
 
   /** Reset to blank canvas and clear selection. */
   const reset = useCallback(() => navigateTo(0, { clearLock: true }), [navigateTo]);
@@ -215,10 +212,7 @@ export default function InspectorClient({ artworkId }: InspectorClientProps): Re
    *
    * @param {number} value - New visible count
    */
-  const handleTimelineChange = useCallback(
-    (value: number) => navigateTo(value),
-    [navigateTo]
-  );
+  const handleTimelineChange = useCallback((value: number) => navigateTo(value), [navigateTo]);
 
   /**
    * Handle speed slider change.
