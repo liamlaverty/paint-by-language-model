@@ -736,10 +736,14 @@ class GenerationOrchestrator:
 
         # Copy viewer HTML template if it exists
         viewer_template = Path(__file__).parent / "viewer" / "index.html"
+        viewer_style = Path(__file__).parent / "viewer" / "style.css"
         if viewer_template.exists():
             viewer_dest = viewer_dir / "index.html"
             shutil.copy2(viewer_template, viewer_dest)
             logger.info(f"Copied viewer HTML to {viewer_dest}")
+            viewer_style_dest = viewer_dir / "style.css"
+            shutil.copy2(viewer_style, viewer_style_dest)
+            logger.info(f"Copied viewer CSS to {viewer_style_dest}")
         else:
             logger.debug(f"Viewer HTML template not found at {viewer_template}, skipping copy")
 
