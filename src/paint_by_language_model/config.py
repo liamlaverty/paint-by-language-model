@@ -243,7 +243,7 @@ VIEWER_DIR_NAME = "viewer"
 VIEWER_DATA_FILENAME = "viewer_data.json"
 
 # Path to the Next.js viewer's public data directory
-NEXTJS_VIEWER_DIR = PROJECT_ROOT / "src" / "viewer"
+NEXTJS_VIEWER_DIR = PROJECT_ROOT / "viewer"
 NEXTJS_VIEWER_DATA_DIR = NEXTJS_VIEWER_DIR / "public" / "data"
 
 
