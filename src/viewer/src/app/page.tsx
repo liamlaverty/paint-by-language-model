@@ -1,15 +1,24 @@
 /**
- * Homepage placeholder component.
+ * Homepage displaying a gallery of all generated artworks.
  *
- * Full gallery implementation will be completed in Task 6.
+ * Loads artwork summaries at build time from public/data/ and renders
+ * a responsive grid of preview cards linking to the inspector.
  *
- * @returns {JSX.Element} - The homepage
+ * @returns {React.ReactElement} The gallery page
  */
-export default function HomePage() {
+import Gallery from '@/components/Gallery';
+import { getArtworkSummaries } from '@/lib/artworks';
+
+export default function HomePage(): React.ReactElement {
+  const artworks = getArtworkSummaries();
+
   return (
-    <main style={{ padding: '2rem', textAlign: 'center' }}>
-      <h1>Paint by Language Model - Viewer</h1>
-      <p>Homepage gallery coming eventually</p>
+    <main className="gallery-page">
+      <div className="gallery-header">
+        <h1>Generated Artworks</h1>
+        <p>Explore artwork created by vision language models, stroke by stroke</p>
+      </div>
+      <Gallery artworks={artworks} />
     </main>
   );
 }
