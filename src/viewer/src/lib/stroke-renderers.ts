@@ -6,9 +6,9 @@
  * color and opacity) and hit-detection rendering (with unique solid colors).
  */
 
-import type { EnrichedStroke } from './types';
-import { hexToRGBA, strokeIndexToColor } from './color-utils';
-import { mulberry32 } from './prng';
+import type { EnrichedStroke } from '@/lib/types';
+import { hexToRGBA, strokeIndexToColor } from '@/lib/color-utils';
+import { mulberry32 } from '@/lib/prng';
 
 /**
  * Render a stroke to a canvas context.

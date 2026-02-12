@@ -2,7 +2,7 @@
  * Unit tests for prng.ts - Seeded PRNG utilities
  */
 
-import { mulberry32 } from '../prng';
+import { mulberry32 } from '@/lib/prng';
 
 describe('mulberry32', () => {
   it('should return a function that generates pseudo-random numbers', () => {

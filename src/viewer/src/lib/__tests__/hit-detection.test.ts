@@ -2,7 +2,7 @@
  * Unit tests for hit-detection.ts - Mouse position to stroke index mapping
  */
 
-import { getStrokeIndexAtPoint } from '../hit-detection';
+import { getStrokeIndexAtPoint } from '@/lib/hit-detection';
 
 // Helper to create a mock canvas element
 const createMockCanvas = (width: number, height: number, cssWidth: number, cssHeight: number) => {

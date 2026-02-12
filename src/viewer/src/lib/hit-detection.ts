@@ -5,7 +5,7 @@
  * by reading pixel colors from a hidden hit-detection canvas.
  */
 
-import { colorToStrokeIndex } from './color-utils';
+import { colorToStrokeIndex } from '@/lib/color-utils';
 
 /**
  * Get the stroke index at a given mouse position.

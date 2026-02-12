@@ -2,7 +2,7 @@
  * Unit tests for color-utils.ts - Color conversion and encoding utilities
  */
 
-import { hexToRGBA, strokeIndexToColor, colorToStrokeIndex } from '../color-utils';
+import { hexToRGBA, strokeIndexToColor, colorToStrokeIndex } from '@/lib/color-utils';
 
 describe('hexToRGBA', () => {
   it('should convert 6-digit hex color to RGBA with given opacity', () => {
