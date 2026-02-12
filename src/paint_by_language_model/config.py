@@ -61,8 +61,8 @@ PROVIDER = os.getenv("PROVIDER", "mistral")
 MISTRAL_BASE_URL = "https://api.mistral.ai/v1"
 MISTRAL_API_KEY = os.getenv("MISTRAL_API_KEY", "")
 MISTRAL_DEFAULT_MODEL = "mistral-small-latest"
-MISTRAL_VLM_MODEL = "pixtral-large-latest"
-MISTRAL_EVALUATION_VLM_MODEL = "pixtral-large-latest"
+MISTRAL_VLM_MODEL = "mistral-large-2512"
+MISTRAL_EVALUATION_VLM_MODEL = "mistral-large-2512"
 
 # LMStudio API settings (for local development)
 LMSTUDIO_BASE_URL = "http://localhost:1234/v1"
@@ -209,6 +209,26 @@ IMAGE_EXPORT_FORMATS = ["PNG", "JPEG"]
 
 # Default image export format for snapshots
 SNAPSHOT_FORMAT = "PNG"
+
+
+# ----------------------------------------------------------------------------
+# GIF Generation Settings
+# ----------------------------------------------------------------------------
+
+# Frame duration in milliseconds (controls playback speed)
+GIF_FRAME_DURATION_MS = 150  # ~6.7 fps
+
+# Hold duration on the final frame (lets viewers appreciate finished artwork)
+GIF_FINAL_FRAME_HOLD_MS = 1500
+
+# Max width or height in pixels (frames resized to keep GIF file size manageable)
+GIF_MAX_DIMENSION = 400
+
+# Output filename for the timelapse GIF
+GIF_FILENAME = "timelapse.gif"
+
+# Loop count (0 = infinite loop)
+GIF_LOOP_COUNT = 0
 
 
 # ----------------------------------------------------------------------------

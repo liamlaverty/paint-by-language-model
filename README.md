@@ -100,6 +100,7 @@ python main.py \
 | `--stroke-types` | | all | Comma-separated stroke types to use |
 | `--provider` | | from `.env` | VLM provider: `mistral` or `lmstudio` |
 | `--api-key` | | from `.env` | API key (overrides `MISTRAL_API_KEY` env var) |
+| `--gif-frame-duration` | | 150 | GIF frame duration in milliseconds |
 | `--log-level` | | INFO | Logging level (DEBUG, INFO, WARNING, ERROR) |
 
 #### Examples
@@ -159,6 +160,7 @@ The application will:
 5. Update strategy based on evaluation feedback
 6. Repeat until target score is reached or max iterations exceeded
 7. Generate a final report with metrics
+8. Create an animated GIF timelapse of the creation process
 
 **Resumable**: If interrupted, re-running with the same `--output-id` will resume from the last completed iteration.
 
@@ -168,6 +170,9 @@ All outputs are saved to `src/output/{output-id}/`:
 
 ```
 src/output/vangogh-001/
+├── timelapse.gif           # Animated creation timelapse
+├── final_artwork.png       # Final completed artwork
+├── final_artwork.jpeg      # Final artwork (JPEG format)
 ├── metadata.json           # Generation metadata
 ├── generation_report.md    # Human-readable summary
 ├── snapshots/              # Canvas images per iteration
@@ -328,6 +333,12 @@ Edit [src/paint_by_language_model/config.py](src/paint_by_language_model/config.
 **Generation Loop**:
 - `MAX_ITERATIONS` - Safety limit (default: 10000)
 - `MIN_ITERATIONS` - Minimum before early stop (default: 20)
+
+**GIF Generation**:
+- `GIF_FRAME_DURATION_MS` - Frame duration in milliseconds (default: 150)
+- `GIF_FINAL_FRAME_HOLD_MS` - Final frame hold duration (default: 1500)
+- `GIF_MAX_DIMENSION` - Max frame width/height for file size optimization (default: 400px)
+- `GIF_LOOP_COUNT` - Animation loop count, 0 = infinite (default: 0)
 - `TARGET_STYLE_SCORE` - Target score 0-100 (default: 75.0)
 
 **Strategy Management**:

@@ -12,6 +12,8 @@ from config import (
     CANVAS_WIDTH,
     DEFAULT_STROKES_PER_QUERY,
     EVALUATION_VLM_MODEL,
+    GIF_FILENAME,
+    GIF_FRAME_DURATION_MS,
     IMAGE_EXPORT_FORMATS,
     MAX_ITERATIONS,
     MIN_ITERATIONS,
@@ -22,6 +24,7 @@ from config import (
 )
 from models import EvaluationResult, Stroke
 from services import CanvasManager, EvaluationVLMClient, StrokeVLMClient
+from services.gif_generator import GifGenerator
 from strategy_manager import StrategyManager
 
 logger = logging.getLogger(__name__)
@@ -37,6 +40,7 @@ class GenerationOrchestrator:
         artwork_id: str,
         output_dir: Path = OUTPUT_DIR,
         strokes_per_query: int = DEFAULT_STROKES_PER_QUERY,
+        gif_frame_duration: int = GIF_FRAME_DURATION_MS,
     ) -> None:
         """
         Initialize Generation Orchestrator.
@@ -47,6 +51,7 @@ class GenerationOrchestrator:
             artwork_id (str): Unique artwork identifier
             output_dir (Path): Base output directory
             strokes_per_query (int): Number of strokes to request per VLM query
+            gif_frame_duration (int): GIF frame duration in milliseconds
         """
         self.artist_name = artist_name
         self.subject = subject
@@ -54,6 +59,7 @@ class GenerationOrchestrator:
         self.output_dir = output_dir
         self.artwork_dir = output_dir / artwork_id
         self.strokes_per_query = strokes_per_query
+        self.gif_frame_duration = gif_frame_duration
 
         # Initialize components
         logger.info(f"Initializing generation for '{subject}' in style of {artist_name}")
@@ -620,6 +626,16 @@ class GenerationOrchestrator:
         # Generate human-readable report
         self._generate_report(metadata)
 
+        # Generate timelapse GIF
+        gif_generator = GifGenerator(frame_duration_ms=self.gif_frame_duration)
+        snapshots_dir = self.artwork_dir / OUTPUT_STRUCTURE["snapshots"]
+        gif_path = self.artwork_dir / GIF_FILENAME
+        gif_result = gif_generator.generate(snapshots_dir, gif_path)
+        if gif_result:
+            logger.info(f"Saved timelapse GIF: {gif_result}")
+        else:
+            logger.warning("Could not generate timelapse GIF (no frames found)")
+
         # Summary
         summary = {
             "artwork_id": self.artwork_id,
@@ -630,6 +646,7 @@ class GenerationOrchestrator:
             "total_strokes": len(self.strokes),
             "interrupted": interrupted,
             "output_directory": str(self.artwork_dir),
+            "timelapse_gif": str(gif_result) if gif_result else None,
         }
 
         logger.info("\n" + "=" * 80)

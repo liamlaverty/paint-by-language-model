@@ -6,6 +6,7 @@ import sys
 
 from config import (
     DEFAULT_STROKES_PER_QUERY,
+    GIF_FRAME_DURATION_MS,
     MAX_ITERATIONS,
     MAX_STROKES_PER_QUERY,
     MIN_STROKES_PER_QUERY,
@@ -46,6 +47,7 @@ def run_generation(
     stroke_types: list[str] | None = None,
     provider: str | None = None,
     api_key: str | None = None,
+    gif_frame_duration: int = GIF_FRAME_DURATION_MS,
 ) -> None:
     """
     Run image generation mode.
@@ -62,6 +64,7 @@ def run_generation(
         stroke_types (list[str] | None): Allowed stroke types filter
         provider (str | None): VLM provider ("mistral" or "lmstudio")
         api_key (str | None): API key for VLM provider
+        gif_frame_duration (int): GIF frame duration in milliseconds
     """
     import config
 
@@ -119,6 +122,7 @@ def run_generation(
             artwork_id=output_id,
             output_dir=OUTPUT_DIR,
             strokes_per_query=strokes_per_query,
+            gif_frame_duration=gif_frame_duration,
         )
         logger.info("Orchestrator initialized")
     except Exception as e:
@@ -270,6 +274,13 @@ Examples:
         help="API key for VLM provider (overrides MISTRAL_API_KEY env var)",
     )
 
+    parser.add_argument(
+        "--gif-frame-duration",
+        type=int,
+        default=GIF_FRAME_DURATION_MS,
+        help=f"GIF frame duration in milliseconds (default: {GIF_FRAME_DURATION_MS})",
+    )
+
     return parser.parse_args()
 
 
@@ -341,6 +352,7 @@ def main() -> None:
         stroke_types=stroke_types,
         provider=args.provider,
         api_key=args.api_key,
+        gif_frame_duration=args.gif_frame_duration,
     )
 
 

@@ -80,9 +80,7 @@ class EvaluationVLMClient:
 
         # Query VLM
         try:
-            response_text = self.client.query_multimodal(
-                prompt=prompt, image_bytes=canvas_image
-            )
+            response_text = self.client.query_multimodal(prompt=prompt, image_bytes=canvas_image)
 
             # Parse response
             evaluation = self._parse_evaluation_response(
