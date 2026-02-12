@@ -13,6 +13,7 @@ describe('Toolbar', () => {
     onReset: jest.fn(),
     onPlay: jest.fn(),
     onPause: jest.fn(),
+    onStepBackward: jest.fn(),
     onStepForward: jest.fn(),
     onShowAll: jest.fn(),
     isPlaying: false,
@@ -31,8 +32,9 @@ describe('Toolbar', () => {
       render(<Toolbar {...defaultProps} />);
 
       expect(screen.getByText('Gallery')).toBeInTheDocument();
-      expect(screen.getByText('⏮ Reset')).toBeInTheDocument();
+      expect(screen.getByText('↺ Reset')).toBeInTheDocument();
       expect(screen.getByText('▶ Play')).toBeInTheDocument();
+      expect(screen.getByText('⏮ Step Back')).toBeInTheDocument();
       expect(screen.getByText('⏭ Step')).toBeInTheDocument();
       expect(screen.getByText('⏩ Show All')).toBeInTheDocument();
     });
@@ -78,8 +80,9 @@ describe('Toolbar', () => {
     it('should disable all buttons except Gallery when isLoaded is false', () => {
       render(<Toolbar {...defaultProps} isLoaded={false} />);
 
-      expect(screen.getByText('⏮ Reset')).toBeDisabled();
+      expect(screen.getByText('↺ Reset')).toBeDisabled();
       expect(screen.getByText('▶ Play')).toBeDisabled();
+      expect(screen.getByText('⏮ Step Back')).toBeDisabled();
       expect(screen.getByText('⏭ Step')).toBeDisabled();
       expect(screen.getByText('⏩ Show All')).toBeDisabled();
       expect(screen.getByRole('slider')).toBeDisabled();
@@ -88,10 +91,11 @@ describe('Toolbar', () => {
       expect(screen.getByRole('link', { name: /gallery/i })).not.toHaveAttribute('disabled');
     });
 
-    it('should disable Reset, Step, and Show All when playing', () => {
+    it('should disable Reset, Step Back, Step, and Show All when playing', () => {
       render(<Toolbar {...defaultProps} isPlaying={true} />);
 
-      expect(screen.getByText('⏮ Reset')).toBeDisabled();
+      expect(screen.getByText('↺ Reset')).toBeDisabled();
+      expect(screen.getByText('⏮ Step Back')).toBeDisabled();
       expect(screen.getByText('⏭ Step')).toBeDisabled();
       expect(screen.getByText('⏩ Show All')).toBeDisabled();
       expect(screen.getByText('⏸ Pause')).not.toBeDisabled();
@@ -100,8 +104,9 @@ describe('Toolbar', () => {
     it('should enable all playback buttons when loaded and not playing', () => {
       render(<Toolbar {...defaultProps} isLoaded={true} isPlaying={false} />);
 
-      expect(screen.getByText('⏮ Reset')).not.toBeDisabled();
+      expect(screen.getByText('↺ Reset')).not.toBeDisabled();
       expect(screen.getByText('▶ Play')).not.toBeDisabled();
+      expect(screen.getByText('⏮ Step Back')).not.toBeDisabled();
       expect(screen.getByText('⏭ Step')).not.toBeDisabled();
       expect(screen.getByText('⏩ Show All')).not.toBeDisabled();
     });
@@ -112,9 +117,18 @@ describe('Toolbar', () => {
       const user = userEvent.setup();
       render(<Toolbar {...defaultProps} />);
 
-      await user.click(screen.getByText('⏮ Reset'));
+      await user.click(screen.getByText('↺ Reset'));
 
       expect(defaultProps.onReset).toHaveBeenCalledTimes(1);
+    });
+
+    it('should call onStepBackward when Step Back button is clicked', async () => {
+      const user = userEvent.setup();
+      render(<Toolbar {...defaultProps} />);
+
+      await user.click(screen.getByText('⏮ Step Back'));
+
+      expect(defaultProps.onStepBackward).toHaveBeenCalledTimes(1);
     });
 
     it('should call onPlay when Play button is clicked', async () => {
@@ -184,8 +198,9 @@ describe('Toolbar', () => {
     it('should have title attributes on buttons', () => {
       render(<Toolbar {...defaultProps} />);
 
-      expect(screen.getByText('⏮ Reset')).toHaveAttribute('title', 'Reset to blank canvas');
+      expect(screen.getByText('↺ Reset')).toHaveAttribute('title', 'Reset to blank canvas');
       expect(screen.getByText('▶ Play')).toHaveAttribute('title', 'Start playback');
+      expect(screen.getByText('⏮ Step Back')).toHaveAttribute('title', 'Go back one stroke');
       expect(screen.getByText('⏭ Step')).toHaveAttribute('title', 'Advance one stroke');
       expect(screen.getByText('⏩ Show All')).toHaveAttribute('title', 'Show all strokes');
     });

@@ -8,6 +8,7 @@ import Link from 'next/link';
  * @property {() => void} onReset - Reset canvas to blank state
  * @property {() => void} onPlay - Start playback animation
  * @property {() => void} onPause - Pause playback animation
+ * @property {() => void} onStepBackward - Go back one stroke
  * @property {() => void} onStepForward - Advance one stroke forward
  * @property {() => void} onShowAll - Skip to the end, showing all strokes
  * @property {boolean} isPlaying - Whether the animation is currently playing
@@ -20,6 +21,7 @@ interface ToolbarProps {
   onReset: () => void;
   onPlay: () => void;
   onPause: () => void;
+  onStepBackward: () => void;
   onStepForward: () => void;
   onShowAll: () => void;
   isPlaying: boolean;
@@ -43,6 +45,7 @@ export default function Toolbar({
   onReset,
   onPlay,
   onPause,
+  onStepBackward,
   onStepForward,
   onShowAll,
   isPlaying,
@@ -65,7 +68,7 @@ export default function Toolbar({
         disabled={!isLoaded || isPlaying}
         title="Reset to blank canvas"
       >
-        ⏮ Reset
+        ↺ Reset
       </button>
 
       {isPlaying ? (
@@ -77,6 +80,15 @@ export default function Toolbar({
           ▶ Play
         </button>
       )}
+
+      <button
+        type="button"
+        onClick={onStepBackward}
+        disabled={!isLoaded || isPlaying}
+        title="Go back one stroke"
+      >
+        ⏮ Step Back
+      </button>
 
       <button
         type="button"

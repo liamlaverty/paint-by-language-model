@@ -61,10 +61,56 @@ export default function InspectorClient({ artworkId }: InspectorClientProps): Re
   };
 
   /**
+   * Pause playback animation.
+   */
+  const pause = useCallback(() => {
+    setIsPlaying(false);
+    if (animTimerRef.current) {
+      clearTimeout(animTimerRef.current);
+      animTimerRef.current = null;
+    }
+  }, []);
+
+  /**
+   * Navigate to a specific stroke count.
+   *
+   * Single entry point for all navigation actions (step forward, step back,
+   * reset, show all, timeline scrub). Guarantees consistent side effects:
+   * pauses playback, clamps the count, and auto-selects the most recent
+   * visible stroke in the side panel when no stroke is locked.
+   *
+   * @param {number} targetCount - Desired number of visible strokes
+   * @param {object} [options] - Navigation options
+   * @param {boolean} [options.clearLock] - Whether to clear the locked stroke selection
+   * @param {boolean} [options.fromPlayback] - Whether called from the animation loop (skips pausing)
+   */
+  const navigateTo = useCallback(
+    (targetCount: number, options?: { clearLock?: boolean; fromPlayback?: boolean }) => {
+      if (!viewerData) return;
+
+      // Pause unless called from the playback loop
+      if (!options?.fromPlayback && isPlaying) {
+        pause();
+      }
+
+      const clamped = Math.max(0, Math.min(targetCount, viewerData.strokes.length));
+      setVisibleCount(clamped);
+
+      if (options?.clearLock) {
+        setLockedIndex(-1);
+        setHoveredIndex(-1);
+      } else if (lockedIndex === -1) {
+        // Auto-select the most recently drawn stroke
+        setHoveredIndex(clamped > 0 ? clamped - 1 : -1);
+      }
+    },
+    [viewerData, isPlaying, lockedIndex, pause]
+  );
+
+  /**
    * Animation step function.
    *
-   * Advances one stroke and schedules the next step if not complete.
-   * Auto-shows metadata for the latest stroke if not locked.
+   * Advances one stroke via navigateTo and schedules the next step if not complete.
    */
   const animationStep = useCallback(() => {
     if (!viewerData) return;
@@ -76,6 +122,10 @@ export default function InspectorClient({ artworkId }: InspectorClientProps): Re
       if (next >= total) {
         // Animation complete
         setIsPlaying(false);
+        // Auto-select final stroke if not locked
+        if (lockedIndex === -1) {
+          setHoveredIndex(total - 1);
+        }
         return total;
       }
 
@@ -102,64 +152,23 @@ export default function InspectorClient({ artworkId }: InspectorClientProps): Re
     animTimerRef.current = setTimeout(animationStep, getDelay(speed));
   }, [viewerData, visibleCount, speed, animationStep]);
 
-  /**
-   * Pause playback animation.
-   */
-  const pause = useCallback(() => {
-    setIsPlaying(false);
-    if (animTimerRef.current) {
-      clearTimeout(animTimerRef.current);
-      animTimerRef.current = null;
-    }
-  }, []);
+  /** Step forward one stroke. */
+  const stepForward = useCallback(() => navigateTo(visibleCount + 1), [navigateTo, visibleCount]);
 
-  /**
-   * Step forward one stroke.
-   */
-  const stepForward = useCallback(() => {
-    if (!viewerData) return;
-    if (isPlaying) pause();
+  /** Step backward one stroke. */
+  const stepBackward = useCallback(
+    () => navigateTo(visibleCount - 1),
+    [navigateTo, visibleCount]
+  );
 
-    setVisibleCount((prev) => {
-      const next = Math.min(prev + 1, viewerData.strokes.length);
+  /** Reset to blank canvas and clear selection. */
+  const reset = useCallback(() => navigateTo(0, { clearLock: true }), [navigateTo]);
 
-      // Auto-show metadata if not locked
-      if (lockedIndex === -1 && next > 0) {
-        setHoveredIndex(next - 1);
-      }
-
-      return next;
-    });
-  }, [viewerData, isPlaying, lockedIndex, pause]);
-
-  /**
-   * Step backward one stroke.
-   */
-  const stepBackward = useCallback(() => {
-    if (!viewerData) return;
-    if (isPlaying) pause();
-
-    setVisibleCount((prev) => Math.max(prev - 1, 0));
-  }, [viewerData, isPlaying, pause]);
-
-  /**
-   * Reset to blank canvas.
-   */
-  const reset = useCallback(() => {
-    pause();
-    setVisibleCount(0);
-    setLockedIndex(-1);
-    setHoveredIndex(-1);
-  }, [pause]);
-
-  /**
-   * Show all strokes.
-   */
+  /** Show all strokes. */
   const showAll = useCallback(() => {
     if (!viewerData) return;
-    pause();
-    setVisibleCount(viewerData.strokes.length);
-  }, [viewerData, pause]);
+    navigateTo(viewerData.strokes.length);
+  }, [navigateTo, viewerData]);
 
   /**
    * Handle stroke hover.
@@ -207,11 +216,8 @@ export default function InspectorClient({ artworkId }: InspectorClientProps): Re
    * @param {number} value - New visible count
    */
   const handleTimelineChange = useCallback(
-    (value: number) => {
-      if (isPlaying) pause();
-      setVisibleCount(value);
-    },
-    [isPlaying, pause]
+    (value: number) => navigateTo(value),
+    [navigateTo]
   );
 
   /**
@@ -326,6 +332,7 @@ export default function InspectorClient({ artworkId }: InspectorClientProps): Re
         onReset={reset}
         onPlay={play}
         onPause={pause}
+        onStepBackward={stepBackward}
         onStepForward={stepForward}
         onShowAll={showAll}
         isPlaying={isPlaying}
