@@ -10,7 +10,7 @@ import json
 import sys
 import tempfile
 from pathlib import Path
-from typing import Any
+from typing import Any, Generator
 
 import pytest
 
@@ -22,6 +22,7 @@ from config import (
     CANVAS_BACKGROUND_COLOR,
     CANVAS_HEIGHT,
     CANVAS_WIDTH,
+    NEXTJS_VIEWER_DATA_DIR,
     OUTPUT_STRUCTURE,
     VIEWER_DATA_FILENAME,
 )
@@ -105,11 +106,13 @@ def _sample_polyline_stroke() -> dict[str, Any]:
 
 
 @pytest.fixture
-def orchestrator_with_batches() -> tuple[GenerationOrchestrator, Path]:
+def orchestrator_with_batches() -> Generator[
+    tuple[GenerationOrchestrator, Path], None, None
+]:
     """Create an orchestrator with pre-populated batch files and evaluations.
 
     Returns:
-        tuple[GenerationOrchestrator, Path]: The orchestrator and its temp directory
+        Generator[tuple[GenerationOrchestrator, Path], None, None]: The orchestrator and its temp directory
     """
     tmpdir = Path(tempfile.mkdtemp())
     orch = GenerationOrchestrator(
@@ -140,11 +143,32 @@ def orchestrator_with_batches() -> tuple[GenerationOrchestrator, Path]:
 
     # Populate evaluations so score_progression is non-empty
     orch.evaluations = [
-        {"score": 35.0, "feedback": "ok", "strengths": [], "suggestions": []},
-        {"score": 55.0, "feedback": "better", "strengths": [], "suggestions": []},
+        {
+            "score": 35.0,
+            "feedback": "ok",
+            "strengths": "",
+            "suggestions": "",
+            "timestamp": "2026-01-01T00:00:00",
+            "iteration": 1,
+        },
+        {
+            "score": 55.0,
+            "feedback": "better",
+            "strengths": "",
+            "suggestions": "",
+            "timestamp": "2026-01-01T00:01:00",
+            "iteration": 2,
+        },
     ]
 
-    return orch, tmpdir
+    yield orch, tmpdir
+
+    # Cleanup: Remove test data from Next.js public directory
+    import shutil
+
+    nextjs_test_data = NEXTJS_VIEWER_DATA_DIR / orch.artwork_id
+    if nextjs_test_data.exists():
+        shutil.rmtree(nextjs_test_data)
 
 
 @pytest.fixture
@@ -307,44 +331,197 @@ class TestViewerDataMetadataFields:
 
 
 class TestViewerHtmlCopied:
-    """Test that the viewer HTML template is copied to the output directory."""
+    """Test that viewer data is written to both local and Next.js directories."""
 
-    def test_viewer_html_exists(
+    def test_viewer_data_exists_locally(
         self,
         orchestrator_with_batches: tuple[GenerationOrchestrator, Path],
     ) -> None:
-        """index.html should be present in the viewer output directory after save."""
+        """viewer_data.json should be present in the local viewer output directory."""
         orch, _ = orchestrator_with_batches
         orch._save_viewer_data()
 
         viewer_dir = orch.artwork_dir / OUTPUT_STRUCTURE["viewer"]
-        html_path = viewer_dir / "index.html"
-        assert html_path.exists(), "viewer index.html was not copied to output"
+        data_path = viewer_dir / VIEWER_DATA_FILENAME
+        assert data_path.exists(), (
+            "viewer_data.json was not created in local viewer directory"
+        )
 
-    def test_viewer_html_is_nonempty(
+    def test_viewer_data_is_valid_json_locally(
         self,
         orchestrator_with_batches: tuple[GenerationOrchestrator, Path],
     ) -> None:
-        """Copied index.html should have content (not an empty file)."""
+        """Local viewer_data.json should be valid JSON."""
         orch, _ = orchestrator_with_batches
         orch._save_viewer_data()
 
         viewer_dir = orch.artwork_dir / OUTPUT_STRUCTURE["viewer"]
-        html_path = viewer_dir / "index.html"
-        assert html_path.stat().st_size > 0, "viewer index.html is empty"
+        data_path = viewer_dir / VIEWER_DATA_FILENAME
+        with open(data_path, encoding="utf-8") as f:
+            data = json.load(f)  # Should not raise
+        assert isinstance(data, dict)
 
-    def test_viewer_html_contains_canvas(
+
+class TestViewerDataWrittenToNextJsDir:
+    """Test that viewer data is written to the Next.js public/data directory."""
+
+    def test_nextjs_viewer_data_exists(
         self,
         orchestrator_with_batches: tuple[GenerationOrchestrator, Path],
     ) -> None:
-        """Copied index.html should contain a canvas element."""
+        """viewer_data.json should be present in Next.js public/data/<artwork_id>/ directory."""
         orch, _ = orchestrator_with_batches
         orch._save_viewer_data()
 
-        viewer_dir = orch.artwork_dir / OUTPUT_STRUCTURE["viewer"]
-        html_path = viewer_dir / "index.html"
-        content = html_path.read_text(encoding="utf-8")
-        assert "<canvas" in content, "viewer index.html does not contain <canvas>"
+        nextjs_data_path = (
+            NEXTJS_VIEWER_DATA_DIR / orch.artwork_id / VIEWER_DATA_FILENAME
+        )
+        assert nextjs_data_path.exists(), (
+            f"viewer_data.json was not created in Next.js data directory at {nextjs_data_path}"
+        )
+
+    def test_nextjs_viewer_data_is_valid_json(
+        self,
+        orchestrator_with_batches: tuple[GenerationOrchestrator, Path],
+    ) -> None:
+        """Next.js viewer_data.json should be valid JSON."""
+        orch, _ = orchestrator_with_batches
+        orch._save_viewer_data()
+
+        nextjs_data_path = (
+            NEXTJS_VIEWER_DATA_DIR / orch.artwork_id / VIEWER_DATA_FILENAME
+        )
+        with open(nextjs_data_path, encoding="utf-8") as f:
+            data = json.load(f)  # Should not raise
+        assert isinstance(data, dict)
+
+    def test_nextjs_viewer_data_matches_local(
+        self,
+        orchestrator_with_batches: tuple[GenerationOrchestrator, Path],
+    ) -> None:
+        """Next.js viewer_data.json should match the local copy."""
+        orch, _ = orchestrator_with_batches
+        orch._save_viewer_data()
+
+        local_viewer_dir = orch.artwork_dir / OUTPUT_STRUCTURE["viewer"]
+        local_data_path = local_viewer_dir / VIEWER_DATA_FILENAME
+        with open(local_data_path, encoding="utf-8") as f:
+            local_data = json.load(f)
+
+        nextjs_data_path = (
+            NEXTJS_VIEWER_DATA_DIR / orch.artwork_id / VIEWER_DATA_FILENAME
+        )
+        with open(nextjs_data_path, encoding="utf-8") as f:
+            nextjs_data = json.load(f)
+
+        assert local_data == nextjs_data, (
+            "Local and Next.js viewer data should be identical"
+        )
+
+    def test_nextjs_metadata_artwork_id_matches(
+        self,
+        orchestrator_with_batches: tuple[GenerationOrchestrator, Path],
+    ) -> None:
+        """Next.js viewer_data.json metadata.artwork_id should match the orchestrator's artwork_id."""
+        orch, _ = orchestrator_with_batches
+        orch._save_viewer_data()
+
+        nextjs_data_path = (
+            NEXTJS_VIEWER_DATA_DIR / orch.artwork_id / VIEWER_DATA_FILENAME
+        )
+        with open(nextjs_data_path, encoding="utf-8") as f:
+            data = json.load(f)
+
+        assert data["metadata"]["artwork_id"] == orch.artwork_id
+
+
+class TestViewerThumbnailGenerated:
+    """Test that thumbnail is generated and saved to Next.js public/data directory."""
+
+    def test_thumbnail_created(
+        self,
+        orchestrator_with_batches: tuple[GenerationOrchestrator, Path],
+    ) -> None:
+        """Thumbnail should be created when final artwork exists."""
+        orch, _ = orchestrator_with_batches
+
+        # Create a mock final_artwork.png
+        from PIL import Image
+
+        final_artwork_path = (
+            orch.artwork_dir / f"{OUTPUT_STRUCTURE['final_artwork']}.png"
+        )
+        img = Image.new("RGB", (800, 600), color="white")
+        img.save(final_artwork_path, "PNG")
+
+        # Call _save_viewer_data which should trigger thumbnail generation
+        orch._save_viewer_data()
+
+        thumbnail_path = NEXTJS_VIEWER_DATA_DIR / orch.artwork_id / "thumbnail.png"
+        assert thumbnail_path.exists(), f"Thumbnail was not created at {thumbnail_path}"
+
+    def test_thumbnail_is_valid_png(
+        self,
+        orchestrator_with_batches: tuple[GenerationOrchestrator, Path],
+    ) -> None:
+        """Thumbnail should be a valid PNG image."""
+        orch, _ = orchestrator_with_batches
+
+        # Create a mock final_artwork.png
+        from PIL import Image
+
+        final_artwork_path = (
+            orch.artwork_dir / f"{OUTPUT_STRUCTURE['final_artwork']}.png"
+        )
+        img = Image.new("RGB", (800, 600), color="white")
+        img.save(final_artwork_path, "PNG")
+
+        orch._save_viewer_data()
+
+        thumbnail_path = NEXTJS_VIEWER_DATA_DIR / orch.artwork_id / "thumbnail.png"
+        # Try to open the thumbnail - should not raise
+        thumb_img = Image.open(thumbnail_path)
+        assert thumb_img.format == "PNG"
+
+    def test_thumbnail_dimensions(
+        self,
+        orchestrator_with_batches: tuple[GenerationOrchestrator, Path],
+    ) -> None:
+        """Thumbnail dimensions should be ≤ 400×400 pixels."""
+        orch, _ = orchestrator_with_batches
+
+        # Create a mock final_artwork.png larger than 400x400
+        from PIL import Image
+
+        final_artwork_path = (
+            orch.artwork_dir / f"{OUTPUT_STRUCTURE['final_artwork']}.png"
+        )
+        img = Image.new("RGB", (800, 600), color="white")
+        img.save(final_artwork_path, "PNG")
+
+        orch._save_viewer_data()
+
+        thumbnail_path = NEXTJS_VIEWER_DATA_DIR / orch.artwork_id / "thumbnail.png"
+        thumb_img = Image.open(thumbnail_path)
+        width, height = thumb_img.size
+
+        assert width <= 400, f"Thumbnail width {width} exceeds 400px"
+        assert height <= 400, f"Thumbnail height {height} exceeds 400px"
+
+    def test_thumbnail_not_created_without_final_artwork(
+        self,
+        orchestrator_with_batches: tuple[GenerationOrchestrator, Path],
+    ) -> None:
+        """Thumbnail should not be created if final artwork doesn't exist."""
+        orch, _ = orchestrator_with_batches
+
+        # Don't create final_artwork.png
+        orch._save_viewer_data()
+
+        thumbnail_path = NEXTJS_VIEWER_DATA_DIR / orch.artwork_id / "thumbnail.png"
+        assert not thumbnail_path.exists(), (
+            "Thumbnail should not be created without final artwork"
+        )
 
 
 class TestViewerDataIterationNumbers:

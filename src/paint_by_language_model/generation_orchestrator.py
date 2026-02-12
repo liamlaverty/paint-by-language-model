@@ -2,7 +2,6 @@
 
 import json
 import logging
-import shutil
 import traceback
 from datetime import datetime
 from pathlib import Path
@@ -19,6 +18,7 @@ from config import (
     IMAGE_EXPORT_FORMATS,
     MAX_ITERATIONS,
     MIN_ITERATIONS,
+    NEXTJS_VIEWER_DATA_DIR,
     OUTPUT_DIR,
     OUTPUT_STRUCTURE,
     TARGET_STYLE_SCORE,
@@ -675,16 +675,13 @@ class GenerationOrchestrator:
         logger.info(f"Saved {len(self.strokes)} strokes")
 
     def _save_viewer_data(self) -> None:
-        """Save enriched stroke data and viewer HTML for the interactive HTML Canvas viewer.
+        """Save enriched stroke data for the Next.js viewer app.
 
         Assembles stroke rendering data with iteration context, batch reasoning,
-        and evaluation scores into a single ``viewer_data.json`` file.  Also copies
-        the viewer HTML template into the artwork's ``viewer/`` directory so the
-        result is self-contained and can be opened directly in a browser.
+        and evaluation scores into a single ``viewer_data.json`` file. Writes to both
+        the artwork's local ``viewer/`` directory (backward compatibility) and the
+        Next.js app's ``public/data/`` directory.
         """
-        viewer_dir = self.artwork_dir / OUTPUT_STRUCTURE["viewer"]
-        viewer_dir.mkdir(parents=True, exist_ok=True)
-
         # Build enriched strokes by cross-referencing batch files
         strokes_dir = self.artwork_dir / OUTPUT_STRUCTURE["strokes"]
         batch_files = sorted(strokes_dir.glob("iteration-*_batch.json"))
@@ -727,25 +724,45 @@ class GenerationOrchestrator:
             "strokes": enriched_strokes,
         }
 
-        # Write viewer data JSON
-        data_path = viewer_dir / VIEWER_DATA_FILENAME
-        with open(data_path, "w", encoding="utf-8") as f:
+        # Write to artwork's own viewer/ directory (backward compat)
+        local_viewer_dir = self.artwork_dir / OUTPUT_STRUCTURE["viewer"]
+        local_viewer_dir.mkdir(parents=True, exist_ok=True)
+        local_data_path = local_viewer_dir / VIEWER_DATA_FILENAME
+        with open(local_data_path, "w", encoding="utf-8") as f:
             json.dump(viewer_data, f, indent=2)
 
-        logger.info(f"Saved viewer data: {len(enriched_strokes)} enriched strokes to {data_path}")
+        logger.info(
+            f"Saved viewer data: {len(enriched_strokes)} enriched strokes to {local_data_path}"
+        )
 
-        # Copy viewer HTML template if it exists
-        viewer_template = Path(__file__).parent / "viewer" / "index.html"
-        viewer_style = Path(__file__).parent / "viewer" / "style.css"
-        if viewer_template.exists():
-            viewer_dest = viewer_dir / "index.html"
-            shutil.copy2(viewer_template, viewer_dest)
-            logger.info(f"Copied viewer HTML to {viewer_dest}")
-            viewer_style_dest = viewer_dir / "style.css"
-            shutil.copy2(viewer_style, viewer_style_dest)
-            logger.info(f"Copied viewer CSS to {viewer_style_dest}")
+        # Write to Next.js public/data/<artwork_id>/
+        nextjs_data_dir = NEXTJS_VIEWER_DATA_DIR / self.artwork_id
+        nextjs_data_dir.mkdir(parents=True, exist_ok=True)
+        nextjs_data_path = nextjs_data_dir / VIEWER_DATA_FILENAME
+        with open(nextjs_data_path, "w", encoding="utf-8") as f:
+            json.dump(viewer_data, f, indent=2)
+
+        logger.info(f"Saved viewer data to Next.js app: {nextjs_data_path}")
+
+        # Generate and save thumbnail
+        self._save_thumbnail(nextjs_data_dir / "thumbnail.png")
+
+    def _save_thumbnail(self, dest_path: Path) -> None:
+        """Save a resized thumbnail of the final artwork.
+
+        Args:
+            dest_path (Path): Destination path for the thumbnail PNG
+        """
+        final_png = self.artwork_dir / f"{OUTPUT_STRUCTURE['final_artwork']}.png"
+        if final_png.exists():
+            from PIL import Image
+
+            img = Image.open(final_png)
+            img.thumbnail((400, 400))
+            img.save(dest_path, "PNG")
+            logger.info(f"Saved thumbnail to {dest_path}")
         else:
-            logger.debug(f"Viewer HTML template not found at {viewer_template}, skipping copy")
+            logger.debug(f"Final artwork not found at {final_png}, skipping thumbnail generation")
 
     def _save_evaluations_summary(self) -> None:
         """Save all evaluations to summary JSON file."""
