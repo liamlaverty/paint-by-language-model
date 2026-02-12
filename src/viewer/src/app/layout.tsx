@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import Link from 'next/link';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -7,15 +8,12 @@ export const metadata: Metadata = {
 };
 
 /**
- * Root layout component for the Next.js app.
+ * Root layout wrapping all pages with navigation and global styles.
  *
- * Provides the HTML structure and global styles. Full implementation
- * will be completed in Task 5.
+ * @param {object} props - Layout props
+ * @param {React.ReactNode} props.children - The page content to render
  *
- * @param {object} props - Component props
- * @param {React.ReactNode} props.children - Child components to render
- *
- * @returns {JSX.Element} - The root layout
+ * @returns {JSX.Element} - The root HTML structure
  */
 export default function RootLayout({
   children,
@@ -24,7 +22,12 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body>
+        <nav className="app-nav">
+          <Link href="/">🎨 Paint by Language Model</Link>
+        </nav>
+        <main>{children}</main>
+      </body>
     </html>
   );
 }
