@@ -2,7 +2,6 @@
 
 import json
 import logging
-import re
 from datetime import datetime
 from typing import TYPE_CHECKING, Any
 
@@ -11,6 +10,7 @@ if TYPE_CHECKING:
 
 from config import API_BASE_URL, API_KEY, EVALUATION_PROMPT_TEMPERATURE, VLM_MODEL, VLM_TIMEOUT
 from models.evaluation_result import EvaluationResult
+from utils.json_utils import clean_and_parse_json
 from vlm_client import VLMClient
 
 logger = logging.getLogger(__name__)
@@ -160,7 +160,7 @@ class EvaluationVLMClient:
             layer_number = current_layer["layer_number"]
             layer_name = current_layer["name"]
             total_layers = painting_plan["total_layers"]
-            
+
             layer_section = f"""
 
 You are also evaluating progress on Layer {layer_number}: "{layer_name}".
@@ -168,7 +168,7 @@ The overall plan has {total_layers} layers.
 
 Consider whether this layer's objectives have been adequately achieved:
 - {current_layer["description"]}
-- Expected palette: {', '.join(current_layer["colour_palette"])}
+- Expected palette: {", ".join(current_layer["colour_palette"])}
 - Expected techniques: {current_layer["techniques"]}
 """
             response_format_addition = ',\n  "layer_complete": <boolean - true if this layer\'s objectives are sufficiently met>'
@@ -224,29 +224,13 @@ IMPORTANT: Respond ONLY with valid JSON. Do not include any text before or after
             ValueError: If JSON invalid, missing fields, or score out of range
             json.JSONDecodeError: If not valid JSON
         """
-        # Try to extract JSON if VLM included extra text
-        json_match = re.search(r"\{.*\}", response_text, re.DOTALL)
-        json_text = json_match.group(0) if json_match else response_text
-
-        # Try parsing as-is first
+        # Use shared robust JSON parsing utility
         try:
-            data = json.loads(json_text)
+            data = clean_and_parse_json(response_text)
         except json.JSONDecodeError as e:
-            # If that fails, try cleaning control characters in a more sophisticated way
-            # Remove or escape control characters that break JSON
-            logger.warning(f"Initial JSON parse failed: {e}. Attempting to clean response.")
-
-            # Replace problematic control characters
-            cleaned_json = re.sub(r"[\x00-\x1f\x7f-\x9f]", " ", json_text)
-
-            try:
-                data = json.loads(cleaned_json)
-                logger.info("Successfully parsed after cleaning control characters")
-            except json.JSONDecodeError as e2:
-                logger.error(f"Failed to parse JSON even after cleaning: {e2}")
-                logger.debug(f"Original response: {json_text[:500]}")
-                logger.debug(f"Cleaned response: {cleaned_json[:500]}")
-                raise ValueError(f"VLM returned invalid JSON: {e2}") from e2
+            logger.error(f"Failed to parse evaluation JSON: {e}")
+            logger.error(f"Response text (first 500 chars): {response_text[:500]}")
+            raise ValueError(f"VLM returned invalid JSON: {e}") from e
 
         # Validate required fields
         required_fields = ["score", "feedback", "strengths", "suggestions"]

@@ -3,7 +3,9 @@
 import json
 import logging
 import re
+import traceback
 from datetime import datetime
+from pathlib import Path
 from typing import Any
 
 from config import (
@@ -12,12 +14,15 @@ from config import (
     CANVAS_HEIGHT,
     CANVAS_WIDTH,
     COLOR_HEX_PATTERN,
+    OUTPUT_DIR,
+    PLANNER_MAX_TOKENS,
     PLANNER_MODEL,
     PLANNER_PROMPT_TEMPERATURE,
     PLANNER_TIMEOUT,
     SUPPORTED_STROKE_TYPES,
 )
 from models.painting_plan import PaintingPlan, PlanLayer
+from utils.json_utils import clean_and_parse_json
 from vlm_client import VLMClient
 
 logger = logging.getLogger(__name__)
@@ -61,6 +66,66 @@ class PlannerLLMClient:
 
         logger.info(f"Initialized PlannerLLMClient with model: {model}")
 
+    def _log_parsing_exception(
+        self,
+        artist_name: str,
+        subject: str,
+        raw_response: str,
+        exception: Exception,
+        prompt: str = "",
+    ) -> Path:
+        """
+        Log parsing exception with raw LLM response for debugging.
+
+        Args:
+            artist_name (str): Artist name from the request
+            subject (str): Subject from the request
+            raw_response (str): Raw LLM response that failed to parse
+            exception (Exception): The exception that was raised
+            prompt (str): The prompt sent to the LLM
+
+        Returns:
+            Path: Path to the saved log file
+        """
+        # Create exception log directory
+        exception_log_dir = OUTPUT_DIR / "exception_logs" / "planner"
+        exception_log_dir.mkdir(parents=True, exist_ok=True)
+
+        # Generate log filename with timestamp
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        safe_subject = "".join(c if c.isalnum() else "_" for c in subject[:30])
+        log_filename = f"planner_{artist_name}_{safe_subject}_{timestamp}.log"
+        log_filepath = exception_log_dir / log_filename
+
+        # Write exception details
+        with open(log_filepath, "w", encoding="utf-8") as f:
+            f.write(f"Planner LLM Parsing Exception\n")
+            f.write("=" * 80 + "\n\n")
+            f.write(f"Artist: {artist_name}\n")
+            f.write(f"Subject: {subject}\n")
+            f.write(f"Timestamp: {timestamp}\n")
+            f.write(f"Exception: {type(exception).__name__}\n")
+            f.write(f"Message: {str(exception)}\n\n")
+            
+            if prompt:
+                f.write("Prompt Sent to LLM:\n")
+                f.write("-" * 80 + "\n")
+                f.write(prompt)
+                f.write("\n" + "-" * 80 + "\n\n")
+            
+            f.write("Raw LLM Response:\n")
+            f.write("-" * 80 + "\n")
+            f.write(raw_response)
+            f.write("\n" + "-" * 80 + "\n\n")
+            
+            f.write("Traceback:\n")
+            f.write("-" * 80 + "\n")
+            f.write(traceback.format_exc())
+            f.write("-" * 80 + "\n")
+
+        logger.error(f"Parsing exception logged to: {log_filepath}")
+        return log_filepath
+
     def generate_plan(
         self,
         artist_name: str,
@@ -95,9 +160,9 @@ class PlannerLLMClient:
             stroke_types=stroke_types,
         )
 
-        # Query LLM (text-only, no image)
+        # Query LLM (text-only, no image) with sufficient max_tokens for detailed plans
         try:
-            response_text = self.client.query(prompt=prompt)
+            response_text = self.client.query(prompt=prompt, max_tokens=PLANNER_MAX_TOKENS)
 
             # Parse response
             painting_plan = self._parse_plan_response(response_text)
@@ -125,12 +190,29 @@ class PlannerLLMClient:
         except ConnectionError:
             logger.error("Failed to connect to LLM server")
             raise
-        except json.JSONDecodeError as e:
-            logger.error(f"Failed to parse LLM response as JSON: {e}")
-            logger.debug(f"Raw response: {response_text if 'response_text' in locals() else 'N/A'}")
+        except (json.JSONDecodeError, ValueError) as e:
+            logger.error(f"Failed to parse LLM response: {e}")
+            # Save raw response for debugging
+            if 'response_text' in locals() and response_text:
+                log_path = self._log_parsing_exception(
+                    artist_name=artist_name,
+                    subject=subject,
+                    raw_response=response_text,
+                    exception=e,
+                    prompt=prompt if 'prompt' in locals() else "",
+                )
+                logger.error(f"Raw LLM response saved to: {log_path}")
             raise ValueError(f"LLM returned invalid JSON: {e}") from e
         except Exception as e:
             logger.error(f"Unexpected error during LLM query: {e}")
+            if 'response_text' in locals() and response_text:
+                self._log_parsing_exception(
+                    artist_name=artist_name,
+                    subject=subject,
+                    raw_response=response_text,
+                    exception=e,
+                    prompt=prompt if 'prompt' in locals() else "",
+                )
             raise RuntimeError(f"LLM query failed: {e}") from e
 
     def _build_planning_prompt(
@@ -164,6 +246,9 @@ Canvas dimensions: {CANVAS_WIDTH}x{CANVAS_HEIGHT} pixels
 Task: Create a step-by-step layer plan for painting this image. Each layer will be
 executed sequentially — the painter can only ADD onto the canvas, not remove or switch
 between layers. Earlier layers will be painted over by later ones.
+
+Plan for 4-8 layers total. Fewer, well-defined layers work better than many small ones.
+Common layer sequence: background → mid-ground → main subjects → details/highlights.
 
 For each layer, specify:
 - name: A short descriptive name (e.g. "Sky background", "Main figure")
@@ -221,37 +306,8 @@ IMPORTANT: Respond ONLY with valid JSON. Do not include markdown formatting."""
             ValueError: If JSON invalid, missing fields, or validation fails
             json.JSONDecodeError: If not valid JSON
         """
-        # Try to extract JSON if LLM included extra text or markdown code blocks
-        # First try to remove markdown code blocks
-        cleaned_text = re.sub(r"```(?:json)?\s*", "", response_text)
-        cleaned_text = re.sub(r"```\s*$", "", cleaned_text)
-
-        # Try to extract JSON object
-        json_match = re.search(r"\{.*\}", cleaned_text, re.DOTALL)
-        json_text = json_match.group(0) if json_match else cleaned_text
-
-        # Remove JSON comments (LLMs sometimes add these)
-        # Remove single-line comments: // comment
-        json_text = re.sub(r"//.*?(?=\n|$)", "", json_text)
-        # Remove multi-line comments: /* comment */
-        json_text = re.sub(r"/\*.*?\*/", "", json_text, flags=re.DOTALL)
-
-        # Fix multi-line strings within JSON values (replace newlines within quotes with spaces)
-        def fix_multiline_strings(match: re.Match[str]) -> str:
-            """Replace newlines within quoted strings with spaces."""
-            value = match.group(0)
-            return value.replace("\n", " ").replace("\r", " ")
-
-        # Match quoted strings and fix newlines within them
-        json_text = re.sub(r'"[^"]*"', fix_multiline_strings, json_text, flags=re.DOTALL)
-
-        # Parse JSON
-        try:
-            data = json.loads(json_text)
-        except json.JSONDecodeError as e:
-            logger.error(f"Failed to parse JSON: {e}")
-            logger.error(f"Attempted to parse: {json_text[:500]}")
-            raise
+        # Use shared robust JSON parsing utility
+        data = clean_and_parse_json(response_text)
 
         # Validate top-level structure
         if "layers" not in data:

@@ -19,7 +19,7 @@ sys.path.insert(
 )
 
 from config import NEXTJS_VIEWER_DATA_DIR
-from services.json_utils import minify_json_file
+from utils.json_utils import minify_json_file
 
 
 def minify_viewer_data_files() -> tuple[int, int, int]:

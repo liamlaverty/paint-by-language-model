@@ -2,7 +2,6 @@
 
 import json
 import logging
-import re
 from datetime import datetime
 from typing import TYPE_CHECKING, Any
 
@@ -27,6 +26,7 @@ from config import (
 )
 from models.stroke import Stroke
 from models.stroke_vlm_response import StrokeVLMResponse
+from utils.json_utils import clean_and_parse_json
 from vlm_client import VLMClient
 
 logger = logging.getLogger(__name__)
@@ -337,38 +337,8 @@ IMPORTANT: Respond ONLY with valid JSON. Do not include any markdown formatting,
             ValueError: If JSON invalid or missing critical fields
             json.JSONDecodeError: If not valid JSON
         """
-        # Try to extract JSON if VLM included extra text or markdown code blocks
-        # First try to remove markdown code blocks
-        response_text = re.sub(r"```(?:json)?\s*", "", response_text)
-        response_text = re.sub(r"```\s*$", "", response_text)
-
-        # Try to extract JSON object
-        json_match = re.search(r"\{.*\}", response_text, re.DOTALL)
-        json_text = json_match.group(0) if json_match else response_text
-
-        # Remove JSON comments (VLMs sometimes add these)
-        # Remove single-line comments: // comment
-        json_text = re.sub(r"//.*?(?=\n|$)", "", json_text)
-        # Remove multi-line comments: /* comment */
-        json_text = re.sub(r"/\*.*?\*/", "", json_text, flags=re.DOTALL)
-
-        # Fix multi-line strings within JSON values (replace newlines within quotes with spaces)
-        # This handles cases where VLMs put actual newlines in string values
-        def fix_multiline_strings(match: re.Match[str]) -> str:
-            """Replace newlines within quoted strings with spaces."""
-            value = match.group(0)
-            return value.replace("\n", " ").replace("\r", " ")
-
-        # Match quoted strings and fix newlines within them
-        json_text = re.sub(r'"[^"]*"', fix_multiline_strings, json_text, flags=re.DOTALL)
-
-        # Parse JSON
-        try:
-            data = json.loads(json_text)
-        except json.JSONDecodeError as e:
-            logger.error(f"Failed to parse JSON: {e}")
-            logger.error(f"Attempted to parse: {json_text[:500]}")
-            raise
+        # Use shared robust JSON parsing utility
+        data = clean_and_parse_json(response_text)
 
         # Handle both old format (single stroke) and new format (strokes array) for backward compatibility
         strokes_list: list[dict[str, Any]] = []

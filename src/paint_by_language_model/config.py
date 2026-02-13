@@ -82,6 +82,7 @@ else:  # lmstudio
 # Planner prompt settings
 PLANNER_PROMPT_TEMPERATURE = 0.4
 PLANNER_TIMEOUT = 180
+PLANNER_MAX_TOKENS = 8192  # Planner needs much more tokens for detailed multi-layer plans
 
 # Request settings
 REQUEST_TIMEOUT = 120  # seconds - LLM responses can be slow

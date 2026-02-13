@@ -11,7 +11,7 @@ sys.path.insert(
     0, str(Path(__file__).parent.parent / "src" / "paint_by_language_model")
 )
 
-from services.json_utils import minify_json_file, minify_json_files_in_directory
+from utils.json_utils import minify_json_file, minify_json_files_in_directory
 
 
 class TestMinifyJsonFile:

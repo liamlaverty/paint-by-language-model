@@ -30,8 +30,8 @@ from config import (
 from models import EvaluationResult, PaintingPlan, PlanLayer, Stroke
 from services import CanvasManager, EvaluationVLMClient, PlannerLLMClient, StrokeVLMClient
 from services.gif_generator import GifGenerator
-from services.json_utils import minify_json_file
 from strategy_manager import StrategyManager
+from utils.json_utils import minify_json_file
 
 logger = logging.getLogger(__name__)
 
