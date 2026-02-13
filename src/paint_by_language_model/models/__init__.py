@@ -4,11 +4,12 @@ from .canvas_state import CanvasState
 from .evaluation_result import EvaluationResult
 from .generation_metadata import GenerationMetadata
 from .strategy_context import StrategyContext
-from .stroke import Stroke
+from .stroke import Stroke, StrokeType
 from .stroke_vlm_response import StrokeVLMResponse
 
 __all__ = [
     "Stroke",
+    "StrokeType",
     "EvaluationResult",
     "StrategyContext",
     "GenerationMetadata",

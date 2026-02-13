@@ -22,35 +22,60 @@ Organization:
         - Validation: Input checking rules
 """
 
+import os
 from pathlib import Path
+
+from dotenv import load_dotenv
+
+load_dotenv()
 
 # ============================================================================
 # PHASE 1: Artist Analysis (Existing)
 # ============================================================================
-
-# LMStudio API settings
-LMSTUDIO_BASE_URL = "http://localhost:1234/v1"
-LMSTUDIO_MODEL = "local-model"  # LMStudio uses this as default
-
-# Request settings
-REQUEST_TIMEOUT = 120  # seconds - LLM responses can be slow
-MAX_TOKENS = 1024
 
 # File paths (relative to project root)
 PROJECT_ROOT = Path(__file__).parent.parent
 ARTISTS_FILE = PROJECT_ROOT / "datafiles" / "artists.json"
 OUTPUT_DIR = PROJECT_ROOT / "output"
 
-# Prompt template
-PROMPT_TEMPLATE = """What are the notable features of {artist_name}'s artwork?
-Please provide a structured response covering:
-1. Artistic style and techniques
-2. Common themes and subjects
-3. Use of color and composition
-4. Historical significance and influence
-5. Most famous works
 
-Respond in a clear, informative manner."""
+# ============================================================================
+# PROVIDER CONFIGURATION
+# ============================================================================
+
+# Provider selection ("mistral" or "lmstudio")
+PROVIDER = os.getenv("PROVIDER", "mistral")
+
+# Mistral API settings
+MISTRAL_BASE_URL = "https://api.mistral.ai/v1"
+MISTRAL_API_KEY = os.getenv("MISTRAL_API_KEY", "")
+MISTRAL_DEFAULT_MODEL = "mistral-small-latest"
+MISTRAL_VLM_MODEL = "mistral-large-2512"
+MISTRAL_EVALUATION_VLM_MODEL = "mistral-large-2512"
+
+# LMStudio API settings (for local development)
+LMSTUDIO_BASE_URL = "http://localhost:1234/v1"
+LMSTUDIO_MODEL = "local-model"
+LMSTUDIO_VLM_MODEL = "lmistralai/ministral-3-3b"
+LMSTUDIO_EVALUATION_VLM_MODEL = "lmistralai/ministral-3-3b"
+
+# Resolved settings based on active provider
+if PROVIDER == "mistral":
+    API_BASE_URL = MISTRAL_BASE_URL
+    API_KEY = MISTRAL_API_KEY
+    DEFAULT_MODEL = MISTRAL_DEFAULT_MODEL
+    VLM_MODEL = MISTRAL_VLM_MODEL
+    EVALUATION_VLM_MODEL = MISTRAL_EVALUATION_VLM_MODEL
+else:  # lmstudio
+    API_BASE_URL = LMSTUDIO_BASE_URL
+    API_KEY = ""  # No auth for LMStudio
+    DEFAULT_MODEL = LMSTUDIO_MODEL
+    VLM_MODEL = LMSTUDIO_VLM_MODEL
+    EVALUATION_VLM_MODEL = LMSTUDIO_EVALUATION_VLM_MODEL
+
+# Request settings
+REQUEST_TIMEOUT = 120  # seconds - LLM responses can be slow
+MAX_TOKENS = 1024
 
 
 # ============================================================================
@@ -74,33 +99,52 @@ CANVAS_BACKGROUND_COLOR = "#FFFFFF"  # White background
 # ----------------------------------------------------------------------------
 
 # Thickness limits (in pixels)
-MAX_STROKE_THICKNESS = 10
+MAX_STROKE_THICKNESS = 100
 MIN_STROKE_THICKNESS = 1
 
 # Opacity limits (0.0 = fully transparent, 1.0 = fully opaque)
 MAX_STROKE_OPACITY = 1.0
 MIN_STROKE_OPACITY = 0.1
 
-# Supported stroke types (Phase 1 implementation)
-SUPPORTED_STROKE_TYPES = ["line"]  # Future: ["line", "curve", "fill"]
+# Supported stroke types (Phase 3 - all types implemented)
+SUPPORTED_STROKE_TYPES = ["line", "arc", "polyline", "circle", "splatter"]
+
+# Arc constraints
+MAX_ARC_ANGLE = 360
+MIN_ARC_ANGLE = 1
+
+# Polyline constraints
+MAX_POLYLINE_POINTS = 50
+MIN_POLYLINE_POINTS = 2
+
+# Circle constraints
+MAX_CIRCLE_RADIUS = 400
+MIN_CIRCLE_RADIUS = 1
+
+# Splatter constraints
+MAX_SPLATTER_COUNT = 100
+MIN_SPLATTER_COUNT = 1
+MAX_SPLATTER_RADIUS = 200
+MIN_SPLATTER_RADIUS = 5
+MAX_DOT_SIZE = 20
+MIN_DOT_SIZE = 1
 
 
 # ----------------------------------------------------------------------------
 # VLM (Vision Language Model) Settings
 # ----------------------------------------------------------------------------
 
-# VLM model identifier
-VLM_MODEL = "lmistralai/ministral-3-3b"  # Or other multimodal model loaded in LMStudio
-
 # VLM request timeout (VLMs are significantly slower than text-only LLMs)
 VLM_TIMEOUT = 180  # 3 minutes
-
-# Evaluation VLM (can be same as or different from stroke VLM)
-EVALUATION_VLM_MODEL = "lmistralai/ministral-3-3b"
 
 # VLM prompt temperature settings
 STROKE_PROMPT_TEMPERATURE = 0.7  # Higher for creativity in stroke generation
 EVALUATION_PROMPT_TEMPERATURE = 0.3  # Lower for consistency in scoring
+
+# Multi-stroke query settings (Phase 3)
+DEFAULT_STROKES_PER_QUERY = 5  # Default number of strokes to request per VLM query
+MAX_STROKES_PER_QUERY = 20  # Maximum strokes allowed in a single query
+MIN_STROKES_PER_QUERY = 1  # Minimum strokes (1 for backward compatibility)
 
 
 # ----------------------------------------------------------------------------
@@ -147,6 +191,7 @@ OUTPUT_STRUCTURE = {
     "metadata": "metadata.json",  # Generation metadata
     "final_artwork": "final_artwork",  # Final image (no extension)
     "report": "generation_report.md",  # Human-readable report
+    "viewer": "viewer",  # HTML Canvas viewer
 }
 
 # Supported image export formats
@@ -154,6 +199,41 @@ IMAGE_EXPORT_FORMATS = ["PNG", "JPEG"]
 
 # Default image export format for snapshots
 SNAPSHOT_FORMAT = "PNG"
+
+
+# ----------------------------------------------------------------------------
+# GIF Generation Settings
+# ----------------------------------------------------------------------------
+
+# Frame duration in milliseconds (controls playback speed)
+GIF_FRAME_DURATION_MS = 150  # ~6.7 fps
+
+# Hold duration on the final frame (lets viewers appreciate finished artwork)
+GIF_FINAL_FRAME_HOLD_MS = 1500
+
+# Max width or height in pixels (frames resized to keep GIF file size manageable)
+GIF_MAX_DIMENSION = 400
+
+# Output filename for the timelapse GIF
+GIF_FILENAME = "timelapse.gif"
+
+# Loop count (0 = infinite loop)
+GIF_LOOP_COUNT = 0
+
+
+# ----------------------------------------------------------------------------
+# Viewer Settings
+# ----------------------------------------------------------------------------
+
+# Viewer output directory name (subdirectory under each artwork)
+VIEWER_DIR_NAME = "viewer"
+
+# Viewer data filename
+VIEWER_DATA_FILENAME = "viewer_data.json"
+
+# Path to the Next.js viewer's public data directory
+NEXTJS_VIEWER_DIR = PROJECT_ROOT / "viewer"
+NEXTJS_VIEWER_DATA_DIR = NEXTJS_VIEWER_DIR / "public" / "data"
 
 
 # ----------------------------------------------------------------------------

@@ -20,7 +20,6 @@ class TestConfigSettings(unittest.TestCase):
         self.assertTrue(hasattr(config, "LMSTUDIO_MODEL"))
         self.assertTrue(hasattr(config, "REQUEST_TIMEOUT"))
         self.assertTrue(hasattr(config, "MAX_TOKENS"))
-        self.assertTrue(hasattr(config, "PROMPT_TEMPLATE"))
 
     def test_phase2_canvas_settings_exist(self) -> None:
         """Test Phase 2 canvas settings are present."""
@@ -79,6 +78,14 @@ class TestConfigSettings(unittest.TestCase):
         self.assertTrue(hasattr(config, "STRICT_STROKE_VALIDATION"))
         self.assertTrue(hasattr(config, "ALLOW_ZERO_LENGTH_STROKES"))
         self.assertTrue(hasattr(config, "COLOR_HEX_PATTERN"))
+
+    def test_phase5_gif_settings_exist(self) -> None:
+        """Test Phase 5 GIF generation settings are present."""
+        self.assertTrue(hasattr(config, "GIF_FRAME_DURATION_MS"))
+        self.assertTrue(hasattr(config, "GIF_FINAL_FRAME_HOLD_MS"))
+        self.assertTrue(hasattr(config, "GIF_MAX_DIMENSION"))
+        self.assertTrue(hasattr(config, "GIF_FILENAME"))
+        self.assertTrue(hasattr(config, "GIF_LOOP_COUNT"))
 
     def test_canvas_dimensions_positive(self) -> None:
         """Test canvas dimensions are positive integers."""
@@ -164,6 +171,42 @@ class TestConfigSettings(unittest.TestCase):
         """Test image export formats is a list."""
         self.assertIsInstance(config.IMAGE_EXPORT_FORMATS, list)
         self.assertGreater(len(config.IMAGE_EXPORT_FORMATS), 0)
+
+    def test_gif_settings_valid(self) -> None:
+        """Test GIF generation settings have valid values."""
+        self.assertGreater(config.GIF_FRAME_DURATION_MS, 0)
+        self.assertGreater(config.GIF_FINAL_FRAME_HOLD_MS, 0)
+        self.assertGreater(config.GIF_MAX_DIMENSION, 0)
+        self.assertIsInstance(config.GIF_FILENAME, str)
+        self.assertTrue(config.GIF_FILENAME.endswith(".gif"))
+        self.assertGreaterEqual(config.GIF_LOOP_COUNT, 0)
+
+    def test_provider_config_exists(self) -> None:
+        """Provider configuration constants exist."""
+        self.assertTrue(hasattr(config, "PROVIDER"))
+        self.assertTrue(hasattr(config, "API_BASE_URL"))
+        self.assertTrue(hasattr(config, "API_KEY"))
+        self.assertTrue(hasattr(config, "DEFAULT_MODEL"))
+
+    def test_mistral_config_exists(self) -> None:
+        """Mistral-specific constants exist."""
+        self.assertTrue(hasattr(config, "MISTRAL_BASE_URL"))
+        self.assertTrue(hasattr(config, "MISTRAL_API_KEY"))
+        self.assertTrue(hasattr(config, "MISTRAL_VLM_MODEL"))
+        self.assertTrue(hasattr(config, "MISTRAL_EVALUATION_VLM_MODEL"))
+
+    def test_lmstudio_config_exists(self) -> None:
+        """LMStudio-specific constants still exist for local dev."""
+        self.assertTrue(hasattr(config, "LMSTUDIO_BASE_URL"))
+        self.assertTrue(hasattr(config, "LMSTUDIO_MODEL"))
+        self.assertTrue(hasattr(config, "LMSTUDIO_VLM_MODEL"))
+
+    def test_provider_resolves_correctly(self) -> None:
+        """API_BASE_URL matches PROVIDER setting."""
+        if config.PROVIDER == "mistral":
+            self.assertEqual(config.API_BASE_URL, config.MISTRAL_BASE_URL)
+        else:
+            self.assertEqual(config.API_BASE_URL, config.LMSTUDIO_BASE_URL)
 
 
 if __name__ == "__main__":
