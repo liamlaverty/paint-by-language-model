@@ -32,11 +32,11 @@ describe('Toolbar', () => {
       render(<Toolbar {...defaultProps} />);
 
       expect(screen.getByText('Gallery')).toBeInTheDocument();
-      expect(screen.getByText('↺ Reset')).toBeInTheDocument();
-      expect(screen.getByText('▶ Play')).toBeInTheDocument();
+      expect(screen.getByText('⏮ Reset')).toBeInTheDocument();
+      expect(screen.getByText('▶️ Play')).toBeInTheDocument();
       expect(screen.getByText('⏮ Step Back')).toBeInTheDocument();
-      expect(screen.getByText('⏭ Step')).toBeInTheDocument();
-      expect(screen.getByText('⏩ Show All')).toBeInTheDocument();
+      expect(screen.getByText('⏭ Step Forward')).toBeInTheDocument();
+      expect(screen.getByText('⏩ Fin')).toBeInTheDocument();
     });
 
     it('should render speed slider with correct value', () => {
@@ -64,15 +64,15 @@ describe('Toolbar', () => {
     it('should show Play button when not playing', () => {
       render(<Toolbar {...defaultProps} isPlaying={false} />);
 
-      expect(screen.getByText('▶ Play')).toBeInTheDocument();
-      expect(screen.queryByText('⏸ Pause')).not.toBeInTheDocument();
+      expect(screen.getByText('▶️ Play')).toBeInTheDocument();
+      expect(screen.queryByText('⏸️ Pause')).not.toBeInTheDocument();
     });
 
     it('should show Pause button when playing', () => {
       render(<Toolbar {...defaultProps} isPlaying={true} />);
 
-      expect(screen.getByText('⏸ Pause')).toBeInTheDocument();
-      expect(screen.queryByText('▶ Play')).not.toBeInTheDocument();
+      expect(screen.getByText('⏸️ Pause')).toBeInTheDocument();
+      expect(screen.queryByText('▶️ Play')).not.toBeInTheDocument();
     });
   });
 
@@ -80,35 +80,35 @@ describe('Toolbar', () => {
     it('should disable all buttons except Gallery when isLoaded is false', () => {
       render(<Toolbar {...defaultProps} isLoaded={false} />);
 
-      expect(screen.getByText('↺ Reset')).toBeDisabled();
-      expect(screen.getByText('▶ Play')).toBeDisabled();
+      expect(screen.getByText('⏮ Reset')).toBeDisabled();
+      expect(screen.getByText('▶️ Play')).toBeDisabled();
       expect(screen.getByText('⏮ Step Back')).toBeDisabled();
-      expect(screen.getByText('⏭ Step')).toBeDisabled();
-      expect(screen.getByText('⏩ Show All')).toBeDisabled();
+      expect(screen.getByText('⏭ Step Forward')).toBeDisabled();
+      expect(screen.getByText('⏩ Fin')).toBeDisabled();
       expect(screen.getByRole('slider')).toBeDisabled();
 
       // Gallery link should not be disabled
       expect(screen.getByRole('link', { name: /gallery/i })).not.toHaveAttribute('disabled');
     });
 
-    it('should disable Reset, Step Back, Step, and Show All when playing', () => {
+    it('should disable Reset, Step Back, Step Forward, and Fin when playing', () => {
       render(<Toolbar {...defaultProps} isPlaying={true} />);
 
-      expect(screen.getByText('↺ Reset')).toBeDisabled();
+      expect(screen.getByText('⏮ Reset')).toBeDisabled();
       expect(screen.getByText('⏮ Step Back')).toBeDisabled();
-      expect(screen.getByText('⏭ Step')).toBeDisabled();
-      expect(screen.getByText('⏩ Show All')).toBeDisabled();
-      expect(screen.getByText('⏸ Pause')).not.toBeDisabled();
+      expect(screen.getByText('⏭ Step Forward')).toBeDisabled();
+      expect(screen.getByText('⏩ Fin')).toBeDisabled();
+      expect(screen.getByText('⏸️ Pause')).not.toBeDisabled();
     });
 
     it('should enable all playback buttons when loaded and not playing', () => {
       render(<Toolbar {...defaultProps} isLoaded={true} isPlaying={false} />);
 
-      expect(screen.getByText('↺ Reset')).not.toBeDisabled();
-      expect(screen.getByText('▶ Play')).not.toBeDisabled();
+      expect(screen.getByText('⏮ Reset')).not.toBeDisabled();
+      expect(screen.getByText('▶️ Play')).not.toBeDisabled();
       expect(screen.getByText('⏮ Step Back')).not.toBeDisabled();
-      expect(screen.getByText('⏭ Step')).not.toBeDisabled();
-      expect(screen.getByText('⏩ Show All')).not.toBeDisabled();
+      expect(screen.getByText('⏭ Step Forward')).not.toBeDisabled();
+      expect(screen.getByText('⏩ Fin')).not.toBeDisabled();
     });
   });
 
@@ -117,7 +117,7 @@ describe('Toolbar', () => {
       const user = userEvent.setup();
       render(<Toolbar {...defaultProps} />);
 
-      await user.click(screen.getByText('↺ Reset'));
+      await user.click(screen.getByText('⏮ Reset'));
 
       expect(defaultProps.onReset).toHaveBeenCalledTimes(1);
     });
@@ -135,7 +135,7 @@ describe('Toolbar', () => {
       const user = userEvent.setup();
       render(<Toolbar {...defaultProps} isPlaying={false} />);
 
-      await user.click(screen.getByText('▶ Play'));
+      await user.click(screen.getByText('▶️ Play'));
 
       expect(defaultProps.onPlay).toHaveBeenCalledTimes(1);
     });
@@ -144,25 +144,25 @@ describe('Toolbar', () => {
       const user = userEvent.setup();
       render(<Toolbar {...defaultProps} isPlaying={true} />);
 
-      await user.click(screen.getByText('⏸ Pause'));
+      await user.click(screen.getByText('⏸️ Pause'));
 
       expect(defaultProps.onPause).toHaveBeenCalledTimes(1);
     });
 
-    it('should call onStepForward when Step button is clicked', async () => {
+    it('should call onStepForward when Step Forward button is clicked', async () => {
       const user = userEvent.setup();
       render(<Toolbar {...defaultProps} />);
 
-      await user.click(screen.getByText('⏭ Step'));
+      await user.click(screen.getByText('⏭ Step Forward'));
 
       expect(defaultProps.onStepForward).toHaveBeenCalledTimes(1);
     });
 
-    it('should call onShowAll when Show All button is clicked', async () => {
+    it('should call onShowAll when Fin button is clicked', async () => {
       const user = userEvent.setup();
       render(<Toolbar {...defaultProps} />);
 
-      await user.click(screen.getByText('⏩ Show All'));
+      await user.click(screen.getByText('⏩ Fin'));
 
       expect(defaultProps.onShowAll).toHaveBeenCalledTimes(1);
     });
@@ -198,11 +198,11 @@ describe('Toolbar', () => {
     it('should have title attributes on buttons', () => {
       render(<Toolbar {...defaultProps} />);
 
-      expect(screen.getByText('↺ Reset')).toHaveAttribute('title', 'Reset to blank canvas');
-      expect(screen.getByText('▶ Play')).toHaveAttribute('title', 'Start playback');
+      expect(screen.getByText('⏮ Reset')).toHaveAttribute('title', 'Reset to blank canvas');
+      expect(screen.getByText('▶️ Play')).toHaveAttribute('title', 'Start playback');
       expect(screen.getByText('⏮ Step Back')).toHaveAttribute('title', 'Go back one stroke');
-      expect(screen.getByText('⏭ Step')).toHaveAttribute('title', 'Advance one stroke');
-      expect(screen.getByText('⏩ Show All')).toHaveAttribute('title', 'Show all strokes');
+      expect(screen.getByText('⏭ Step Forward')).toHaveAttribute('title', 'Advance one stroke');
+      expect(screen.getByText('⏩ Fin')).toHaveAttribute('title', 'Show all strokes');
     });
 
     it('should have title attribute on speed slider', () => {

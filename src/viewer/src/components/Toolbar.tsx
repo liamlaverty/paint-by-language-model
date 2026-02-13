@@ -57,13 +57,14 @@ export default function Toolbar({
   return (
     <div className="toolbar">
       <Link href="/">
-        <button type="button">Gallery</button>
+        <button type="button" className="button">Gallery</button>
       </Link>
 
       <div className="sep" />
 
       <button
         type="button"
+        className="button"
         onClick={onReset}
         disabled={!isLoaded || isPlaying}
         title="Reset to blank canvas"
@@ -73,6 +74,7 @@ export default function Toolbar({
 
       <button
         type="button"
+        className="button"
         onClick={onStepBackward}
         disabled={!isLoaded || isPlaying}
         title="Go back one stroke"
@@ -81,17 +83,18 @@ export default function Toolbar({
       </button>
 
       {isPlaying ? (
-        <button type="button" onClick={onPause} disabled={!isLoaded} title="Pause playback">
+        <button type="button" className="button" onClick={onPause} disabled={!isLoaded} title="Pause playback">
           ⏸️ Pause
         </button>
       ) : (
-        <button type="button" onClick={onPlay} disabled={!isLoaded} title="Start playback">
+        <button type="button" className="button" onClick={onPlay} disabled={!isLoaded} title="Start playback">
           ▶️ Play
         </button>
       )}
 
       <button
         type="button"
+        className="button"
         onClick={onStepForward}
         disabled={!isLoaded || isPlaying}
         title="Advance one stroke"
@@ -101,6 +104,7 @@ export default function Toolbar({
 
       <button
         type="button"
+        className="button"
         onClick={onShowAll}
         disabled={!isLoaded || isPlaying}
         title="Show all strokes"

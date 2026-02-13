@@ -197,28 +197,12 @@ body {
   flex-wrap: wrap;
 }
 
-.toolbar button {
-  background: var(--color-button-background);
-  color: var(--color-button-text);
-  border: 1px solid var(--color-button-border);
-  border-radius: var(--radius-s);
-  padding: 6px 14px;
-  cursor: pointer;
-  font-size: var(--size-step-00);
-  transition: background var(--transition-base);
-}
-
-.toolbar button:hover {
-  background: var(--color-button-hover-background);
-  color: var(--color-button-hover-text);
-}
-
-.toolbar button:disabled {
+.toolbar .button:disabled {
   opacity: 0.4;
   cursor: default;
 }
 
-.toolbar button.active {
+.toolbar .button.active {
   background: var(--color-button-hover-background);
   border-color: var(--color-highlight);
 }
