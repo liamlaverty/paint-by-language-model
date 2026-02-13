@@ -71,8 +71,8 @@ class EvaluationVLMClient:
             artist_name (str): Target artist name
             subject (str): Subject being painted
             iteration (int): Current iteration number
-            painting_plan (PaintingPlan | None): Complete painting plan (unused for now)
-            current_layer (PlanLayer | None): Current layer information (unused for now)
+            painting_plan (PaintingPlan | None): Complete painting plan
+            current_layer (PlanLayer | None): Current layer information
 
         Returns:
             EvaluationResult: Evaluation score and feedback
@@ -86,7 +86,11 @@ class EvaluationVLMClient:
 
         # Build prompt
         prompt = self._build_evaluation_prompt(
-            artist_name=artist_name, subject=subject, iteration=iteration
+            artist_name=artist_name,
+            subject=subject,
+            iteration=iteration,
+            painting_plan=painting_plan,
+            current_layer=current_layer,
         )
 
         # Query VLM
@@ -95,7 +99,9 @@ class EvaluationVLMClient:
 
             # Parse response
             evaluation = self._parse_evaluation_response(
-                response_text=response_text, iteration=iteration
+                response_text=response_text,
+                iteration=iteration,
+                current_layer=current_layer,
             )
 
             # Store raw and parsed responses
@@ -126,7 +132,14 @@ class EvaluationVLMClient:
             logger.error(f"Unexpected error during VLM evaluation: {e}")
             raise RuntimeError(f"VLM evaluation failed: {e}") from e
 
-    def _build_evaluation_prompt(self, artist_name: str, subject: str, iteration: int) -> str:
+    def _build_evaluation_prompt(
+        self,
+        artist_name: str,
+        subject: str,
+        iteration: int,
+        painting_plan: "PaintingPlan | None" = None,
+        current_layer: "PlanLayer | None" = None,
+    ) -> str:
         """
         Build prompt for style evaluation.
 
@@ -134,15 +147,37 @@ class EvaluationVLMClient:
             artist_name (str): Target artist name
             subject (str): Subject being painted
             iteration (int): Current iteration number
+            painting_plan (PaintingPlan | None): Complete painting plan
+            current_layer (PlanLayer | None): Current layer information
 
         Returns:
             str: Formatted prompt
         """
+        # Build layer context section if available
+        layer_section = ""
+        response_format_addition = ""
+        if painting_plan and current_layer:
+            layer_number = current_layer["layer_number"]
+            layer_name = current_layer["name"]
+            total_layers = painting_plan["total_layers"]
+            
+            layer_section = f"""
+
+You are also evaluating progress on Layer {layer_number}: "{layer_name}".
+The overall plan has {total_layers} layers.
+
+Consider whether this layer's objectives have been adequately achieved:
+- {current_layer["description"]}
+- Expected palette: {', '.join(current_layer["colour_palette"])}
+- Expected techniques: {current_layer["techniques"]}
+"""
+            response_format_addition = ',\n  "layer_complete": <boolean - true if this layer\'s objectives are sufficiently met>'
+
         prompt = f"""You are an art critic evaluating artwork for stylistic similarity to {artist_name}.
 
 Current Canvas: [Image attached]
 Subject: {subject}
-Iteration: {iteration}
+Iteration: {iteration}{layer_section}
 
 Task: Rate how well this image embodies {artist_name}'s artistic style on a scale of 0-100.
 
@@ -161,20 +196,26 @@ Respond in JSON format:
   "score": <float 0-100>,
   "feedback": "<detailed qualitative assessment>",
   "strengths": "<what's working well stylistically>",
-  "suggestions": "<areas that could be improved>"
+  "suggestions": "<areas that could be improved>"{response_format_addition}
 }}
 
 IMPORTANT: Respond ONLY with valid JSON. Do not include any text before or after the JSON object."""
 
         return prompt
 
-    def _parse_evaluation_response(self, response_text: str, iteration: int) -> EvaluationResult:
+    def _parse_evaluation_response(
+        self,
+        response_text: str,
+        iteration: int,
+        current_layer: "PlanLayer | None" = None,
+    ) -> EvaluationResult:
         """
         Parse VLM evaluation response into EvaluationResult.
 
         Args:
             response_text (str): Raw VLM response
             iteration (int): Current iteration number
+            current_layer (PlanLayer | None): Current layer information
 
         Returns:
             EvaluationResult: Parsed evaluation
@@ -227,6 +268,11 @@ IMPORTANT: Respond ONLY with valid JSON. Do not include any text before or after
             "timestamp": datetime.now().isoformat(),
             "iteration": iteration,
         }
+
+        # Add layer-specific fields if layer context was provided
+        if current_layer:
+            result["layer_complete"] = data.get("layer_complete", False)
+            result["layer_number"] = current_layer["layer_number"]
 
         return result
 

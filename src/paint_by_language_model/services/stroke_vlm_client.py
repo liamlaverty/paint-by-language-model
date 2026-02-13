@@ -92,9 +92,9 @@ class StrokeVLMClient:
             iteration (int): Current iteration number
             strategy_context (str): Recent strategic context
             num_strokes (int): Number of strokes to request (default: 5)
-            painting_plan (PaintingPlan | None): Complete painting plan (unused for now)
-            current_layer (PlanLayer | None): Current layer information (unused for now)
-            expanded_subject (str | None): Detailed subject description (unused for now)
+            painting_plan (PaintingPlan | None): Complete painting plan
+            current_layer (PlanLayer | None): Current layer information
+            expanded_subject (str | None): Detailed subject description
 
         Returns:
             StrokeVLMResponse: List of strokes and optional strategy update
@@ -125,6 +125,9 @@ class StrokeVLMClient:
             iteration=iteration,
             strategy_context=strategy_context,
             num_strokes=num_strokes,
+            painting_plan=painting_plan,
+            current_layer=current_layer,
+            expanded_subject=expanded_subject,
         )
 
         # Query VLM
@@ -211,6 +214,9 @@ class StrokeVLMClient:
         iteration: int,
         strategy_context: str,
         num_strokes: int,
+        painting_plan: "PaintingPlan | None" = None,
+        current_layer: "PlanLayer | None" = None,
+        expanded_subject: str | None = None,
     ) -> str:
         """
         Build prompt for multiple stroke suggestions.
@@ -221,19 +227,51 @@ class StrokeVLMClient:
             iteration (int): Current iteration number
             strategy_context (str): Recent strategic context
             num_strokes (int): Number of strokes to request
+            painting_plan (PaintingPlan | None): Complete painting plan
+            current_layer (PlanLayer | None): Current layer information
+            expanded_subject (str | None): Detailed subject description
 
         Returns:
             str: Formatted prompt
         """
+        # Build subject section with optional expanded description
+        subject_section = f"Subject: {subject}"
+        if expanded_subject:
+            subject_section += f"\nDetailed description: {expanded_subject}"
+
+        # Build strategy context section
         strategy_section = ""
         if strategy_context:
             strategy_section = f"\n\nRecent Strategy Context:\n{strategy_context}"
 
+        # Build painting plan section if available
+        plan_section = ""
+        if painting_plan and current_layer:
+            import json
+
+            plan_section = f"""
+
+=== PAINTING PLAN ===
+{json.dumps(painting_plan, indent=2)}
+
+=== CURRENT FOCUS ===
+You are currently working on Layer {current_layer["layer_number"]}: "{current_layer["name"]}"
+Description: {current_layer["description"]}
+Recommended colour palette: {", ".join(current_layer["colour_palette"])}
+Recommended stroke types: {", ".join(current_layer["stroke_types"])}
+Techniques: {current_layer["techniques"]}
+Shapes: {current_layer["shapes"]}
+Highlights: {current_layer["highlights"]}
+
+Focus your strokes on this layer's objectives. Stay within the recommended palette
+and techniques unless artistic judgement requires deviation.
+"""
+
         prompt = f"""You are an expert artist creating a piece in the style of {artist_name}.
 
 Current Canvas: [Image attached]
-Subject: {subject}
-Iteration: {iteration}{strategy_section}
+{subject_section}
+Iteration: {iteration}{strategy_section}{plan_section}
 
 Task: Suggest {num_strokes} stroke(s) to add to this canvas that evoke {artist_name}'s artistic style.
 
