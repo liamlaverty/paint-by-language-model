@@ -154,7 +154,7 @@ export default function StrokeCanvas({
     const clientX = event.clientX - rect.left;
     const clientY = event.clientY - rect.top;
 
-    const strokeIndex = getStrokeIndexAtPoint(hitCtx, hitCanvas, clientX, clientY);
+    const strokeIndex = getStrokeIndexAtPoint(hitCtx, mainCanvas, clientX, clientY);
 
     // Only trigger hover for visible strokes
     if (strokeIndex >= 0 && strokeIndex < visibleCount) {
@@ -178,7 +178,7 @@ export default function StrokeCanvas({
     const clientX = event.clientX - rect.left;
     const clientY = event.clientY - rect.top;
 
-    const strokeIndex = getStrokeIndexAtPoint(hitCtx, hitCanvas, clientX, clientY);
+    const strokeIndex = getStrokeIndexAtPoint(hitCtx, mainCanvas, clientX, clientY);
 
     if (strokeIndex >= 0 && strokeIndex < visibleCount) {
       onStrokeClick(strokeIndex);
