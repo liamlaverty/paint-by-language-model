@@ -110,7 +110,7 @@ CANVAS_BACKGROUND_COLOR = "#FFFFFF"  # White background
 # ----------------------------------------------------------------------------
 
 # Thickness limits (in pixels)
-MAX_STROKE_THICKNESS = 10
+MAX_STROKE_THICKNESS = 100
 MIN_STROKE_THICKNESS = 1
 
 # Opacity limits (0.0 = fully transparent, 1.0 = fully opaque)

@@ -50,6 +50,16 @@ export function getStrokeIndexAtPoint(
   const canvasX = Math.floor(clientX * scaleX);
   const canvasY = Math.floor(clientY * scaleY);
 
+  // Validate coordinates are within canvas bounds
+  if (
+    canvasX < 0 ||
+    canvasY < 0 ||
+    canvasX >= canvasEl.width ||
+    canvasY >= canvasEl.height
+  ) {
+    return -1; // Out of bounds = background
+  }
+
   // Read pixel color from hit canvas
   const pixel = hitCtx.getImageData(canvasX, canvasY, 1, 1).data;
   const r = pixel[0];
