@@ -2,9 +2,11 @@
 
 import json
 import logging
-import re
 from datetime import datetime
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from models import PaintingPlan, PlanLayer
 
 from config import (
     API_BASE_URL,
@@ -24,6 +26,7 @@ from config import (
 )
 from models.stroke import Stroke
 from models.stroke_vlm_response import StrokeVLMResponse
+from utils.json_utils import clean_and_parse_json
 from vlm_client import VLMClient
 
 logger = logging.getLogger(__name__)
@@ -75,6 +78,9 @@ class StrokeVLMClient:
         iteration: int,
         strategy_context: str = "",
         num_strokes: int = DEFAULT_STROKES_PER_QUERY,
+        painting_plan: "PaintingPlan | None" = None,
+        current_layer: "PlanLayer | None" = None,
+        expanded_subject: str | None = None,
     ) -> StrokeVLMResponse:
         """
         Query VLM for multiple stroke suggestions.
@@ -86,6 +92,9 @@ class StrokeVLMClient:
             iteration (int): Current iteration number
             strategy_context (str): Recent strategic context
             num_strokes (int): Number of strokes to request (default: 5)
+            painting_plan (PaintingPlan | None): Complete painting plan
+            current_layer (PlanLayer | None): Current layer information
+            expanded_subject (str | None): Detailed subject description
 
         Returns:
             StrokeVLMResponse: List of strokes and optional strategy update
@@ -116,6 +125,9 @@ class StrokeVLMClient:
             iteration=iteration,
             strategy_context=strategy_context,
             num_strokes=num_strokes,
+            painting_plan=painting_plan,
+            current_layer=current_layer,
+            expanded_subject=expanded_subject,
         )
 
         # Query VLM
@@ -202,6 +214,9 @@ class StrokeVLMClient:
         iteration: int,
         strategy_context: str,
         num_strokes: int,
+        painting_plan: "PaintingPlan | None" = None,
+        current_layer: "PlanLayer | None" = None,
+        expanded_subject: str | None = None,
     ) -> str:
         """
         Build prompt for multiple stroke suggestions.
@@ -212,19 +227,51 @@ class StrokeVLMClient:
             iteration (int): Current iteration number
             strategy_context (str): Recent strategic context
             num_strokes (int): Number of strokes to request
+            painting_plan (PaintingPlan | None): Complete painting plan
+            current_layer (PlanLayer | None): Current layer information
+            expanded_subject (str | None): Detailed subject description
 
         Returns:
             str: Formatted prompt
         """
+        # Build subject section with optional expanded description
+        subject_section = f"Subject: {subject}"
+        if expanded_subject:
+            subject_section += f"\nDetailed description: {expanded_subject}"
+
+        # Build strategy context section
         strategy_section = ""
         if strategy_context:
             strategy_section = f"\n\nRecent Strategy Context:\n{strategy_context}"
 
+        # Build painting plan section if available
+        plan_section = ""
+        if painting_plan and current_layer:
+            import json
+
+            plan_section = f"""
+
+=== PAINTING PLAN ===
+{json.dumps(painting_plan, indent=2)}
+
+=== CURRENT FOCUS ===
+You are currently working on Layer {current_layer["layer_number"]}: "{current_layer["name"]}"
+Description: {current_layer["description"]}
+Recommended colour palette: {", ".join(current_layer["colour_palette"])}
+Recommended stroke types: {", ".join(current_layer["stroke_types"])}
+Techniques: {current_layer["techniques"]}
+Shapes: {current_layer["shapes"]}
+Highlights: {current_layer["highlights"]}
+
+Focus your strokes on this layer's objectives. Stay within the recommended palette
+and techniques unless artistic judgement requires deviation.
+"""
+
         prompt = f"""You are an expert artist creating a piece in the style of {artist_name}.
 
 Current Canvas: [Image attached]
-Subject: {subject}
-Iteration: {iteration}{strategy_section}
+{subject_section}
+Iteration: {iteration}{strategy_section}{plan_section}
 
 Task: Suggest {num_strokes} stroke(s) to add to this canvas that evoke {artist_name}'s artistic style.
 
@@ -290,38 +337,8 @@ IMPORTANT: Respond ONLY with valid JSON. Do not include any markdown formatting,
             ValueError: If JSON invalid or missing critical fields
             json.JSONDecodeError: If not valid JSON
         """
-        # Try to extract JSON if VLM included extra text or markdown code blocks
-        # First try to remove markdown code blocks
-        response_text = re.sub(r"```(?:json)?\s*", "", response_text)
-        response_text = re.sub(r"```\s*$", "", response_text)
-
-        # Try to extract JSON object
-        json_match = re.search(r"\{.*\}", response_text, re.DOTALL)
-        json_text = json_match.group(0) if json_match else response_text
-
-        # Remove JSON comments (VLMs sometimes add these)
-        # Remove single-line comments: // comment
-        json_text = re.sub(r"//.*?(?=\n|$)", "", json_text)
-        # Remove multi-line comments: /* comment */
-        json_text = re.sub(r"/\*.*?\*/", "", json_text, flags=re.DOTALL)
-
-        # Fix multi-line strings within JSON values (replace newlines within quotes with spaces)
-        # This handles cases where VLMs put actual newlines in string values
-        def fix_multiline_strings(match: re.Match[str]) -> str:
-            """Replace newlines within quoted strings with spaces."""
-            value = match.group(0)
-            return value.replace("\n", " ").replace("\r", " ")
-
-        # Match quoted strings and fix newlines within them
-        json_text = re.sub(r'"[^"]*"', fix_multiline_strings, json_text, flags=re.DOTALL)
-
-        # Parse JSON
-        try:
-            data = json.loads(json_text)
-        except json.JSONDecodeError as e:
-            logger.error(f"Failed to parse JSON: {e}")
-            logger.error(f"Attempted to parse: {json_text[:500]}")
-            raise
+        # Use shared robust JSON parsing utility
+        data = clean_and_parse_json(response_text)
 
         # Handle both old format (single stroke) and new format (strokes array) for backward compatibility
         strokes_list: list[dict[str, Any]] = []

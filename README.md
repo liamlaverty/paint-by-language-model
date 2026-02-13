@@ -4,7 +4,7 @@ A Python application that uses Vision Language Models (VLMs) to iteratively crea
 
 The project includes a Next.js viewer application for interactively exploring generated artworks, viewing stroke-by-stroke creation timelines, and examining metadata and evaluation scores.
 
-**Current Status**: Phase 4 complete - Provider-agnostic VLM client supporting Mistral API and LMStudio, with multi-stroke generation, evaluation, strategy management, and interactive web viewer.
+**Current Status**: Phase 8 complete - Multi-layer planning phase with structured painting plans, layer-aware generation, and enhanced subject descriptions for coherent artwork creation.
 
 ## Prerequisites
 
@@ -102,13 +102,15 @@ python main.py \
 | Argument | Description |
 |----------|-------------|
 | `--artist` | Target artist name (e.g., "Claude Monet", "Vincent van Gogh") |
-| `--subject` | Subject to paint (e.g., "Water Lilies", "Starry Night Landscape") |
+| `--subject` | Short one-sentence subject description |
 | `--output-id` | Unique identifier for this artwork (used for output directory) |
 
 #### Optional Arguments
 
 | Argument | Short | Default | Description |
 |----------|-------|---------|-------------|
+| `--expanded-subject` | | None | Detailed multi-sentence description for richer planning |
+| `--planner-model` | | from config | Override planner model (e.g., `mistral-large-latest`) |
 | `--max-iterations` | `-i` | 10000 | Maximum iterations before stopping |
 | `--target-score` | `-t` | 75.0 | Target style score (0-100) to stop generation early |
 | `--strokes-per-query` | `-n` | 5 | Number of strokes per VLM query (1-20) |
@@ -126,6 +128,16 @@ python main.py \
   --artist "Claude Monet" \
   --subject "Water Lilies" \
   --output-id monet-001
+```
+
+With detailed planning (recommended):
+```sh
+python main.py \
+  --artist "Vincent van Gogh" \
+  --subject "Starry night over a quiet village" \
+  --expanded-subject "A swirling night sky filled with dynamic spiral patterns and bright stars dominates the upper canvas. Below, a peaceful village with a prominent church steeple nestles in rolling hills. The sky should feature Van Gogh's characteristic thick, energetic brushwork with deep blues transitioning to lighter tones near the horizon." \
+  --output-id vangogh-starry-001 \
+  --planner-model "mistral-large-latest"
 ```
 
 Custom iteration limits and target score:
@@ -168,16 +180,18 @@ python main.py \
 ### Generation Process
 
 The application will:
-1. Initialize a blank canvas (800×600 pixels)
-2. Query the VLM for stroke suggestions based on the artist's style
-3. Apply suggested strokes to the canvas
-4. Evaluate the current canvas against the artist's style
-5. Update strategy based on evaluation feedback
-6. Repeat until target score is reached or max iterations exceeded
-7. Generate a final report with metrics
-8. Create an animated GIF timelapse of the creation process
+1. **Planning Phase**: Generate a structured multi-layer painting plan using a planner LLM
+2. Initialize a blank canvas (800×600 pixels)
+3. Query the VLM for stroke suggestions guided by the current layer's plan
+4. Apply suggested strokes to the canvas
+5. Evaluate the current canvas against the artist's style and layer objectives
+6. Advance to the next layer when evaluator indicates layer completion
+7. Update strategy based on evaluation feedback
+8. Repeat until target score is reached or max iterations exceeded
+9. Generate a final report with metrics and layer breakdown
+10. Create an animated GIF timelapse of the creation process
 
-**Resumable**: If interrupted, re-running with the same `--output-id` will resume from the last completed iteration.
+**Resumable**: If interrupted, re-running with the same `--output-id` will resume from the last completed iteration. The painting plan is saved and reused on resume.
 
 ### Output Structure
 
@@ -185,6 +199,7 @@ All outputs are saved to `src/output/{output-id}/`:
 
 ```
 src/output/vangogh-001/
+├── painting_plan.json      # Multi-layer painting plan (NEW in Phase 8)
 ├── timelapse.gif           # Animated creation timelapse
 ├── final_artwork.png       # Final completed artwork
 ├── final_artwork.jpeg      # Final artwork (JPEG format)
@@ -195,10 +210,10 @@ src/output/vangogh-001/
 │   ├── iteration-001.png
 │   ├── iteration-002.png
 │   └── ...
-├── strokes/                # Stroke data per iteration
+├── strokes/                # Stroke data per iteration (includes layer info)
 │   ├── iteration-001.json
 │   └── ...
-├── evaluations/            # VLM evaluation results
+├── evaluations/            # VLM evaluation results (includes layer completion)
 │   ├── iteration-001.json
 │   └── ...
 └── strategies/             # Strategy updates
@@ -290,12 +305,26 @@ Output Directory: src/output/vangogh-001
 {
   "artwork_id": "vangogh-001",
   "artist_name": "Vincent van Gogh",
-  "subject": "Starry Night Landscape",
+  "subject": "Starry night over a quiet village",
+  "expanded_subject": "A swirling night sky filled with dynamic spiral patterns...",
   "canvas_width": 800,
   "canvas_height": 600,
   "started_at": "2026-02-05T10:30:45.123456",
   "vlm_model": "pixtral-large-latest",
-  "provider": "mistral"
+  "planner_model": "mistral-large-latest",
+  "provider": "mistral",
+  "painting_plan": {
+    "total_layers": 4,
+    "layers": [
+      {"layer_number": 1, "name": "Sky background", "..." : "..."}
+    ]
+  },
+  "layer_progression": {
+    "1": 12,
+    "2": 15,
+    "3": 10,
+    "4": 8
+  }
 }
 ```
 
@@ -322,7 +351,9 @@ Output Directory: src/output/vangogh-001
   "style_score": 45.5,
   "strengths": ["Bold brushwork", "Good color palette"],
   "weaknesses": ["Lacks texture variation"],
-  "suggestions": "Add more swirling patterns typical of Van Gogh"
+  "suggestions": "Add more swirling patterns typical of Van Gogh",
+  "layer_complete": false,
+  "layer_number": 1
 }
 ```
 
@@ -404,9 +435,12 @@ Edit [src/paint_by_language_model/config.py](src/paint_by_language_model/config.
 - `MISTRAL_API_KEY` - API key for Mistral (loaded from `.env`)
 - `VLM_MODEL` - Stroke generation model (Mistral: `pixtral-large-latest`, LMStudio: `lmistralai/ministral-3-3b`)
 - `EVALUATION_VLM_MODEL` - Style evaluation model
+- `PLANNER_MODEL` - Planning LLM model (Mistral: `mistral-large-latest`, LMStudio: `local-model`)
 - `VLM_TIMEOUT` - Request timeout (default: 180 seconds)
+- `PLANNER_TIMEOUT` - Planning request timeout (default: 180 seconds)
 - `STROKE_PROMPT_TEMPERATURE` - Creativity setting (default: 0.7)
 - `EVALUATION_PROMPT_TEMPERATURE` - Consistency setting (default: 0.3)
+- `PLANNER_PROMPT_TEMPERATURE` - Planning creativity (default: 0.4)
 
 **Generation Loop**:
 - `MAX_ITERATIONS` - Safety limit (default: 10000)
@@ -429,9 +463,11 @@ Edit [src/paint_by_language_model/config.py](src/paint_by_language_model/config.
 
 - **Generation Orchestrator** ([generation_orchestrator.py](src/paint_by_language_model/generation_orchestrator.py))
   - Main entry point for generation workflow
+  - Runs planning phase before generation begins
   - Coordinates all components (canvas, VLMs, strategy)
-  - Handles iteration loop and stopping conditions
-  - Supports resumable generation
+  - Handles layer-aware iteration loop and stopping conditions
+  - Tracks layer progression and advancement
+  - Supports resumable generation with plan persistence
   - Auto-exports viewer data on completion
 
 - **Canvas Manager** ([services/canvas_manager.py](src/paint_by_language_model/services/canvas_manager.py))
@@ -441,24 +477,34 @@ Edit [src/paint_by_language_model/config.py](src/paint_by_language_model/config.
   - Saves snapshots
   - Delegates rendering to `StrokeRendererFactory`
 
+- **Planner LLM Client** ([services/planner_llm_client.py](src/paint_by_language_model/services/planner_llm_client.py))
+  - Generates structured multi-layer painting plans before generation
+  - Uses separate (potentially more capable) text-only model
+  - Produces layer-by-layer guidance with palettes, techniques, and objectives
+  - Validates and parses plan responses into structured data
+  - Plans are cached to disk for resume support
+
 - **Stroke VLM Client** ([services/stroke_vlm_client.py](src/paint_by_language_model/services/stroke_vlm_client.py))
   - Queries VLMs with canvas images
-  - Builds prompts with artist context and strategy
+  - Builds layer-aware prompts with artist context, plan, and strategy
+  - References current layer's palette, techniques, and objectives
   - Parses JSON responses robustly (handles malformed VLM output)
   - Supports batch stroke generation
   - Tracks interaction history for debugging
 
 - **Evaluation VLM Client** ([services/evaluation_vlm_client.py](src/paint_by_language_model/services/evaluation_vlm_client.py))
-  - Evaluates canvas against target artist style
-  - Returns style scores (0-100)
+  - Evaluates canvas against target artist style and layer objectives
+  - Returns style scores (0-100) and layer completion status
   - Provides strengths, weaknesses, and suggestions
+  - Triggers layer advancement when objectives are met
   - Guides strategy updates
 
 - **Strategy Manager** ([strategy_manager.py](src/paint_by_language_model/strategy_manager.py))
   - Manages multi-iteration context
   - Saves and loads strategy files
+  - Prepends current layer context to strategy guidance
   - Provides recent strategy window for prompts
-  - Tracks strategic evolution over iterations
+  - Tracks strategic evolution over iterations and layers
 
 - **VLM Client** ([vlm_client.py](src/paint_by_language_model/vlm_client.py))
   - Provider-agnostic client for OpenAI-compatible APIs (Mistral, LMStudio)
@@ -516,9 +562,11 @@ Edit [src/paint_by_language_model/config.py](src/paint_by_language_model/config.
 
 ### Data Models
 
+- **PaintingPlan** ([models/painting_plan.py](src/paint_by_language_model/models/painting_plan.py)) - Multi-layer plan structure with layers, palettes, and techniques
+- **PlanLayer** ([models/painting_plan.py](src/paint_by_language_model/models/painting_plan.py)) - Individual layer specification within a plan
 - **Stroke** ([models/stroke.py](src/paint_by_language_model/models/stroke.py)) - Drawing operation parameters
 - **StrokeVLMResponse** ([models/stroke_vlm_response.py](src/paint_by_language_model/models/stroke_vlm_response.py)) - VLM response structure
-- **EvaluationResult** ([models/evaluation_result.py](src/paint_by_language_model/models/evaluation_result.py)) - Style evaluation data
+- **EvaluationResult** ([models/evaluation_result.py](src/paint_by_language_model/models/evaluation_result.py)) - Style evaluation data with layer completion status
 - **CanvasState** ([models/canvas_state.py](src/paint_by_language_model/models/canvas_state.py)) - Canvas state snapshot
 
 ## Development Roadmap
@@ -530,4 +578,5 @@ Edit [src/paint_by_language_model/config.py](src/paint_by_language_model/config.
 - [x] Phase 5: Interactive Next.js viewer with timeline playback
 - [ ] Phase 6: Advanced stroke types and rendering techniques
 - [ ] Phase 7: Multi-model VLM comparison and A/B testing
-- [ ] Phase 8: Public deployment and gallery hosting
+- [x] Phase 8: Multi-layer planning phase with structured painting plans
+- [ ] Phase 9: Public deployment and gallery hosting

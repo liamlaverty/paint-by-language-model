@@ -48,6 +48,8 @@ def run_generation(
     provider: str | None = None,
     api_key: str | None = None,
     gif_frame_duration: int = GIF_FRAME_DURATION_MS,
+    expanded_subject: str | None = None,
+    planner_model: str | None = None,
 ) -> None:
     """
     Run image generation mode.
@@ -65,6 +67,8 @@ def run_generation(
         provider (str | None): VLM provider ("mistral" or "lmstudio")
         api_key (str | None): API key for VLM provider
         gif_frame_duration (int): GIF frame duration in milliseconds
+        expanded_subject (str | None): Detailed description of the final image
+        planner_model (str | None): Override the planner LLM model
     """
     import config
 
@@ -88,6 +92,10 @@ def run_generation(
     if api_key:
         config.API_KEY = api_key
 
+    # Apply planner model override
+    if planner_model:
+        config.PLANNER_MODEL = planner_model
+
     # Validate that Mistral has an API key
     if config.PROVIDER == "mistral" and not config.API_KEY:
         logger.error(
@@ -106,6 +114,10 @@ def run_generation(
     logger.info(f"Strokes per query: {strokes_per_query}")
     logger.info(f"Max iterations: {max_iterations or MAX_ITERATIONS}")
     logger.info(f"Target score: {target_score or TARGET_STYLE_SCORE}")
+    logger.info(f"Planner model: {config.PLANNER_MODEL}")
+
+    if expanded_subject:
+        logger.info(f"Expanded subject: {expanded_subject}")
 
     if stroke_types:
         logger.info(f"Allowed stroke types: {', '.join(stroke_types)}")
@@ -123,6 +135,7 @@ def run_generation(
             output_dir=OUTPUT_DIR,
             strokes_per_query=strokes_per_query,
             gif_frame_duration=gif_frame_duration,
+            expanded_subject=expanded_subject,
         )
         logger.info("Orchestrator initialized")
     except Exception as e:
@@ -211,6 +224,13 @@ Examples:
     --subject "Abstract Expression" \\
     --output-id pollock-001 \\
     --stroke-types "line,splatter"
+
+  # Generate with an expanded subject description
+  python main.py \\
+    --artist "Claude Monet" \\
+    --subject "Water Lilies" \\
+    --output-id monet-002 \\
+    --expanded-subject "A serene pond with floating water lilies, soft reflections of willow trees, dappled sunlight on the water surface"
         """,
     )
 
@@ -279,6 +299,20 @@ Examples:
         type=int,
         default=GIF_FRAME_DURATION_MS,
         help=f"GIF frame duration in milliseconds (default: {GIF_FRAME_DURATION_MS})",
+    )
+
+    parser.add_argument(
+        "--expanded-subject",
+        type=str,
+        default=None,
+        help="Detailed description of what the final image should look like",
+    )
+
+    parser.add_argument(
+        "--planner-model",
+        type=str,
+        default=None,
+        help="Override the planner LLM model (e.g. mistral-large-latest)",
     )
 
     return parser.parse_args()
@@ -353,6 +387,8 @@ def main() -> None:
         provider=args.provider,
         api_key=args.api_key,
         gif_frame_duration=args.gif_frame_duration,
+        expanded_subject=args.expanded_subject,
+        planner_model=args.planner_model,
     )
 
 
