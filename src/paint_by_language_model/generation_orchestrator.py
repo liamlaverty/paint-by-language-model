@@ -28,6 +28,7 @@ from config import (
 from models import EvaluationResult, Stroke
 from services import CanvasManager, EvaluationVLMClient, StrokeVLMClient
 from services.gif_generator import GifGenerator
+from services.json_utils import minify_json_file
 from strategy_manager import StrategyManager
 
 logger = logging.getLogger(__name__)
@@ -743,6 +744,15 @@ class GenerationOrchestrator:
             json.dump(viewer_data, f, indent=2)
 
         logger.info(f"Saved viewer data to Next.js app: {nextjs_data_path}")
+
+        # Minify the Next.js viewer data file for production
+        try:
+            success, bytes_saved = minify_json_file(nextjs_data_path)
+            if success and bytes_saved > 0:
+                kb_saved = bytes_saved / 1024
+                logger.info(f"Minified viewer data: {kb_saved:.1f} KB saved")
+        except Exception as e:
+            logger.warning(f"Failed to minify viewer data: {e}")
 
         # Generate and save thumbnail
         self._save_thumbnail(nextjs_data_dir / "thumbnail.png")

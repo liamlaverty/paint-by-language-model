@@ -10,9 +10,16 @@ Usage:
     python scripts/minify_viewer_data.py
 """
 
-import json
 import sys
 from pathlib import Path
+
+# Add src directory to path for imports
+sys.path.insert(
+    0, str(Path(__file__).parent.parent / "src" / "paint_by_language_model")
+)
+
+from config import NEXTJS_VIEWER_DATA_DIR
+from services.json_utils import minify_json_file
 
 
 def minify_viewer_data_files() -> tuple[int, int, int]:
@@ -22,9 +29,7 @@ def minify_viewer_data_files() -> tuple[int, int, int]:
     Returns:
         tuple[int, int, int]: (files_processed, bytes_saved, files_with_errors)
     """
-    # Path to Next.js viewer data directory
-    project_root = Path(__file__).parent.parent
-    data_dir = project_root / "src" / "viewer" / "public" / "data"
+    data_dir = NEXTJS_VIEWER_DATA_DIR
 
     if not data_dir.exists():
         print(f"Data directory not found: {data_dir}")
@@ -45,35 +50,21 @@ def minify_viewer_data_files() -> tuple[int, int, int]:
 
     for file_path in viewer_data_files:
         try:
-            # Read original file
-            original_size = file_path.stat().st_size
-            with open(file_path, "r", encoding="utf-8") as f:
-                data = json.load(f)
+            success, bytes_saved = minify_json_file(file_path)
 
-            # Write minified (no indentation, no extra whitespace)
-            with open(file_path, "w", encoding="utf-8") as f:
-                json.dump(data, f, separators=(",", ":"), ensure_ascii=False)
+            if success:
+                if bytes_saved > 0:
+                    kb_saved = bytes_saved / 1024
+                    reduction_pct = (bytes_saved / file_path.stat().st_size) * 100
+                    print(
+                        f"  ✓ {file_path.parent.name}/viewer_data.json: "
+                        f"{kb_saved:.1f} KB saved ({reduction_pct:.1f}% reduction)"
+                    )
+                    total_bytes_saved += bytes_saved
+                else:
+                    print(f"  ✓ {file_path.parent.name}/viewer_data.json: already minified")
+                files_processed += 1
 
-            # Calculate space saved
-            new_size = file_path.stat().st_size
-            bytes_saved = original_size - new_size
-
-            if bytes_saved > 0:
-                kb_saved = bytes_saved / 1024
-                reduction_pct = (bytes_saved / original_size) * 100
-                print(
-                    f"  ✓ {file_path.parent.name}/viewer_data.json: "
-                    f"{kb_saved:.1f} KB saved ({reduction_pct:.1f}% reduction)"
-                )
-                total_bytes_saved += bytes_saved
-            else:
-                print(f"  ✓ {file_path.parent.name}/viewer_data.json: already minified")
-
-            files_processed += 1
-
-        except json.JSONDecodeError as e:
-            print(f"  ✗ {file_path.parent.name}/viewer_data.json: Invalid JSON - {e}")
-            files_with_errors += 1
         except Exception as e:
             print(f"  ✗ {file_path.parent.name}/viewer_data.json: Error - {e}")
             files_with_errors += 1

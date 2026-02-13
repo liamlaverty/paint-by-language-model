@@ -94,8 +94,8 @@ def test_validate_color_hex_invalid() -> None:
 def test_validate_thickness_valid() -> None:
     """Test validation of valid thickness values."""
     validate_thickness(1)
-    validate_thickness(25)
-    validate_thickness(50)
+    validate_thickness(5)
+    validate_thickness(10)
     print("✓ validate_thickness accepts valid values")
 
 
@@ -108,14 +108,14 @@ def test_validate_thickness_invalid() -> None:
         validate_thickness(0)
 
     with pytest.raises(ValueError, match="out of range"):
-        validate_thickness(51)
+        validate_thickness(11)
 
     print("✓ validate_thickness rejects invalid values")
 
 
 def test_validate_opacity_valid() -> None:
     """Test validation of valid opacity values."""
-    validate_opacity(0.0)
+    validate_opacity(0.1)
     validate_opacity(0.5)
     validate_opacity(1.0)
     validate_opacity(1)  # Integer is also valid
@@ -128,7 +128,7 @@ def test_validate_opacity_invalid() -> None:
         validate_opacity("0.5")  # type: ignore
 
     with pytest.raises(ValueError, match="out of range"):
-        validate_opacity(-0.1)
+        validate_opacity(0.05)
 
     with pytest.raises(ValueError, match="out of range"):
         validate_opacity(1.1)

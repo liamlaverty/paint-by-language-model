@@ -7,6 +7,7 @@ template is copied into the output directory.
 """
 
 import json
+import shutil
 import sys
 import tempfile
 from pathlib import Path
@@ -549,45 +550,53 @@ class TestViewerDataSkippedStrokes:
     def test_skipped_strokes_not_in_output(self) -> None:
         """Strokes with success=False should be omitted from viewer data."""
         tmpdir = Path(tempfile.mkdtemp())
-        orch = GenerationOrchestrator(
-            artist_name="Skip Test",
-            subject="Skip Subject",
-            artwork_id="test-skip-001",
-            output_dir=tmpdir,
-        )
+        nextjs_test_dir = NEXTJS_VIEWER_DATA_DIR / "test-skip-001"
 
-        strokes_dir = orch.artwork_dir / OUTPUT_STRUCTURE["strokes"]
-        strokes_dir.mkdir(parents=True, exist_ok=True)
+        try:
+            orch = GenerationOrchestrator(
+                artist_name="Skip Test",
+                subject="Skip Subject",
+                artwork_id="test-skip-001",
+                output_dir=tmpdir,
+            )
 
-        # Create a batch where one stroke succeeded and one failed
-        batch: dict[str, Any] = {
-            "iteration": 1,
-            "batch_reasoning": "Mixed results",
-            "strokes": [_sample_line_stroke(), _sample_arc_stroke()],
-            "applied_count": 1,
-            "skipped_count": 1,
-            "total_requested": 2,
-            "timestamp": "2026-01-01T00:00:00",
-            "results": [
-                {"success": True, "stroke_index": 0},
-                {"success": False, "stroke_index": 1, "error": "Out of bounds"},
-            ],
-        }
-        with open(strokes_dir / "iteration-001_batch.json", "w", encoding="utf-8") as f:
-            json.dump(batch, f)
+            strokes_dir = orch.artwork_dir / OUTPUT_STRUCTURE["strokes"]
+            strokes_dir.mkdir(parents=True, exist_ok=True)
 
-        orch.evaluations = []
-        orch._save_viewer_data()
+            # Create a batch where one stroke succeeded and one failed
+            batch: dict[str, Any] = {
+                "iteration": 1,
+                "batch_reasoning": "Mixed results",
+                "strokes": [_sample_line_stroke(), _sample_arc_stroke()],
+                "applied_count": 1,
+                "skipped_count": 1,
+                "total_requested": 2,
+                "timestamp": "2026-01-01T00:00:00",
+                "results": [
+                    {"success": True, "stroke_index": 0},
+                    {"success": False, "stroke_index": 1, "error": "Out of bounds"},
+                ],
+            }
+            with open(strokes_dir / "iteration-001_batch.json", "w", encoding="utf-8") as f:
+                json.dump(batch, f)
 
-        viewer_dir = orch.artwork_dir / OUTPUT_STRUCTURE["viewer"]
-        data_path = viewer_dir / VIEWER_DATA_FILENAME
-        with open(data_path, encoding="utf-8") as f:
-            data = json.load(f)
+            orch.evaluations = []
+            orch._save_viewer_data()
 
-        # Only the successful stroke should appear
-        assert len(data["strokes"]) == 1
-        assert data["strokes"][0]["type"] == "line"
-        assert data["metadata"]["total_strokes"] == 1
+            viewer_dir = orch.artwork_dir / OUTPUT_STRUCTURE["viewer"]
+            data_path = viewer_dir / VIEWER_DATA_FILENAME
+            with open(data_path, encoding="utf-8") as f:
+                data = json.load(f)
+
+            # Only the successful stroke should appear
+            assert len(data["strokes"]) == 1
+            assert data["strokes"][0]["type"] == "line"
+            assert data["metadata"]["total_strokes"] == 1
+
+        finally:
+            # Cleanup: Remove the test directory from Next.js viewer data
+            if nextjs_test_dir.exists():
+                shutil.rmtree(nextjs_test_dir)
 
 
 class TestViewerDataJsonFile:
