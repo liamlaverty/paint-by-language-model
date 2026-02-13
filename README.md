@@ -2,15 +2,22 @@
 
 A Python application that uses Vision Language Models (VLMs) to iteratively create original artwork in the style of famous artists. The system starts with a blank canvas and progressively adds strokes suggested by VLMs, building unique images that embody specific artistic styles.
 
-**Current Status**: Phase 4 complete - Provider-agnostic VLM client supporting Mistral API and LMStudio, with multi-stroke generation, evaluation, and strategy management.
+The project includes a Next.js viewer application for interactively exploring generated artworks, viewing stroke-by-stroke creation timelines, and examining metadata and evaluation scores.
+
+**Current Status**: Phase 4 complete - Provider-agnostic VLM client supporting Mistral API and LMStudio, with multi-stroke generation, evaluation, strategy management, and interactive web viewer.
 
 ## Prerequisites
 
+### Python Backend
 - **Python**: 3.12.2 or higher
 - **Conda**: Anaconda or Miniconda for environment management
 - A VLM provider (one of):
   - **Mistral API** (recommended): Get an API key at https://console.mistral.ai/
   - **LMStudio** (local): Download from https://lmstudio.ai/ and run with server enabled on port 1234
+
+### Next.js Viewer (Optional)
+- **Node.js**: 18.0.0 or higher
+- **pnpm**: 9.15.0 or higher (install with `npm install -g pnpm`)
 
 ## Setup
 
@@ -65,6 +72,14 @@ For linting, type checking, and testing:
 ```sh
 cd src/paint_by_language_model
 uv pip install -e ".[dev]"
+```
+
+### 5. Install Viewer Dependencies (Optional)
+
+To run the interactive web viewer:
+
+```sh
+pnpm -C src/viewer install
 ```
 
 ## Running the App
@@ -175,6 +190,7 @@ src/output/vangogh-001/
 ├── final_artwork.jpeg      # Final artwork (JPEG format)
 ├── metadata.json           # Generation metadata
 ├── generation_report.md    # Human-readable summary
+├── viewer_data.json        # Aggregated data for web viewer (auto-generated)
 ├── snapshots/              # Canvas images per iteration
 │   ├── iteration-001.png
 │   ├── iteration-002.png
@@ -188,6 +204,68 @@ src/output/vangogh-001/
 └── strategies/             # Strategy updates
     ├── strategy-001.md
     └── ...
+```
+
+**Note**: `viewer_data.json` is automatically generated after each successful generation. This aggregated file contains all iteration data needed by the web viewer.
+
+## Interactive Viewer
+
+### Running the Viewer
+
+The Next.js viewer provides an interactive web interface for exploring generated artworks:
+
+```sh
+pnpm -C src/viewer dev
+```
+
+View the gallery at: http://localhost:3000
+
+### Features
+
+- **Gallery View**: Browse all generated artworks with preview cards
+- **Inspector**: Step through artwork creation stroke-by-stroke
+- **Timeline Playback**: Animate the creation process with play/pause controls
+- **Metadata Display**: View artist name, subject, scores, and generation statistics
+- **Evaluation Insights**: See VLM feedback for each iteration (strengths, weaknesses, suggestions)
+- **Stroke Details**: Examine individual stroke parameters, colors, and reasoning
+
+### Preparing Data for the Viewer
+
+**Automatic Export**: `viewer_data.json` is automatically generated after each successful artwork generation.
+
+**Manual Export**: To re-export data for existing artworks:
+
+```sh
+conda activate paint-by-language-model
+python -c "from src.paint_by_language_model.services.viewer_data_export import export_viewer_data; export_viewer_data('vangogh-001')"
+```
+
+**Copy to Viewer**: Copy artwork directories to the viewer's public data folder:
+
+```sh
+# Copy (for production builds)
+cp -r src/output/vangogh-001 src/viewer/public/data/vangogh-001
+```
+
+**Minify for Production**: Reduce file sizes before deployment:
+
+```sh
+conda activate paint-by-language-model
+python scripts/minify_viewer_data.py
+```
+
+### Building for Production
+
+```sh
+pnpm -C src/viewer build
+pnpm -C src/viewer start  # Serves optimized production build
+```
+
+Or export static HTML:
+
+```sh
+pnpm -C src/viewer build
+# Static files are in src/viewer/out/
 ```
 
 ## Output Examples
@@ -347,35 +425,40 @@ Edit [src/paint_by_language_model/config.py](src/paint_by_language_model/config.
 
 ## Architecture
 
-### Current Components
+### Python Backend Components
 
 - **Generation Orchestrator** ([generation_orchestrator.py](src/paint_by_language_model/generation_orchestrator.py))
   - Main entry point for generation workflow
   - Coordinates all components (canvas, VLMs, strategy)
   - Handles iteration loop and stopping conditions
   - Supports resumable generation
+  - Auto-exports viewer data on completion
 
 - **Canvas Manager** ([services/canvas_manager.py](src/paint_by_language_model/services/canvas_manager.py))
   - Manages image canvas with PIL
-  - Applies strokes (lines, curves, fills)
+  - Applies strokes (lines, arcs, polylines, circles, splatters)
   - Validates stroke parameters
   - Saves snapshots
+  - Delegates rendering to `StrokeRendererFactory`
 
 - **Stroke VLM Client** ([services/stroke_vlm_client.py](src/paint_by_language_model/services/stroke_vlm_client.py))
   - Queries VLMs with canvas images
-  - Builds prompts with artist context
-  - Parses JSON responses robustly
+  - Builds prompts with artist context and strategy
+  - Parses JSON responses robustly (handles malformed VLM output)
+  - Supports batch stroke generation
   - Tracks interaction history for debugging
 
 - **Evaluation VLM Client** ([services/evaluation_vlm_client.py](src/paint_by_language_model/services/evaluation_vlm_client.py))
   - Evaluates canvas against target artist style
   - Returns style scores (0-100)
   - Provides strengths, weaknesses, and suggestions
+  - Guides strategy updates
 
 - **Strategy Manager** ([strategy_manager.py](src/paint_by_language_model/strategy_manager.py))
   - Manages multi-iteration context
   - Saves and loads strategy files
   - Provides recent strategy window for prompts
+  - Tracks strategic evolution over iterations
 
 - **VLM Client** ([vlm_client.py](src/paint_by_language_model/vlm_client.py))
   - Provider-agnostic client for OpenAI-compatible APIs (Mistral, LMStudio)
@@ -383,6 +466,53 @@ Edit [src/paint_by_language_model/config.py](src/paint_by_language_model/config.
   - Bearer token authentication (Mistral) or no auth (LMStudio)
   - Rate-limit retry with exponential backoff (HTTP 429)
   - Configurable temperature per request
+
+- **Viewer Data Export** ([services/viewer_data_export.py](src/paint_by_language_model/services/viewer_data_export.py))
+  - Aggregates iteration data into `viewer_data.json`
+  - Embeds base64-encoded snapshot images
+  - Auto-exports after successful generation
+  - Optimized format for web viewer performance
+
+- **GIF Generator** ([services/gif_generator.py](src/paint_by_language_model/services/gif_generator.py))
+  - Creates animated timelapses from iteration snapshots
+  - Resizes frames for manageable file sizes
+  - Configurable frame duration and looping
+  - Auto-generates `timelapse.gif` on completion
+
+- **Stroke Renderers** ([services/renderers/](src/paint_by_language_model/services/renderers/))
+  - Modular rendering system for different stroke types
+  - Implementations: line, arc, polyline, circle, splatter
+  - Factory pattern for extensibility
+  - Consistent parameter validation
+
+### Next.js Viewer (Frontend)
+
+- **Gallery** ([src/viewer/src/app/page.tsx](src/viewer/src/app/page.tsx))
+  - Homepage displaying all generated artworks
+  - Responsive grid of artwork cards
+  - Static generation at build time
+
+- **Inspector** ([src/viewer/src/app/inspect/[artworkId]/page.tsx](src/viewer/src/app/inspect/[artworkId]/page.tsx))
+  - Interactive artwork viewer with timeline
+  - Stroke-by-stroke playback controls
+  - Side panel with metadata, evaluation scores, and stroke details
+  - Canvas overlay rendering
+
+- **Components**:
+  - `StrokeCanvas`: HTML5 canvas for rendering strokes
+  - `Timeline`: Interactive timeline with play/pause controls
+  - `SidePanel`: Metadata, evaluations, and stroke information
+  - `Toolbar`: Playback controls and display options
+  - `ArtworkCard`: Preview cards in gallery view
+  - `Gallery`: Responsive grid layout
+
+### Data Flow
+
+1. **Generation**: Python backend creates artwork → saves iteration files
+2. **Export**: `viewer_data.json` generated with aggregated data + base64 images
+3. **Deployment**: Link/copy artwork folders to `src/viewer/public/data/`
+4. **Build**: Next.js discovers artworks → generates static pages
+5. **Runtime**: Client-side React components render interactive UI
 
 ### Data Models
 
@@ -397,3 +527,7 @@ Edit [src/paint_by_language_model/config.py](src/paint_by_language_model/config.
 - [x] Phase 2: Generation orchestrator & CLI
 - [x] Phase 3: Additional stroke types (arc, polyline, circle, splatter), multiple strokes per iteration
 - [x] Phase 4: Provider-agnostic VLM client (Mistral API + LMStudio)
+- [x] Phase 5: Interactive Next.js viewer with timeline playback
+- [ ] Phase 6: Advanced stroke types and rendering techniques
+- [ ] Phase 7: Multi-model VLM comparison and A/B testing
+- [ ] Phase 8: Public deployment and gallery hosting
