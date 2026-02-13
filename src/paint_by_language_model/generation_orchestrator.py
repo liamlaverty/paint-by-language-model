@@ -45,6 +45,7 @@ class GenerationOrchestrator:
         output_dir: Path = OUTPUT_DIR,
         strokes_per_query: int = DEFAULT_STROKES_PER_QUERY,
         gif_frame_duration: int = GIF_FRAME_DURATION_MS,
+        expanded_subject: str | None = None,
     ) -> None:
         """
         Initialize Generation Orchestrator.
@@ -56,9 +57,11 @@ class GenerationOrchestrator:
             output_dir (Path): Base output directory
             strokes_per_query (int): Number of strokes to request per VLM query
             gif_frame_duration (int): GIF frame duration in milliseconds
+            expanded_subject (str | None): Detailed description of the final image
         """
         self.artist_name = artist_name
         self.subject = subject
+        self.expanded_subject = expanded_subject
         self.artwork_id = artwork_id
         self.output_dir = output_dir
         self.artwork_dir = output_dir / artwork_id

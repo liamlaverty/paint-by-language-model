@@ -59,6 +59,10 @@ LMSTUDIO_MODEL = "local-model"
 LMSTUDIO_VLM_MODEL = "lmistralai/ministral-3-3b"
 LMSTUDIO_EVALUATION_VLM_MODEL = "lmistralai/ministral-3-3b"
 
+# Planner LLM Settings
+MISTRAL_PLANNER_MODEL = "mistral-large-latest"
+LMSTUDIO_PLANNER_MODEL = "local-model"
+
 # Resolved settings based on active provider
 if PROVIDER == "mistral":
     API_BASE_URL = MISTRAL_BASE_URL
@@ -66,12 +70,18 @@ if PROVIDER == "mistral":
     DEFAULT_MODEL = MISTRAL_DEFAULT_MODEL
     VLM_MODEL = MISTRAL_VLM_MODEL
     EVALUATION_VLM_MODEL = MISTRAL_EVALUATION_VLM_MODEL
+    PLANNER_MODEL = MISTRAL_PLANNER_MODEL
 else:  # lmstudio
     API_BASE_URL = LMSTUDIO_BASE_URL
     API_KEY = ""  # No auth for LMStudio
     DEFAULT_MODEL = LMSTUDIO_MODEL
     VLM_MODEL = LMSTUDIO_VLM_MODEL
     EVALUATION_VLM_MODEL = LMSTUDIO_EVALUATION_VLM_MODEL
+    PLANNER_MODEL = LMSTUDIO_PLANNER_MODEL
+
+# Planner prompt settings
+PLANNER_PROMPT_TEMPERATURE = 0.4
+PLANNER_TIMEOUT = 180
 
 # Request settings
 REQUEST_TIMEOUT = 120  # seconds - LLM responses can be slow
@@ -192,6 +202,7 @@ OUTPUT_STRUCTURE = {
     "final_artwork": "final_artwork",  # Final image (no extension)
     "report": "generation_report.md",  # Human-readable report
     "viewer": "viewer",  # HTML Canvas viewer
+    "painting_plan": "painting_plan.json",  # Painting plan from planner VLM
 }
 
 # Supported image export formats

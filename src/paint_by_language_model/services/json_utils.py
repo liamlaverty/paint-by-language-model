@@ -31,7 +31,7 @@ def minify_json_file(file_path: Path) -> tuple[bool, int]:
     try:
         # Read original file
         original_size = file_path.stat().st_size
-        with open(file_path, "r", encoding="utf-8") as f:
+        with open(file_path, encoding="utf-8") as f:
             data: Any = json.load(f)
 
         # Write minified (no indentation, no extra whitespace)
