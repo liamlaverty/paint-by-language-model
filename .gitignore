@@ -220,7 +220,6 @@ output/
 .Trashes
 ehthumbs.db
 Thumbs.db
-.github/copilot-instructions.md
-.github/copilot-instructions.**.md
+.github/*instructions.md
 
 test_output/
