@@ -202,6 +202,7 @@ OUTPUT_STRUCTURE = {
     "metadata": "metadata.json",  # Generation metadata
     "final_artwork": "final_artwork",  # Final image (no extension)
     "report": "generation_report.md",  # Human-readable report
+    "viewer": "viewer",  # HTML Canvas viewer
 }
 
 # Supported image export formats
@@ -229,6 +230,21 @@ GIF_FILENAME = "timelapse.gif"
 
 # Loop count (0 = infinite loop)
 GIF_LOOP_COUNT = 0
+
+
+# ----------------------------------------------------------------------------
+# Viewer Settings
+# ----------------------------------------------------------------------------
+
+# Viewer output directory name (subdirectory under each artwork)
+VIEWER_DIR_NAME = "viewer"
+
+# Viewer data filename
+VIEWER_DATA_FILENAME = "viewer_data.json"
+
+# Path to the Next.js viewer's public data directory
+NEXTJS_VIEWER_DIR = PROJECT_ROOT / "viewer"
+NEXTJS_VIEWER_DATA_DIR = NEXTJS_VIEWER_DIR / "public" / "data"
 
 
 # ----------------------------------------------------------------------------

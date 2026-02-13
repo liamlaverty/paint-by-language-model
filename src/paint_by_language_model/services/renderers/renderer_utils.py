@@ -3,6 +3,13 @@
 import re
 from typing import TYPE_CHECKING
 
+from config import (
+    MAX_STROKE_OPACITY,
+    MAX_STROKE_THICKNESS,
+    MIN_STROKE_OPACITY,
+    MIN_STROKE_THICKNESS,
+)
+
 if TYPE_CHECKING:
     from models import Stroke
 
@@ -92,8 +99,10 @@ def validate_thickness(thickness: int) -> None:
     """
     if not isinstance(thickness, int):
         raise ValueError(f"thickness must be an integer, got {type(thickness).__name__}")
-    if not (1 <= thickness <= 50):
-        raise ValueError(f"thickness {thickness} out of range [1, 50]")
+    if not (MIN_STROKE_THICKNESS <= thickness <= MAX_STROKE_THICKNESS):
+        raise ValueError(
+            f"thickness {thickness} out of range [{MIN_STROKE_THICKNESS}, {MAX_STROKE_THICKNESS}]"
+        )
 
 
 def validate_opacity(opacity: float) -> None:
@@ -108,8 +117,10 @@ def validate_opacity(opacity: float) -> None:
     """
     if not isinstance(opacity, (int, float)):
         raise ValueError(f"opacity must be a number, got {type(opacity).__name__}")
-    if not (0.0 <= opacity <= 1.0):
-        raise ValueError(f"opacity {opacity} out of range [0.0, 1.0]")
+    if not (MIN_STROKE_OPACITY <= opacity <= MAX_STROKE_OPACITY):
+        raise ValueError(
+            f"opacity {opacity} out of range [{MIN_STROKE_OPACITY}, {MAX_STROKE_OPACITY}]"
+        )
 
 
 def validate_common_stroke_fields(stroke: "Stroke") -> None:

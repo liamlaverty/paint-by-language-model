@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any
 
 from config import (
+    CANVAS_BACKGROUND_COLOR,
     CANVAS_HEIGHT,
     CANVAS_WIDTH,
     DEFAULT_STROKES_PER_QUERY,
@@ -17,14 +18,17 @@ from config import (
     IMAGE_EXPORT_FORMATS,
     MAX_ITERATIONS,
     MIN_ITERATIONS,
+    NEXTJS_VIEWER_DATA_DIR,
     OUTPUT_DIR,
     OUTPUT_STRUCTURE,
     TARGET_STYLE_SCORE,
+    VIEWER_DATA_FILENAME,
     VLM_MODEL,
 )
 from models import EvaluationResult, Stroke
 from services import CanvasManager, EvaluationVLMClient, StrokeVLMClient
 from services.gif_generator import GifGenerator
+from services.json_utils import minify_json_file
 from strategy_manager import StrategyManager
 
 logger = logging.getLogger(__name__)
@@ -616,6 +620,9 @@ class GenerationOrchestrator:
         # Save all strokes
         self._save_all_strokes()
 
+        # Save viewer data for HTML Canvas viewer
+        self._save_viewer_data()
+
         # Save all evaluations summary
         self._save_evaluations_summary()
 
@@ -667,6 +674,105 @@ class GenerationOrchestrator:
             json.dump(self.strokes, f, indent=2)
 
         logger.info(f"Saved {len(self.strokes)} strokes")
+
+    def _save_viewer_data(self) -> None:
+        """Save enriched stroke data for the Next.js viewer app.
+
+        Assembles stroke rendering data with iteration context, batch reasoning,
+        and evaluation scores into a single ``viewer_data.json`` file. Writes to both
+        the artwork's local ``viewer/`` directory (backward compatibility) and the
+        Next.js app's ``public/data/`` directory.
+        """
+        # Build enriched strokes by cross-referencing batch files
+        strokes_dir = self.artwork_dir / OUTPUT_STRUCTURE["strokes"]
+        batch_files = sorted(strokes_dir.glob("iteration-*_batch.json"))
+
+        enriched_strokes: list[dict[str, Any]] = []
+        global_index = 0
+
+        for batch_file in batch_files:
+            with open(batch_file, encoding="utf-8") as f:
+                batch: dict[str, Any] = json.load(f)
+
+            iteration: int = batch["iteration"]
+            reasoning: str = batch.get("batch_reasoning", "")
+
+            for i, result in enumerate(batch["results"]):
+                if result["success"]:
+                    stroke = batch["strokes"][result["stroke_index"]]
+                    enriched_stroke: dict[str, Any] = {
+                        "index": global_index,
+                        "iteration": iteration,
+                        "batch_position": i,
+                        "batch_reasoning": reasoning,
+                        **stroke,
+                    }
+                    enriched_strokes.append(enriched_stroke)
+                    global_index += 1
+
+        viewer_data: dict[str, Any] = {
+            "metadata": {
+                "artwork_id": self.artwork_id,
+                "artist_name": self.artist_name,
+                "subject": self.subject,
+                "canvas_width": CANVAS_WIDTH,
+                "canvas_height": CANVAS_HEIGHT,
+                "background_color": CANVAS_BACKGROUND_COLOR,
+                "total_strokes": len(enriched_strokes),
+                "total_iterations": len(batch_files),
+                "score_progression": [e["score"] for e in self.evaluations],
+            },
+            "strokes": enriched_strokes,
+        }
+
+        # Write to artwork's own viewer/ directory (backward compat)
+        local_viewer_dir = self.artwork_dir / OUTPUT_STRUCTURE["viewer"]
+        local_viewer_dir.mkdir(parents=True, exist_ok=True)
+        local_data_path = local_viewer_dir / VIEWER_DATA_FILENAME
+        with open(local_data_path, "w", encoding="utf-8") as f:
+            json.dump(viewer_data, f, indent=2)
+
+        logger.info(
+            f"Saved viewer data: {len(enriched_strokes)} enriched strokes to {local_data_path}"
+        )
+
+        # Write to Next.js public/data/<artwork_id>/
+        nextjs_data_dir = NEXTJS_VIEWER_DATA_DIR / self.artwork_id
+        nextjs_data_dir.mkdir(parents=True, exist_ok=True)
+        nextjs_data_path = nextjs_data_dir / VIEWER_DATA_FILENAME
+        with open(nextjs_data_path, "w", encoding="utf-8") as f:
+            json.dump(viewer_data, f, indent=2)
+
+        logger.info(f"Saved viewer data to Next.js app: {nextjs_data_path}")
+
+        # Minify the Next.js viewer data file for production
+        try:
+            success, bytes_saved = minify_json_file(nextjs_data_path)
+            if success and bytes_saved > 0:
+                kb_saved = bytes_saved / 1024
+                logger.info(f"Minified viewer data: {kb_saved:.1f} KB saved")
+        except Exception as e:
+            logger.warning(f"Failed to minify viewer data: {e}")
+
+        # Generate and save thumbnail
+        self._save_thumbnail(nextjs_data_dir / "thumbnail.png")
+
+    def _save_thumbnail(self, dest_path: Path) -> None:
+        """Save a resized thumbnail of the final artwork.
+
+        Args:
+            dest_path (Path): Destination path for the thumbnail PNG
+        """
+        final_png = self.artwork_dir / f"{OUTPUT_STRUCTURE['final_artwork']}.png"
+        if final_png.exists():
+            from PIL import Image
+
+            img = Image.open(final_png)
+            img.thumbnail((400, 400))
+            img.save(dest_path, "PNG")
+            logger.info(f"Saved thumbnail to {dest_path}")
+        else:
+            logger.debug(f"Final artwork not found at {final_png}, skipping thumbnail generation")
 
     def _save_evaluations_summary(self) -> None:
         """Save all evaluations to summary JSON file."""

@@ -1,0 +1,8 @@
+#!/bin/sh
+
+# Minify viewer_data.json files
+echo "Minifying viewer_data.json files..."
+python scripts/minify_viewer_data.py || exit 1
+
+# Run viewer pre-commit checks
+cd src/viewer && pnpm run pre-commit

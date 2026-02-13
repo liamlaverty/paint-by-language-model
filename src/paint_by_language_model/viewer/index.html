@@ -1,0 +1,718 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Paint by Language Model — Stroke Viewer</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="app" class="flow flow-space-xs">
+
+  <!-- Toolbar -->
+  <div id="toolbar" class="cluster">
+    <button id="btnLoad" title="Load viewer_data.json">📂 Load</button>
+    <div class="sep"></div>
+    <button id="btnReset" disabled title="Reset to blank canvas">⏮ Reset</button>
+    <button id="btnPlay" disabled title="Play stroke animation">▶ Play</button>
+    <button id="btnPause" disabled style="display:none" title="Pause animation">⏸ Pause</button>
+    <button id="btnStepFwd" disabled title="Draw next stroke">⏭ Step</button>
+    <button id="btnShowAll" disabled title="Show all strokes">⏩ Show All</button>
+    <div class="sep"></div>
+    <label>Speed</label>
+    <input type="range" id="speedSlider" min="1" max="100" value="50" title="Animation speed">
+    <div class="sep"></div>
+    <span class="info" id="toolbarInfo"></span>
+  </div>
+
+  <!-- Main area -->
+  <div id="main">
+    <div id="canvas-container">
+      <!-- Empty state shown before data is loaded -->
+      <div class="empty-state flow flow-space-s" id="emptyState">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+        <p>No artwork loaded</p>
+        <small>Click <strong>📂 Load</strong> to open a <code>viewer_data.json</code> file</small>
+      </div>
+      <!-- Canvas wrapper (hidden until loaded) -->
+      <div id="canvas-wrapper" style="display:none">
+        <canvas id="mainCanvas"></canvas>
+        <canvas id="hitCanvas"></canvas>
+        <canvas id="overlayCanvas"></canvas>
+      </div>
+    </div>
+
+    <!-- Side panel -->
+    <div id="side-panel" class="flow flow-space-m">
+      <div id="artwork-header" class="flow flow-space-xs" style="display:none">
+        <div class="title" id="artworkTitle"></div>
+        <div class="subtitle" id="artworkSubtitle"></div>
+      </div>
+      <div id="strokeInfo" class="flow flow-space-s">
+        <button id="clearSelectionBtn" title="Clear locked selection (Esc)">✕ Clear Selection</button>
+        <div id="hover-hint" class="flow flow-space-xs">
+          <p>Load an artwork and hover over strokes to inspect them.</p>
+          <small>Click a stroke to lock its metadata in place.</small>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Timeline scrubber -->
+  <div id="timeline" class="cluster" style="display:none">
+    <span class="timeline-label" id="timelineLabel">0 / 0</span>
+    <input type="range" id="timelineScrubber" min="0" max="0" value="0">
+  </div>
+
+</div>
+
+<!-- Hidden file input -->
+<input type="file" id="fileInput" accept=".json" style="display:none">
+
+<script>
+/* ═══════════════════════════════════════════════════════════════════════════
+   Paint by Language Model — Interactive Stroke Viewer
+   Self-contained vanilla JS. No dependencies. No build step.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+// ── State ──────────────────────────────────────────────────────────────────
+let viewerData = null;       // Full viewer_data.json
+let strokes = [];            // Array of enriched stroke objects
+let metadata = {};           // Artwork metadata
+let visibleCount = 0;        // Number of strokes currently rendered
+let hoveredIndex = -1;       // Currently hovered stroke index
+let lockedIndex = -1;        // Click-locked stroke index (-1 = none)
+let animating = false;       // Is replay animation running?
+let animTimer = null;        // requestAnimationFrame / setTimeout id
+
+// ── DOM refs ───────────────────────────────────────────────────────────────
+const mainCanvas    = document.getElementById('mainCanvas');
+const hitCanvas     = document.getElementById('hitCanvas');
+const overlayCanvas = document.getElementById('overlayCanvas');
+const mainCtx       = mainCanvas.getContext('2d');
+const hitCtx        = hitCanvas.getContext('2d');
+const overlayCtx    = overlayCanvas.getContext('2d');
+
+const btnLoad     = document.getElementById('btnLoad');
+const btnReset    = document.getElementById('btnReset');
+const btnPlay     = document.getElementById('btnPlay');
+const btnPause    = document.getElementById('btnPause');
+const btnStepFwd  = document.getElementById('btnStepFwd');
+const btnShowAll  = document.getElementById('btnShowAll');
+const speedSlider = document.getElementById('speedSlider');
+const fileInput   = document.getElementById('fileInput');
+const toolbarInfo = document.getElementById('toolbarInfo');
+
+const emptyState     = document.getElementById('emptyState');
+const canvasWrapper  = document.getElementById('canvas-wrapper');
+const strokeInfo     = document.getElementById('strokeInfo');
+const hoverHint      = document.getElementById('hover-hint');
+const artworkHeader  = document.getElementById('artwork-header');
+const artworkTitle      = document.getElementById('artworkTitle');
+const artworkSubtitle   = document.getElementById('artworkSubtitle');
+const clearSelectionBtn = document.getElementById('clearSelectionBtn');
+
+const timelineBar     = document.getElementById('timeline');
+const timelineScrubber= document.getElementById('timelineScrubber');
+const timelineLabel   = document.getElementById('timelineLabel');
+
+
+// ── Seeded PRNG (mulberry32) ───────────────────────────────────────────────
+function mulberry32(seed) {
+  return function() {
+    seed |= 0; seed = seed + 0x6D2B79F5 | 0;
+    let t = Math.imul(seed ^ seed >>> 15, 1 | seed);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+
+
+// ── Color Utilities ────────────────────────────────────────────────────────
+function hexToRGBA(hex, opacity) {
+  const h = hex.replace('#', '');
+  const r = parseInt(h.substring(0, 2), 16);
+  const g = parseInt(h.substring(2, 4), 16);
+  const b = parseInt(h.substring(4, 6), 16);
+  if (h.length === 8) {
+    const a = parseInt(h.substring(6, 8), 16) / 255;
+    return `rgba(${r},${g},${b},${a})`;
+  }
+  return `rgba(${r},${g},${b},${opacity})`;
+}
+
+function strokeIndexToColor(index) {
+  const id = index + 1;
+  const r = (id >> 16) & 0xFF;
+  const g = (id >> 8) & 0xFF;
+  const b = id & 0xFF;
+  return `rgb(${r},${g},${b})`;
+}
+
+function colorToStrokeIndex(r, g, b) {
+  if (r === 0 && g === 0 && b === 0) return -1;
+  return ((r << 16) | (g << 8) | b) - 1;
+}
+
+
+// ── Stroke Renderers ───────────────────────────────────────────────────────
+// Each function draws on the given context. `isHit` flag renders with the
+// stroke's unique solid color at full opacity for hit-detection.
+
+function renderStroke(ctx, stroke, index, isHit) {
+  ctx.save();
+  switch (stroke.type) {
+    case 'line':      renderLine(ctx, stroke, isHit); break;
+    case 'arc':       renderArc(ctx, stroke, isHit); break;
+    case 'polyline':  renderPolyline(ctx, stroke, isHit); break;
+    case 'circle':    renderCircle(ctx, stroke, isHit); break;
+    case 'splatter':  renderSplatter(ctx, stroke, index, isHit); break;
+  }
+  ctx.restore();
+}
+
+function renderLine(ctx, stroke, isHit) {
+  const color = isHit ? strokeIndexToColor(stroke.index) : hexToRGBA(stroke.color_hex, stroke.opacity);
+  ctx.beginPath();
+  ctx.moveTo(stroke.start_x, stroke.start_y);
+  ctx.lineTo(stroke.end_x, stroke.end_y);
+  ctx.strokeStyle = color;
+  ctx.lineWidth = isHit ? Math.max(stroke.thickness, 4) : stroke.thickness;
+  ctx.lineCap = 'butt';
+  ctx.globalAlpha = isHit ? 1 : 1; // alpha is baked into strokeStyle via rgba
+  ctx.stroke();
+}
+
+function renderArc(ctx, stroke, isHit) {
+  const [x0, y0, x1, y1] = stroke.arc_bbox;
+  const cx = (x0 + x1) / 2;
+  const cy = (y0 + y1) / 2;
+  const rx = (x1 - x0) / 2;
+  const ry = (y1 - y0) / 2;
+  const startRad = stroke.arc_start_angle * Math.PI / 180;
+  const endRad   = stroke.arc_end_angle   * Math.PI / 180;
+  const color = isHit ? strokeIndexToColor(stroke.index) : hexToRGBA(stroke.color_hex, stroke.opacity);
+
+  ctx.beginPath();
+  ctx.ellipse(cx, cy, Math.abs(rx), Math.abs(ry), 0, startRad, endRad, false);
+  ctx.strokeStyle = color;
+  ctx.lineWidth = isHit ? Math.max(stroke.thickness, 4) : stroke.thickness;
+  ctx.stroke();
+}
+
+function renderPolyline(ctx, stroke, isHit) {
+  if (!stroke.points || stroke.points.length < 2) return;
+  const color = isHit ? strokeIndexToColor(stroke.index) : hexToRGBA(stroke.color_hex, stroke.opacity);
+
+  ctx.beginPath();
+  ctx.moveTo(stroke.points[0][0], stroke.points[0][1]);
+  for (let i = 1; i < stroke.points.length; i++) {
+    ctx.lineTo(stroke.points[i][0], stroke.points[i][1]);
+  }
+  ctx.strokeStyle = color;
+  ctx.lineWidth = isHit ? Math.max(stroke.thickness, 4) : stroke.thickness;
+  ctx.lineJoin = 'round';
+  ctx.lineCap = 'round';
+  ctx.stroke();
+}
+
+function renderCircle(ctx, stroke, isHit) {
+  const color = isHit ? strokeIndexToColor(stroke.index) : hexToRGBA(stroke.color_hex, stroke.opacity);
+
+  ctx.beginPath();
+  ctx.arc(stroke.center_x, stroke.center_y, stroke.radius, 0, Math.PI * 2);
+  if (stroke.fill) {
+    ctx.fillStyle = color;
+    ctx.fill();
+  } else {
+    ctx.strokeStyle = color;
+    ctx.lineWidth = isHit ? Math.max(stroke.thickness, 4) : stroke.thickness;
+    ctx.stroke();
+  }
+}
+
+function renderSplatter(ctx, stroke, globalIndex, isHit) {
+  const color = isHit ? strokeIndexToColor(stroke.index) : hexToRGBA(stroke.color_hex, stroke.opacity);
+  // Use stroke index as seed for deterministic-per-viewer splatter
+  const rng = mulberry32(globalIndex * 2654435761); // hash-like seed
+
+  const canvasW = metadata.canvas_width || 800;
+  const canvasH = metadata.canvas_height || 600;
+
+  for (let i = 0; i < stroke.splatter_count; i++) {
+    const angle    = rng() * Math.PI * 2;
+    const distance = rng() * stroke.splatter_radius;
+    const dotX = stroke.center_x + distance * Math.cos(angle);
+    const dotY = stroke.center_y + distance * Math.sin(angle);
+    const dotRadius = Math.floor(rng() * (stroke.dot_size_max - stroke.dot_size_min + 1)) + stroke.dot_size_min;
+
+    // Skip dots entirely outside canvas (matches PIL behavior)
+    if (dotX + dotRadius < 0 || dotY + dotRadius < 0 || dotX - dotRadius >= canvasW || dotY - dotRadius >= canvasH) continue;
+
+    ctx.beginPath();
+    ctx.arc(dotX, dotY, dotRadius, 0, Math.PI * 2);
+    ctx.fillStyle = color;
+    ctx.fill();
+  }
+}
+
+
+// ── Canvas Drawing ─────────────────────────────────────────────────────────
+
+function clearAll() {
+  const bg = metadata.background_color || '#FFFFFF';
+  const w  = mainCanvas.width;
+  const h  = mainCanvas.height;
+
+  mainCtx.fillStyle = bg;
+  mainCtx.fillRect(0, 0, w, h);
+
+  hitCtx.fillStyle = '#000000';
+  hitCtx.fillRect(0, 0, w, h);
+  // Disable anti-aliasing on hit canvas
+  hitCtx.imageSmoothingEnabled = false;
+
+  overlayCtx.clearRect(0, 0, w, h);
+}
+
+function drawStrokesUpTo(count) {
+  clearAll();
+  for (let i = 0; i < count && i < strokes.length; i++) {
+    renderStroke(mainCtx, strokes[i], i, false);
+    renderStroke(hitCtx,  strokes[i], i, true);
+  }
+  visibleCount = count;
+  updateTimeline();
+  updateToolbarInfo();
+}
+
+function drawAllStrokes() {
+  drawStrokesUpTo(strokes.length);
+}
+
+
+// ── Highlight & Hover ──────────────────────────────────────────────────────
+
+function highlightStroke(index) {
+  if (index === hoveredIndex) return;
+  hoveredIndex = index;
+
+  const w = overlayCanvas.width;
+  const h = overlayCanvas.height;
+  overlayCtx.clearRect(0, 0, w, h);
+
+  if (index < 0 || index >= strokes.length) return;
+
+  const stroke = strokes[index];
+
+  // Draw a bright highlight version of the stroke
+  overlayCtx.save();
+  overlayCtx.globalAlpha = 0.6;
+  overlayCtx.shadowColor = '#e94560';
+  overlayCtx.shadowBlur = 12;
+
+  // Re-render the stroke in highlight color
+  const highlightStroke = { ...stroke, color_hex: '#e94560', opacity: 1.0 };
+  // Use slightly thicker line for visibility
+  if (highlightStroke.thickness) highlightStroke.thickness = Math.max(highlightStroke.thickness + 2, 4);
+  renderStroke(overlayCtx, highlightStroke, index, false);
+
+  overlayCtx.restore();
+}
+
+function clearHighlight() {
+  if (hoveredIndex === -1) return;
+  hoveredIndex = -1;
+  overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+}
+
+
+// ── Side Panel ─────────────────────────────────────────────────────────────
+
+function showMetadata(stroke) {
+  const totalStrokes = metadata.total_strokes || strokes.length;
+  const totalIter    = metadata.total_iterations || '?';
+  const scores       = metadata.score_progression || [];
+  const scoreAtIter  = stroke.iteration > 0 && stroke.iteration <= scores.length
+                        ? scores[stroke.iteration - 1] : null;
+
+  let typeDetails = '';
+  switch (stroke.type) {
+    case 'line':
+      typeDetails = `
+        <div class="meta-row"><span class="meta-label">Start</span><span class="meta-value">(${stroke.start_x}, ${stroke.start_y})</span></div>
+        <div class="meta-row"><span class="meta-label">End</span><span class="meta-value">(${stroke.end_x}, ${stroke.end_y})</span></div>`;
+      break;
+    case 'arc':
+      typeDetails = `
+        <div class="meta-row"><span class="meta-label">Bbox</span><span class="meta-value">[${stroke.arc_bbox.join(', ')}]</span></div>
+        <div class="meta-row"><span class="meta-label">Angles</span><span class="meta-value">${stroke.arc_start_angle}° → ${stroke.arc_end_angle}°</span></div>`;
+      break;
+    case 'polyline':
+      const pts = stroke.points || [];
+      const ptsStr = pts.slice(0, 4).map(p => `(${p[0]},${p[1]})`).join(' → ');
+      typeDetails = `
+        <div class="meta-row"><span class="meta-label">Points</span><span class="meta-value">${pts.length}</span></div>
+        <div class="meta-row"><span class="meta-label">Path</span><span class="meta-value" style="font-size:11px">${ptsStr}${pts.length > 4 ? ' …' : ''}</span></div>`;
+      break;
+    case 'circle':
+      typeDetails = `
+        <div class="meta-row"><span class="meta-label">Center</span><span class="meta-value">(${stroke.center_x}, ${stroke.center_y})</span></div>
+        <div class="meta-row"><span class="meta-label">Radius</span><span class="meta-value">${stroke.radius}px</span></div>
+        <div class="meta-row"><span class="meta-label">Fill</span><span class="meta-value">${stroke.fill ? 'Solid' : 'Outline'}</span></div>`;
+      break;
+    case 'splatter':
+      typeDetails = `
+        <div class="meta-row"><span class="meta-label">Center</span><span class="meta-value">(${stroke.center_x}, ${stroke.center_y})</span></div>
+        <div class="meta-row"><span class="meta-label">Radius</span><span class="meta-value">${stroke.splatter_radius}px</span></div>
+        <div class="meta-row"><span class="meta-label">Dots</span><span class="meta-value">${stroke.splatter_count}</span></div>
+        <div class="meta-row"><span class="meta-label">Dot Size</span><span class="meta-value">${stroke.dot_size_min} – ${stroke.dot_size_max}px</span></div>`;
+      break;
+  }
+
+  const opacityPct = Math.round(stroke.opacity * 100);
+  const scoreHtml = scoreAtIter !== null
+    ? `<h3>Score at Iteration ${stroke.iteration}</h3>
+       <div class="meta-row"><span class="meta-label">Score</span><span class="meta-value">${scoreAtIter.toFixed(1)} / 100</span></div>
+       <div class="score-bar-container"><div class="score-bar" style="width:${scoreAtIter}%;background:${scoreAtIter >= 70 ? '#27ae60' : scoreAtIter >= 40 ? '#f39c12' : '#e74c3c'}"></div></div>`
+    : '';
+
+  strokeInfo.innerHTML = `
+    <h2>Stroke ${stroke.index + 1} of ${totalStrokes}</h2>
+
+    <h3>Identity</h3>
+    <div class="meta-row"><span class="meta-label">Type</span><span class="meta-value">${stroke.type}</span></div>
+    <div class="meta-row"><span class="meta-label">Iteration</span><span class="meta-value">${stroke.iteration} of ${totalIter}</span></div>
+    <div class="meta-row"><span class="meta-label">Batch Position</span><span class="meta-value">${stroke.batch_position + 1}</span></div>
+
+    <h3>Appearance</h3>
+    <div class="meta-row"><span class="meta-label">Color</span><span class="meta-value"><span class="color-swatch" style="background:${stroke.color_hex}"></span>${stroke.color_hex}</span></div>
+    <div class="meta-row"><span class="meta-label">Opacity</span><span class="meta-value">${opacityPct}%</span></div>
+    <div class="meta-row"><span class="meta-label">Thickness</span><span class="meta-value">${stroke.thickness}px</span></div>
+
+    <h3>Geometry</h3>
+    ${typeDetails}
+
+    ${stroke.batch_reasoning ? `<h3>Batch Reasoning</h3><div class="reasoning-box">${escapeHtml(stroke.batch_reasoning)}</div>` : ''}
+
+    ${scoreHtml}
+  `;
+}
+
+function clearMetadata() {
+  strokeInfo.innerHTML = `<button id="clearSelectionBtn" style="display:none" title="Clear locked selection (Esc)">✕ Clear Selection</button><div id="hover-hint"><p>Hover over a stroke to inspect it.</p><small>Click a stroke to lock its metadata in place.</small></div>`;
+  // Re-bind clear button since innerHTML was replaced
+  document.getElementById('clearSelectionBtn').addEventListener('click', clearSelection);
+}
+
+function showMetadataLocked(stroke) {
+  showMetadata(stroke);
+  // Inject the clear button and locked badge at the top
+  const btn = document.getElementById('clearSelectionBtn');
+  if (btn) btn.style.display = 'block';
+  // Add locked badge to the header
+  const h2 = strokeInfo.querySelector('h2');
+  if (h2 && !h2.querySelector('.locked-badge')) {
+    h2.insertAdjacentHTML('beforeend', '<span class="locked-badge">Locked</span>');
+  }
+}
+
+function clearSelection() {
+  lockedIndex = -1;
+  clearHighlight();
+  clearMetadata();
+  const btn = document.getElementById('clearSelectionBtn');
+  if (btn) btn.style.display = 'none';
+}
+
+function escapeHtml(text) {
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
+
+
+// ── Timeline ───────────────────────────────────────────────────────────────
+
+function updateTimeline() {
+  timelineLabel.textContent = `${visibleCount} / ${strokes.length}`;
+  timelineScrubber.value = visibleCount;
+}
+
+function updateToolbarInfo() {
+  if (!viewerData) { toolbarInfo.textContent = ''; return; }
+  toolbarInfo.textContent = `${metadata.artwork_id || ''} · ${visibleCount}/${strokes.length} strokes`;
+}
+
+
+// ── Animation ──────────────────────────────────────────────────────────────
+
+function getDelay() {
+  // Speed slider: 1=slow (500ms), 50=medium (100ms), 100=fast (10ms)
+  const val = parseInt(speedSlider.value);
+  return Math.max(10, 500 - (val - 1) * 5);
+}
+
+function playAnimation() {
+  if (animating) return;
+  animating = true;
+  btnPlay.style.display = 'none';
+  btnPause.style.display = '';
+  btnReset.disabled = true;
+  btnStepFwd.disabled = true;
+  btnShowAll.disabled = true;
+
+  function step() {
+    if (!animating) return;
+    if (visibleCount < strokes.length) {
+      visibleCount++;
+      // Incremental draw: just add the new stroke
+      const s = strokes[visibleCount - 1];
+      renderStroke(mainCtx, s, visibleCount - 1, false);
+      renderStroke(hitCtx,  s, visibleCount - 1, true);
+      updateTimeline();
+      updateToolbarInfo();
+      // Auto-show metadata for the latest stroke (unless user has a locked selection)
+      if (lockedIndex === -1) {
+        highlightStroke(visibleCount - 1);
+        showMetadata(strokes[visibleCount - 1]);
+      }
+      animTimer = setTimeout(step, getDelay());
+    } else {
+      stopAnimation();
+    }
+  }
+  step();
+}
+
+function stopAnimation() {
+  animating = false;
+  if (animTimer) { clearTimeout(animTimer); animTimer = null; }
+  btnPlay.style.display = '';
+  btnPause.style.display = 'none';
+  btnReset.disabled = false;
+  btnStepFwd.disabled = false;
+  btnShowAll.disabled = false;
+}
+
+function stepForward() {
+  if (visibleCount < strokes.length) {
+    visibleCount++;
+    const s = strokes[visibleCount - 1];
+    renderStroke(mainCtx, s, visibleCount - 1, false);
+    renderStroke(hitCtx,  s, visibleCount - 1, true);
+    updateTimeline();
+    updateToolbarInfo();
+    // Auto-show metadata for the latest stroke (unless user has a locked selection)
+    if (lockedIndex === -1) {
+      highlightStroke(visibleCount - 1);
+      showMetadata(strokes[visibleCount - 1]);
+    }
+  }
+}
+
+function resetCanvas() {
+  stopAnimation();
+  visibleCount = 0;
+  lockedIndex = -1;
+  clearAll();
+  updateTimeline();
+  updateToolbarInfo();
+  clearHighlight();
+  clearMetadata();
+}
+
+
+// ── Data Loading ───────────────────────────────────────────────────────────
+
+function loadViewerData(data) {
+  viewerData = data;
+  metadata   = data.metadata || {};
+  strokes    = data.strokes  || [];
+
+  const w = metadata.canvas_width  || 800;
+  const h = metadata.canvas_height || 600;
+
+  // Size canvases
+  [mainCanvas, hitCanvas, overlayCanvas].forEach(c => { c.width = w; c.height = h; });
+  canvasWrapper.style.width  = w + 'px';
+  canvasWrapper.style.height = h + 'px';
+
+  // Show canvas, hide empty state
+  emptyState.style.display    = 'none';
+  canvasWrapper.style.display = '';
+  timelineBar.style.display   = 'flex';
+
+  // Artwork header
+  artworkHeader.style.display = '';
+  artworkTitle.textContent    = `${metadata.artist_name || 'Unknown'} — ${metadata.artwork_id || ''}`;
+  artworkSubtitle.textContent = metadata.subject || '';
+
+  // Timeline
+  timelineScrubber.max = strokes.length;
+  timelineScrubber.value = 0;
+
+  // Enable buttons
+  btnReset.disabled   = false;
+  btnPlay.disabled    = false;
+  btnStepFwd.disabled = false;
+  btnShowAll.disabled = false;
+
+  // Draw all strokes immediately
+  drawAllStrokes();
+  clearMetadata();
+}
+
+function loadFromFile(file) {
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      const data = JSON.parse(e.target.result);
+      loadViewerData(data);
+    } catch (err) {
+      alert('Failed to parse JSON: ' + err.message);
+    }
+  };
+  reader.readAsText(file);
+}
+
+// Try to auto-load viewer_data.json from same directory (works over HTTP)
+async function tryAutoLoad() {
+  try {
+    const resp = await fetch('viewer_data.json');
+    if (resp.ok) {
+      const data = await resp.json();
+      loadViewerData(data);
+    }
+  } catch (_) {
+    // Silently fail — user can use file picker
+  }
+
+  // Also check URL param
+  const params = new URLSearchParams(window.location.search);
+  const dataUrl = params.get('data');
+  if (dataUrl) {
+    try {
+      const resp = await fetch(dataUrl);
+      if (resp.ok) {
+        const data = await resp.json();
+        loadViewerData(data);
+      }
+    } catch (_) {}
+  }
+}
+
+
+// ── Event Wiring ───────────────────────────────────────────────────────────
+
+btnLoad.addEventListener('click', () => fileInput.click());
+fileInput.addEventListener('change', (e) => {
+  if (e.target.files.length > 0) loadFromFile(e.target.files[0]);
+});
+
+btnPlay.addEventListener('click', playAnimation);
+btnPause.addEventListener('click', stopAnimation);
+btnReset.addEventListener('click', resetCanvas);
+btnStepFwd.addEventListener('click', stepForward);
+btnShowAll.addEventListener('click', drawAllStrokes);
+
+timelineScrubber.addEventListener('input', (e) => {
+  stopAnimation();
+  const target = parseInt(e.target.value);
+  drawStrokesUpTo(target);
+});
+
+// Mouse hover hit detection on the overlay canvas container
+mainCanvas.addEventListener('mousemove', (e) => {
+  if (!strokes.length) return;
+  // If a stroke is locked, don't change highlight/metadata on hover
+  if (lockedIndex !== -1) return;
+
+  const rect = mainCanvas.getBoundingClientRect();
+  const scaleX = mainCanvas.width / rect.width;
+  const scaleY = mainCanvas.height / rect.height;
+  const x = Math.floor((e.clientX - rect.left) * scaleX);
+  const y = Math.floor((e.clientY - rect.top) * scaleY);
+
+  const pixel = hitCtx.getImageData(x, y, 1, 1).data;
+  const idx = colorToStrokeIndex(pixel[0], pixel[1], pixel[2]);
+
+  if (idx >= 0 && idx < visibleCount) {
+    highlightStroke(idx);
+    showMetadata(strokes[idx]);
+  } else {
+    clearHighlight();
+    if (hoveredIndex === -1) clearMetadata();
+  }
+});
+
+mainCanvas.addEventListener('mouseleave', () => {
+  // Don't clear if a stroke is locked
+  if (lockedIndex !== -1) return;
+  clearHighlight();
+  clearMetadata();
+});
+
+// Click to lock/unlock stroke selection
+mainCanvas.addEventListener('click', (e) => {
+  if (!strokes.length) return;
+  const rect = mainCanvas.getBoundingClientRect();
+  const scaleX = mainCanvas.width / rect.width;
+  const scaleY = mainCanvas.height / rect.height;
+  const x = Math.floor((e.clientX - rect.left) * scaleX);
+  const y = Math.floor((e.clientY - rect.top) * scaleY);
+
+  const pixel = hitCtx.getImageData(x, y, 1, 1).data;
+  const idx = colorToStrokeIndex(pixel[0], pixel[1], pixel[2]);
+
+  if (idx >= 0 && idx < visibleCount) {
+    // Lock this stroke (or switch lock to new stroke)
+    lockedIndex = idx;
+    highlightStroke(idx);
+    showMetadataLocked(strokes[idx]);
+  } else {
+    // Clicked empty area — clear lock
+    clearSelection();
+  }
+});
+
+// Keyboard shortcuts
+document.addEventListener('keydown', (e) => {
+  if (e.target.tagName === 'INPUT') return;
+  switch (e.key) {
+    case ' ':
+      e.preventDefault();
+      animating ? stopAnimation() : playAnimation();
+      break;
+    case 'ArrowRight':
+      e.preventDefault();
+      stepForward();
+      break;
+    case 'ArrowLeft':
+      e.preventDefault();
+      if (visibleCount > 0) { drawStrokesUpTo(visibleCount - 1); }
+      break;
+    case 'Home':
+      e.preventDefault();
+      resetCanvas();
+      break;
+    case 'End':
+      e.preventDefault();
+      drawAllStrokes();
+      break;
+    case 'Escape':
+      e.preventDefault();
+      clearSelection();
+      break;
+  }
+});
+
+// Wire up the clear selection button
+clearSelectionBtn.addEventListener('click', clearSelection);
+
+// Auto-load on page open
+tryAutoLoad();
+
+</script>
+</body>
+</html>
