@@ -4,7 +4,10 @@ import json
 import logging
 import re
 from datetime import datetime
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from models import PaintingPlan, PlanLayer
 
 from config import (
     API_BASE_URL,
@@ -75,6 +78,9 @@ class StrokeVLMClient:
         iteration: int,
         strategy_context: str = "",
         num_strokes: int = DEFAULT_STROKES_PER_QUERY,
+        painting_plan: "PaintingPlan | None" = None,
+        current_layer: "PlanLayer | None" = None,
+        expanded_subject: str | None = None,
     ) -> StrokeVLMResponse:
         """
         Query VLM for multiple stroke suggestions.
@@ -86,6 +92,9 @@ class StrokeVLMClient:
             iteration (int): Current iteration number
             strategy_context (str): Recent strategic context
             num_strokes (int): Number of strokes to request (default: 5)
+            painting_plan (PaintingPlan | None): Complete painting plan (unused for now)
+            current_layer (PlanLayer | None): Current layer information (unused for now)
+            expanded_subject (str | None): Detailed subject description (unused for now)
 
         Returns:
             StrokeVLMResponse: List of strokes and optional strategy update

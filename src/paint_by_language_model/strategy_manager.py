@@ -3,8 +3,12 @@
 import logging
 import re
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from config import STRATEGY_CONTEXT_WINDOW
+
+if TYPE_CHECKING:
+    from models import PlanLayer
 
 logger = logging.getLogger(__name__)
 
@@ -85,7 +89,10 @@ class StrategyManager:
         return self.strategies.get(iteration)
 
     def get_recent_strategies(
-        self, current_iteration: int, window: int = STRATEGY_CONTEXT_WINDOW
+        self,
+        current_iteration: int,
+        window: int = STRATEGY_CONTEXT_WINDOW,
+        current_layer: "PlanLayer | None" = None,
     ) -> str:
         """
         Get recent strategy context for VLM prompt.
@@ -93,6 +100,7 @@ class StrategyManager:
         Args:
             current_iteration (int): Current iteration number
             window (int): Number of recent strategies to include
+            current_layer (PlanLayer | None): Current painting layer information (unused for now)
 
         Returns:
             str: Formatted string with recent strategies

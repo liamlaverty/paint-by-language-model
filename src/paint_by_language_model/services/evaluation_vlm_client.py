@@ -4,7 +4,10 @@ import json
 import logging
 import re
 from datetime import datetime
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from models import PaintingPlan, PlanLayer
 
 from config import API_BASE_URL, API_KEY, EVALUATION_PROMPT_TEMPERATURE, VLM_MODEL, VLM_TIMEOUT
 from models.evaluation_result import EvaluationResult
@@ -52,7 +55,13 @@ class EvaluationVLMClient:
         logger.info(f"Initialized EvaluationVLMClient with model: {model}")
 
     def evaluate_style(
-        self, canvas_image: bytes, artist_name: str, subject: str, iteration: int
+        self,
+        canvas_image: bytes,
+        artist_name: str,
+        subject: str,
+        iteration: int,
+        painting_plan: "PaintingPlan | None" = None,
+        current_layer: "PlanLayer | None" = None,
     ) -> EvaluationResult:
         """
         Evaluate canvas style similarity to target artist.
@@ -62,6 +71,8 @@ class EvaluationVLMClient:
             artist_name (str): Target artist name
             subject (str): Subject being painted
             iteration (int): Current iteration number
+            painting_plan (PaintingPlan | None): Complete painting plan (unused for now)
+            current_layer (PlanLayer | None): Current layer information (unused for now)
 
         Returns:
             EvaluationResult: Evaluation score and feedback
