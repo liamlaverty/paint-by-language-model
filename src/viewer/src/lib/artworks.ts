@@ -8,6 +8,7 @@
 import { readdirSync, readFileSync, existsSync } from 'fs';
 import path from 'path';
 import type { ArtworkSummary, ViewerData } from './types';
+import { getPublicUrl } from './basePath';
 
 /**
  * Scan the public/data/ directory and build a summary for each artwork.
@@ -50,7 +51,9 @@ export function getArtworkSummaries(): ArtworkSummary[] {
 
         // Check for thumbnail
         const thumbnailPath = path.join(dataDir, artworkId, 'thumbnail.png');
-        const thumbnailUrl = existsSync(thumbnailPath) ? `/data/${artworkId}/thumbnail.png` : null;
+        const thumbnailUrl = existsSync(thumbnailPath)
+          ? getPublicUrl(`/data/${artworkId}/thumbnail.png`)
+          : null;
 
         // Build summary
         summaries.push({

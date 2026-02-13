@@ -1,4 +1,5 @@
 import type { NextConfig } from 'next';
+import { GITHUB_PAGES_BASE_PATH } from './src/config/constants';
 
 /**
  * Next.js configuration for static export mode.
@@ -10,8 +11,8 @@ import type { NextConfig } from 'next';
  */
 const nextConfig: NextConfig = {
   output: 'export',
-  basePath: process.env.NODE_ENV === 'production' ? '/paint-by-language-model' : '',
-  assetPrefix: process.env.NODE_ENV === 'production' ? '/paint-by-language-model/' : '',
+  basePath: process.env.NODE_ENV === 'production' ? GITHUB_PAGES_BASE_PATH : '',
+  assetPrefix: process.env.NODE_ENV === 'production' ? `${GITHUB_PAGES_BASE_PATH}/` : '',
   images: {
     unoptimized: true,
   },
