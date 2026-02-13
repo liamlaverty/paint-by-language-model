@@ -15,6 +15,7 @@ import Timeline from '@/components/Timeline';
 import SidePanel from '@/components/SidePanel';
 import EmptyState from '@/components/EmptyState';
 import type { ViewerData, EnrichedStroke } from '@/lib/types';
+import { getPublicUrl } from '@/lib/basePath';
 
 /**
  * Props for the inspector client component.
@@ -247,7 +248,7 @@ export default function InspectorClient({ artworkId }: InspectorClientProps): Re
       setError('');
 
       try {
-        const response = await fetch(`/data/${artworkId}/viewer_data.json`);
+        const response = await fetch(getPublicUrl(`/data/${artworkId}/viewer_data.json`));
         if (!response.ok) {
           throw new Error(`Failed to load artwork: ${response.statusText}`);
         }
