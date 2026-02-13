@@ -46,9 +46,7 @@ describe('basePath utility', () => {
     it('should warn if path does not start with /', () => {
       const consoleSpy = jest.spyOn(console, 'warn').mockImplementation();
       getPublicUrl('data/artwork-001/thumbnail.png');
-      expect(consoleSpy).toHaveBeenCalledWith(
-        expect.stringContaining('Path should start with /')
-      );
+      expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('Path should start with /'));
       consoleSpy.mockRestore();
     });
 

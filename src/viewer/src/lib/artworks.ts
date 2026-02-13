@@ -51,7 +51,9 @@ export function getArtworkSummaries(): ArtworkSummary[] {
 
         // Check for thumbnail
         const thumbnailPath = path.join(dataDir, artworkId, 'thumbnail.png');
-        const thumbnailUrl = existsSync(thumbnailPath) ? getPublicUrl(`/data/${artworkId}/thumbnail.png`) : null;
+        const thumbnailUrl = existsSync(thumbnailPath)
+          ? getPublicUrl(`/data/${artworkId}/thumbnail.png`)
+          : null;
 
         // Build summary
         summaries.push({
