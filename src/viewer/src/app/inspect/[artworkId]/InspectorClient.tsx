@@ -82,14 +82,13 @@ export default function InspectorClient({ artworkId }: InspectorClientProps): Re
    * @param {number} targetCount - Desired number of visible strokes
    * @param {object} [options] - Navigation options
    * @param {boolean} [options.clearLock] - Whether to clear the locked stroke selection
-   * @param {boolean} [options.fromPlayback] - Whether called from the animation loop (skips pausing)
    */
   const navigateTo = useCallback(
-    (targetCount: number, options?: { clearLock?: boolean; fromPlayback?: boolean }) => {
+    (targetCount: number, options?: { clearLock?: boolean }) => {
       if (!viewerData) return;
 
-      // Pause unless called from the playback loop
-      if (!options?.fromPlayback && isPlaying) {
+      // Pause playback when manually navigating
+      if (isPlaying) {
         pause();
       }
 
@@ -110,7 +109,7 @@ export default function InspectorClient({ artworkId }: InspectorClientProps): Re
   /**
    * Animation step function.
    *
-   * Advances one stroke via navigateTo and schedules the next step if not complete.
+   * Advances one stroke and schedules the next step if not complete.
    */
   const animationStep = useCallback(() => {
     if (!viewerData) return;
@@ -129,9 +128,6 @@ export default function InspectorClient({ artworkId }: InspectorClientProps): Re
         return total;
       }
 
-      // Schedule next step
-      animTimerRef.current = setTimeout(animationStep, getDelay(speed));
-
       // Auto-show metadata for latest stroke if not locked
       if (lockedIndex === -1) {
         setHoveredIndex(next - 1);
@@ -139,7 +135,28 @@ export default function InspectorClient({ artworkId }: InspectorClientProps): Re
 
       return next;
     });
-  }, [viewerData, speed, lockedIndex]);
+  }, [viewerData, lockedIndex]);
+
+  // Animation loop - schedule next step when visibleCount changes during playback
+  useEffect(() => {
+    if (!isPlaying || !viewerData) return;
+
+    // Check if animation is complete
+    if (visibleCount >= viewerData.strokes.length) {
+      setIsPlaying(false);
+      return;
+    }
+
+    // Schedule next animation step
+    animTimerRef.current = setTimeout(animationStep, getDelay(speed));
+
+    return () => {
+      if (animTimerRef.current) {
+        clearTimeout(animTimerRef.current);
+        animTimerRef.current = null;
+      }
+    };
+  }, [isPlaying, visibleCount, viewerData, speed, animationStep]);
 
   /**
    * Start playback animation.
@@ -149,8 +166,8 @@ export default function InspectorClient({ artworkId }: InspectorClientProps): Re
     if (visibleCount >= viewerData.strokes.length) return;
 
     setIsPlaying(true);
-    animTimerRef.current = setTimeout(animationStep, getDelay(speed));
-  }, [viewerData, visibleCount, speed, animationStep]);
+    // Animation loop is now handled by useEffect
+  }, [viewerData, visibleCount]);
 
   /** Step forward one stroke. */
   const stepForward = useCallback(() => navigateTo(visibleCount + 1), [navigateTo, visibleCount]);
