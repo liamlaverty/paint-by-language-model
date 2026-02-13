@@ -38,17 +38,6 @@ PROJECT_ROOT = Path(__file__).parent.parent
 ARTISTS_FILE = PROJECT_ROOT / "datafiles" / "artists.json"
 OUTPUT_DIR = PROJECT_ROOT / "output"
 
-# Prompt template
-PROMPT_TEMPLATE = """What are the notable features of {artist_name}'s artwork?
-Please provide a structured response covering:
-1. Artistic style and techniques
-2. Common themes and subjects
-3. Use of color and composition
-4. Historical significance and influence
-5. Most famous works
-
-Respond in a clear, informative manner."""
-
 
 # ============================================================================
 # PROVIDER CONFIGURATION

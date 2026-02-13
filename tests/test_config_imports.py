@@ -20,7 +20,6 @@ class TestConfigSettings(unittest.TestCase):
         self.assertTrue(hasattr(config, "LMSTUDIO_MODEL"))
         self.assertTrue(hasattr(config, "REQUEST_TIMEOUT"))
         self.assertTrue(hasattr(config, "MAX_TOKENS"))
-        self.assertTrue(hasattr(config, "PROMPT_TEMPLATE"))
 
     def test_phase2_canvas_settings_exist(self) -> None:
         """Test Phase 2 canvas settings are present."""

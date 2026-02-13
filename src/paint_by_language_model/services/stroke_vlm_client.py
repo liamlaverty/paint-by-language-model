@@ -12,7 +12,11 @@ from config import (
     CANVAS_HEIGHT,
     CANVAS_WIDTH,
     DEFAULT_STROKES_PER_QUERY,
+    MAX_STROKE_OPACITY,
+    MAX_STROKE_THICKNESS,
     MAX_STROKES_PER_QUERY,
+    MIN_STROKE_OPACITY,
+    MIN_STROKE_THICKNESS,
     MIN_STROKES_PER_QUERY,
     STROKE_PROMPT_TEMPERATURE,
     VLM_MODEL,
@@ -248,6 +252,10 @@ AVAILABLE STROKE TYPES:
 
 Canvas dimensions: {CANVAS_WIDTH}x{CANVAS_HEIGHT} pixels
 All coordinates must be within bounds (0 to {CANVAS_WIDTH - 1} for x, 0 to {CANVAS_HEIGHT - 1} for y).
+
+Stroke constraints:
+- Thickness: {MIN_STROKE_THICKNESS} to {MAX_STROKE_THICKNESS} pixels
+- Opacity: {MIN_STROKE_OPACITY} to {MAX_STROKE_OPACITY} (0.0 = transparent, 1.0 = opaque)
 
 Consider:
 - {artist_name}'s characteristic techniques, color palette, and composition style
