@@ -51,12 +51,7 @@ export function getStrokeIndexAtPoint(
   const canvasY = Math.floor(clientY * scaleY);
 
   // Validate coordinates are within canvas bounds
-  if (
-    canvasX < 0 ||
-    canvasY < 0 ||
-    canvasX >= canvasEl.width ||
-    canvasY >= canvasEl.height
-  ) {
+  if (canvasX < 0 || canvasY < 0 || canvasX >= canvasEl.width || canvasY >= canvasEl.height) {
     return -1; // Out of bounds = background
   }
 
