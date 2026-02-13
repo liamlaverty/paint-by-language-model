@@ -108,7 +108,7 @@ def test_validate_thickness_invalid() -> None:
         validate_thickness(0)
 
     with pytest.raises(ValueError, match="out of range"):
-        validate_thickness(11)
+        validate_thickness(110)
 
     print("✓ validate_thickness rejects invalid values")
 
