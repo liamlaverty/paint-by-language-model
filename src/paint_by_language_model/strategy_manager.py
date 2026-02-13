@@ -3,8 +3,12 @@
 import logging
 import re
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from config import STRATEGY_CONTEXT_WINDOW
+
+if TYPE_CHECKING:
+    from models import PlanLayer
 
 logger = logging.getLogger(__name__)
 
@@ -85,7 +89,10 @@ class StrategyManager:
         return self.strategies.get(iteration)
 
     def get_recent_strategies(
-        self, current_iteration: int, window: int = STRATEGY_CONTEXT_WINDOW
+        self,
+        current_iteration: int,
+        window: int = STRATEGY_CONTEXT_WINDOW,
+        current_layer: "PlanLayer | None" = None,
     ) -> str:
         """
         Get recent strategy context for VLM prompt.
@@ -93,29 +100,40 @@ class StrategyManager:
         Args:
             current_iteration (int): Current iteration number
             window (int): Number of recent strategies to include
+            current_layer (PlanLayer | None): Current painting layer information
 
         Returns:
             str: Formatted string with recent strategies
         """
         if not self.strategies:
-            return "No previous strategies yet."
+            context = "No previous strategies yet."
+        else:
+            # Get iterations within window
+            start_iteration = max(1, current_iteration - window)
+            relevant_iterations = [
+                i for i in range(start_iteration, current_iteration) if i in self.strategies
+            ]
 
-        # Get iterations within window
-        start_iteration = max(1, current_iteration - window)
-        relevant_iterations = [
-            i for i in range(start_iteration, current_iteration) if i in self.strategies
-        ]
+            if not relevant_iterations:
+                context = "No previous strategies yet."
+            else:
+                # Format strategies
+                context_parts = []
+                for iteration in relevant_iterations:
+                    strategy = self.strategies[iteration]
+                    context_parts.append(f"Iteration {iteration}: {strategy}")
 
-        if not relevant_iterations:
-            return "No previous strategies yet."
+                context = "\n".join(context_parts)
 
-        # Format strategies
-        context_parts = []
-        for iteration in relevant_iterations:
-            strategy = self.strategies[iteration]
-            context_parts.append(f"Iteration {iteration}: {strategy}")
+        # Prepend layer context if available
+        if current_layer:
+            header = (
+                f"Current Layer: {current_layer['layer_number']} — {current_layer['name']}\n"
+                f"Layer Focus: {current_layer['description']}\n\n"
+            )
+            return header + context
 
-        return "\n".join(context_parts)
+        return context
 
     def get_latest_strategy(self) -> tuple[int, str] | None:
         """

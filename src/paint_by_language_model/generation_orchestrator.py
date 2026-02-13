@@ -21,15 +21,17 @@ from config import (
     NEXTJS_VIEWER_DATA_DIR,
     OUTPUT_DIR,
     OUTPUT_STRUCTURE,
+    PLANNER_MODEL,
+    SUPPORTED_STROKE_TYPES,
     TARGET_STYLE_SCORE,
     VIEWER_DATA_FILENAME,
     VLM_MODEL,
 )
-from models import EvaluationResult, Stroke
-from services import CanvasManager, EvaluationVLMClient, StrokeVLMClient
+from models import EvaluationResult, PaintingPlan, PlanLayer, Stroke
+from services import CanvasManager, EvaluationVLMClient, PlannerLLMClient, StrokeVLMClient
 from services.gif_generator import GifGenerator
-from services.json_utils import minify_json_file
 from strategy_manager import StrategyManager
+from utils.json_utils import minify_json_file
 
 logger = logging.getLogger(__name__)
 
@@ -45,6 +47,7 @@ class GenerationOrchestrator:
         output_dir: Path = OUTPUT_DIR,
         strokes_per_query: int = DEFAULT_STROKES_PER_QUERY,
         gif_frame_duration: int = GIF_FRAME_DURATION_MS,
+        expanded_subject: str | None = None,
     ) -> None:
         """
         Initialize Generation Orchestrator.
@@ -56,9 +59,11 @@ class GenerationOrchestrator:
             output_dir (Path): Base output directory
             strokes_per_query (int): Number of strokes to request per VLM query
             gif_frame_duration (int): GIF frame duration in milliseconds
+            expanded_subject (str | None): Detailed description of the final image
         """
         self.artist_name = artist_name
         self.subject = subject
+        self.expanded_subject = expanded_subject
         self.artwork_id = artwork_id
         self.output_dir = output_dir
         self.artwork_dir = output_dir / artwork_id
@@ -89,6 +94,11 @@ class GenerationOrchestrator:
         self.total_strokes_applied = 0
         self.total_strokes_skipped = 0
         self.stroke_type_counts: dict[str, int] = {}
+
+        # Painting plan tracking
+        self.painting_plan: PaintingPlan | None = None
+        self.current_layer_index: int = 0
+        self.layer_iterations: dict[int, int] = {}
 
         # Create output directories
         self._create_output_directories()
@@ -122,6 +132,10 @@ class GenerationOrchestrator:
             logger.info(f"Resuming from iteration {self.starting_iteration}")
         logger.info("=" * 80)
 
+        # NEW: Run planning phase
+        self.painting_plan = self._run_planning_phase()
+        self._save_painting_plan(self.painting_plan)
+
         try:
             # Main iteration loop
             iteration = 1
@@ -130,8 +144,15 @@ class GenerationOrchestrator:
                 logger.info(f"Iteration {iteration}/{MAX_ITERATIONS}")
                 logger.info(f"{'=' * 80}")
 
+                # Determine current layer
+                current_layer = (
+                    self.painting_plan["layers"][self.current_layer_index]
+                    if self.painting_plan
+                    else None
+                )
+
                 # Execute single iteration
-                should_stop = self._execute_iteration(iteration)
+                should_stop = self._execute_iteration(iteration, current_layer)
 
                 # Check stopping conditions
                 if should_stop:
@@ -156,12 +177,13 @@ class GenerationOrchestrator:
             logger.error(f"Generation failed with error: {e}")
             raise RuntimeError(f"Generation failed: {e}") from e
 
-    def _execute_iteration(self, iteration: int) -> bool:
+    def _execute_iteration(self, iteration: int, current_layer: PlanLayer | None = None) -> bool:
         """
         Execute a single iteration of generation.
 
         Args:
             iteration (int): Current iteration number
+            current_layer (PlanLayer | None): Current painting layer information
 
         Returns:
             bool: True if should stop, False to continue
@@ -169,7 +191,7 @@ class GenerationOrchestrator:
         try:
             # Step 1: Get strategy context
             strategy_context = self.strategy_manager.get_recent_strategies(
-                current_iteration=iteration
+                current_iteration=iteration, current_layer=current_layer
             )
             logger.debug(f"Strategy context: {strategy_context[:100]}...")
 
@@ -187,6 +209,9 @@ class GenerationOrchestrator:
                     iteration=iteration,
                     strategy_context=strategy_context,
                     num_strokes=self.strokes_per_query,
+                    painting_plan=self.painting_plan,
+                    current_layer=current_layer,
+                    expanded_subject=self.expanded_subject,
                 )
                 strokes_batch = stroke_response["strokes"]
                 batch_reasoning = stroke_response.get("batch_reasoning", "")
@@ -252,7 +277,9 @@ class GenerationOrchestrator:
             )
 
             # Step 4b: Save batch metadata
-            self._save_stroke_batch(strokes_batch, iteration, batch_reasoning, results)
+            self._save_stroke_batch(
+                strokes_batch, iteration, batch_reasoning, results, current_layer
+            )
 
             # Update current stroke file with last successful stroke
             if successful_strokes:
@@ -296,6 +323,8 @@ class GenerationOrchestrator:
                     artist_name=self.artist_name,
                     subject=self.subject,
                     iteration=iteration,
+                    painting_plan=self.painting_plan,
+                    current_layer=current_layer,
                 )
 
                 self.evaluations.append(evaluation)
@@ -311,6 +340,23 @@ class GenerationOrchestrator:
                 with open(current_eval_path, "w", encoding="utf-8") as f:
                     json.dump(evaluation, f, indent=2)
                 logger.debug("Updated current-evaluation.json")
+
+                # Track layer iterations
+                if current_layer:
+                    layer_num = current_layer["layer_number"]
+                    self.layer_iterations[layer_num] = self.layer_iterations.get(layer_num, 0) + 1
+
+                # Check for layer advancement
+                if (
+                    evaluation.get("layer_complete", False)
+                    and self.painting_plan is not None
+                    and self.current_layer_index < len(self.painting_plan["layers"]) - 1
+                ):
+                    self.current_layer_index += 1
+                    next_layer = self.painting_plan["layers"][self.current_layer_index]
+                    logger.info(
+                        f"Advancing to Layer {next_layer['layer_number']}: {next_layer['name']}"
+                    )
 
                 # Step 10: Check stopping conditions
                 should_stop = self._check_stopping_conditions(iteration, evaluation)
@@ -365,12 +411,62 @@ class GenerationOrchestrator:
 
         return False
 
+    def _run_planning_phase(self) -> PaintingPlan:
+        """
+        Execute planning phase to generate or load painting plan.
+
+        Returns:
+            PaintingPlan: Complete painting plan with layers
+
+        Raises:
+            RuntimeError: If plan generation fails
+        """
+        plan_path = self.artwork_dir / "painting_plan.json"
+
+        # Check if plan already exists on disk
+        if plan_path.exists():
+            with open(plan_path, encoding="utf-8") as f:
+                plan: PaintingPlan = json.load(f)
+            logger.info("Loaded existing plan from disk")
+            return plan
+
+        # Generate new plan
+        logger.info("Generating new painting plan...")
+        planner = PlannerLLMClient()
+        plan = planner.generate_plan(
+            self.artist_name, self.subject, self.expanded_subject, SUPPORTED_STROKE_TYPES
+        )
+
+        # Log plan summary
+        logger.info(f"Generated plan: {plan['total_layers']} layers")
+        for layer in plan["layers"]:
+            logger.info(f"  Layer {layer['layer_number']}: {layer['name']}")
+
+        return plan
+
+    def _save_painting_plan(self, plan: PaintingPlan) -> None:
+        """
+        Save painting plan to disk.
+
+        Args:
+            plan (PaintingPlan): Painting plan to save
+        """
+        plan_path = self.artwork_dir / "painting_plan.json"
+        with open(plan_path, "w", encoding="utf-8") as f:
+            json.dump(plan, f, indent=2)
+        logger.info(f"Saved painting plan to {plan_path}")
+
     def _create_output_directories(self) -> None:
         """Create all required output directories."""
         self.artwork_dir.mkdir(parents=True, exist_ok=True)
 
         for key, dirname in OUTPUT_STRUCTURE.items():
-            if key not in ["metadata", "report", "final_artwork"]:  # These are files
+            if key not in [
+                "metadata",
+                "report",
+                "final_artwork",
+                "painting_plan",
+            ]:  # These are files
                 dir_path = self.artwork_dir / dirname
                 dir_path.mkdir(parents=True, exist_ok=True)
 
@@ -378,6 +474,15 @@ class GenerationOrchestrator:
 
     def _load_existing_state(self) -> None:
         """Load existing strokes and evaluations to resume generation."""
+        # Load painting plan if present
+        plan_path = self.artwork_dir / "painting_plan.json"
+        if plan_path.exists():
+            with open(plan_path, encoding="utf-8") as f:
+                self.painting_plan = json.load(f)
+            logger.info(
+                f"Loaded existing painting plan with {len(self.painting_plan['layers'])} layers"
+            )
+
         # Check if strokes directory exists and has files
         strokes_dir = self.artwork_dir / OUTPUT_STRUCTURE["strokes"]
         if not strokes_dir.exists():
@@ -425,6 +530,29 @@ class GenerationOrchestrator:
 
             # Set starting iteration based on batch files
             self.starting_iteration = len(batch_files) + 1
+
+            # Determine current layer and rebuild layer iterations from batches
+            if self.painting_plan and batch_files:
+                for batch_file in batch_files:
+                    with open(batch_file, encoding="utf-8") as f:
+                        batch_data = json.load(f)
+                    layer_num = batch_data.get("layer_number")
+                    if layer_num:
+                        self.layer_iterations[layer_num] = (
+                            self.layer_iterations.get(layer_num, 0) + 1
+                        )
+
+                # Set current layer index from most recent batch
+                with open(batch_files[-1], encoding="utf-8") as f:
+                    last_batch = json.load(f)
+                last_layer_num = last_batch.get("layer_number")
+                if last_layer_num:
+                    # Find the index of this layer in the plan
+                    for idx, layer in enumerate(self.painting_plan["layers"]):
+                        if layer["layer_number"] == last_layer_num:
+                            self.current_layer_index = idx
+                            break
+                    logger.info(f"Resuming on Layer {last_layer_num}")
 
         else:
             # Fall back to old single-stroke format for backward compatibility
@@ -554,6 +682,7 @@ class GenerationOrchestrator:
         iteration: int,
         batch_reasoning: str,
         results: list[dict[str, Any]],
+        current_layer: PlanLayer | None = None,
     ) -> None:
         """
         Save batch of strokes with metadata to JSON file.
@@ -563,6 +692,7 @@ class GenerationOrchestrator:
             iteration (int): Current iteration number
             batch_reasoning (str): VLM reasoning for this batch
             results (list[dict[str, Any]]): Application results for each stroke
+            current_layer (PlanLayer | None): Current painting layer information
         """
         strokes_dir = self.artwork_dir / OUTPUT_STRUCTURE["strokes"]
         filename = f"iteration-{iteration:03d}_batch.json"
@@ -579,6 +709,8 @@ class GenerationOrchestrator:
             "skipped_count": skipped_count,
             "total_requested": len(strokes),
             "timestamp": datetime.now().isoformat(),
+            "layer_number": current_layer["layer_number"] if current_layer else None,
+            "layer_name": current_layer["name"] if current_layer else None,
             "results": [
                 {
                     "stroke_index": i,
@@ -705,6 +837,8 @@ class GenerationOrchestrator:
                         "iteration": iteration,
                         "batch_position": i,
                         "batch_reasoning": reasoning,
+                        "layer_number": batch.get("layer_number"),
+                        "layer_name": batch.get("layer_name"),
                         **stroke,
                     }
                     enriched_strokes.append(enriched_stroke)
@@ -715,6 +849,7 @@ class GenerationOrchestrator:
                 "artwork_id": self.artwork_id,
                 "artist_name": self.artist_name,
                 "subject": self.subject,
+                "expanded_subject": self.expanded_subject,
                 "canvas_width": CANVAS_WIDTH,
                 "canvas_height": CANVAS_HEIGHT,
                 "background_color": CANVAS_BACKGROUND_COLOR,
@@ -722,6 +857,7 @@ class GenerationOrchestrator:
                 "total_iterations": len(batch_files),
                 "score_progression": [e["score"] for e in self.evaluations],
             },
+            "painting_plan": self.painting_plan,
             "strokes": enriched_strokes,
         }
 
@@ -834,6 +970,10 @@ class GenerationOrchestrator:
                 "average_applied_per_iteration": round(avg_applied_per_iteration, 2),
                 "stroke_type_breakdown": self.stroke_type_counts,
             },
+            "painting_plan": self.painting_plan,
+            "layer_progression": self.layer_iterations,
+            "planner_model": PLANNER_MODEL,
+            "expanded_subject": self.expanded_subject,
         }
 
         return metadata
@@ -867,9 +1007,34 @@ class GenerationOrchestrator:
 
 ## Artwork Information
 - **Artist Style**: {self.artist_name}
-- **Subject**: {self.subject}
-- **Artwork ID**: {self.artwork_id}
+- **Subject**: {self.subject}"""
 
+        if self.expanded_subject:
+            report += f"\n- **Expanded Subject**: {self.expanded_subject}"
+
+        report += f"""
+- **Artwork ID**: {self.artwork_id}
+"""
+
+        if self.painting_plan:
+            report += f"""
+## Painting Plan
+- **Total Layers**: {self.painting_plan["total_layers"]}
+- **Overall Notes**: {self.painting_plan["overall_notes"]}
+
+### Layers
+"""
+            for layer in self.painting_plan["layers"]:
+                iterations = self.layer_iterations.get(layer["layer_number"], 0)
+                report += f"""
+#### Layer {layer["layer_number"]}: {layer["name"]}
+- **Description**: {layer["description"]}
+- **Iterations**: {iterations}
+- **Palette**: {", ".join(layer["colour_palette"])}
+- **Techniques**: {layer["techniques"]}
+"""
+
+        report += f"""
 ## Generation Details
 - **Start Time**: {metadata["generation_date"]}
 - **End Time**: {metadata["generation_end_date"]}

@@ -229,7 +229,7 @@ class TestCanvasManager(unittest.TestCase):
             "end_x": 150,
             "end_y": 150,
             "color_hex": "#FF5733",
-            "thickness": 15,  # Above MAX_STROKE_THICKNESS
+            "thickness": 150,  # Above MAX_STROKE_THICKNESS
             "opacity": 0.8,
             "reasoning": "Test",
         }

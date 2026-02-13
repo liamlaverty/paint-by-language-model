@@ -95,6 +95,26 @@ export default function SidePanel({
         <span className="meta-value">{stroke.batch_position}</span>
       </div>
 
+      {/* Batch Reasoning Section */}
+      <h3>Batch Reasoning</h3>
+      <div className="reasoning-box">{stroke.batch_reasoning}</div>
+
+      {/* Score at Iteration Section */}
+      <h3>Score at Iteration</h3>
+      <div className="meta-row">
+        <span className="meta-label">Evaluation Score</span>
+        <span className="meta-value">{scoreAtIteration}/100</span>
+      </div>
+      <div className="score-bar-container">
+        <div
+          className="score-bar"
+          style={{
+            width: `${scoreAtIteration}%`,
+            backgroundColor: scoreBarColor,
+          }}
+        />
+      </div>
+
       {/* Appearance Section */}
       <h3>Appearance</h3>
       <div className="meta-row">
@@ -212,26 +232,6 @@ export default function SidePanel({
           </div>
         </>
       )}
-
-      {/* Batch Reasoning Section */}
-      <h3>Batch Reasoning</h3>
-      <div className="reasoning-box">{stroke.batch_reasoning}</div>
-
-      {/* Score at Iteration Section */}
-      <h3>Score at Iteration</h3>
-      <div className="meta-row">
-        <span className="meta-label">Evaluation Score</span>
-        <span className="meta-value">{scoreAtIteration}/100</span>
-      </div>
-      <div className="score-bar-container">
-        <div
-          className="score-bar"
-          style={{
-            width: `${scoreAtIteration}%`,
-            backgroundColor: scoreBarColor,
-          }}
-        />
-      </div>
     </aside>
   );
 }

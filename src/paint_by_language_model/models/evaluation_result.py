@@ -3,7 +3,18 @@
 from typing import TypedDict
 
 
-class EvaluationResult(TypedDict):
+class _EvaluationResultRequired(TypedDict):
+    """Required fields for EvaluationResult."""
+
+    score: float
+    feedback: str
+    strengths: str
+    suggestions: str
+    timestamp: str
+    iteration: int
+
+
+class EvaluationResult(_EvaluationResultRequired, total=False):
     """
     Represents style evaluation results from a VLM.
 
@@ -14,11 +25,9 @@ class EvaluationResult(TypedDict):
         suggestions (str): Areas for improvement
         timestamp (str): ISO format timestamp of evaluation
         iteration (int): Iteration number when evaluated
+        layer_complete (bool): Whether the current layer is complete
+        layer_number (int): The layer number being evaluated
     """
 
-    score: float
-    feedback: str
-    strengths: str
-    suggestions: str
-    timestamp: str
-    iteration: int
+    layer_complete: bool
+    layer_number: int

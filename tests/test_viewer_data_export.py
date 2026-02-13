@@ -577,7 +577,9 @@ class TestViewerDataSkippedStrokes:
                     {"success": False, "stroke_index": 1, "error": "Out of bounds"},
                 ],
             }
-            with open(strokes_dir / "iteration-001_batch.json", "w", encoding="utf-8") as f:
+            with open(
+                strokes_dir / "iteration-001_batch.json", "w", encoding="utf-8"
+            ) as f:
                 json.dump(batch, f)
 
             orch.evaluations = []
