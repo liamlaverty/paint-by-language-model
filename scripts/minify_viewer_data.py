@@ -62,7 +62,9 @@ def minify_viewer_data_files() -> tuple[int, int, int]:
                     )
                     total_bytes_saved += bytes_saved
                 else:
-                    print(f"  ✓ {file_path.parent.name}/viewer_data.json: already minified")
+                    print(
+                        f"  ✓ {file_path.parent.name}/viewer_data.json: already minified"
+                    )
                 files_processed += 1
 
         except Exception as e:

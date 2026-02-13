@@ -172,7 +172,7 @@ def test_validate_common_stroke_fields_invalid() -> None:
 
     # Invalid thickness
     stroke["color_hex"] = "#FF5733"
-    stroke["thickness"] = 100
+    stroke["thickness"] = 101  # Exceeds MAX_STROKE_THICKNESS (100)
     with pytest.raises(ValueError, match="out of range"):
         validate_common_stroke_fields(stroke)
 

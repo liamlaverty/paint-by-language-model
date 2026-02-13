@@ -461,7 +461,12 @@ class GenerationOrchestrator:
         self.artwork_dir.mkdir(parents=True, exist_ok=True)
 
         for key, dirname in OUTPUT_STRUCTURE.items():
-            if key not in ["metadata", "report", "final_artwork"]:  # These are files
+            if key not in [
+                "metadata",
+                "report",
+                "final_artwork",
+                "painting_plan",
+            ]:  # These are files
                 dir_path = self.artwork_dir / dirname
                 dir_path.mkdir(parents=True, exist_ok=True)
 
