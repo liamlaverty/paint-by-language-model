@@ -99,25 +99,25 @@ class PlannerLLMClient:
 
         # Write exception details
         with open(log_filepath, "w", encoding="utf-8") as f:
-            f.write(f"Planner LLM Parsing Exception\n")
+            f.write("Planner LLM Parsing Exception\n")
             f.write("=" * 80 + "\n\n")
             f.write(f"Artist: {artist_name}\n")
             f.write(f"Subject: {subject}\n")
             f.write(f"Timestamp: {timestamp}\n")
             f.write(f"Exception: {type(exception).__name__}\n")
             f.write(f"Message: {str(exception)}\n\n")
-            
+
             if prompt:
                 f.write("Prompt Sent to LLM:\n")
                 f.write("-" * 80 + "\n")
                 f.write(prompt)
                 f.write("\n" + "-" * 80 + "\n\n")
-            
+
             f.write("Raw LLM Response:\n")
             f.write("-" * 80 + "\n")
             f.write(raw_response)
             f.write("\n" + "-" * 80 + "\n\n")
-            
+
             f.write("Traceback:\n")
             f.write("-" * 80 + "\n")
             f.write(traceback.format_exc())
