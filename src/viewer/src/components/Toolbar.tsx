@@ -57,7 +57,9 @@ export default function Toolbar({
   return (
     <div className="toolbar">
       <Link href="/">
-        <button type="button" className="button">Gallery</button>
+        <button type="button" className="button">
+          Gallery
+        </button>
       </Link>
 
       <div className="sep" />
@@ -83,11 +85,23 @@ export default function Toolbar({
       </button>
 
       {isPlaying ? (
-        <button type="button" className="button" onClick={onPause} disabled={!isLoaded} title="Pause playback">
+        <button
+          type="button"
+          className="button"
+          onClick={onPause}
+          disabled={!isLoaded}
+          title="Pause playback"
+        >
           ⏸️ Pause
         </button>
       ) : (
-        <button type="button" className="button" onClick={onPlay} disabled={!isLoaded} title="Start playback">
+        <button
+          type="button"
+          className="button"
+          onClick={onPlay}
+          disabled={!isLoaded}
+          title="Start playback"
+        >
           ▶️ Play
         </button>
       )}
