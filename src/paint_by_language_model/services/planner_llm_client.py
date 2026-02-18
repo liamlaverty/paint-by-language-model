@@ -193,25 +193,25 @@ class PlannerLLMClient:
         except (json.JSONDecodeError, ValueError) as e:
             logger.error(f"Failed to parse LLM response: {e}")
             # Save raw response for debugging
-            if 'response_text' in locals() and response_text:
+            if "response_text" in locals() and response_text:
                 log_path = self._log_parsing_exception(
                     artist_name=artist_name,
                     subject=subject,
                     raw_response=response_text,
                     exception=e,
-                    prompt=prompt if 'prompt' in locals() else "",
+                    prompt=prompt if "prompt" in locals() else "",
                 )
                 logger.error(f"Raw LLM response saved to: {log_path}")
             raise ValueError(f"LLM returned invalid JSON: {e}") from e
         except Exception as e:
             logger.error(f"Unexpected error during LLM query: {e}")
-            if 'response_text' in locals() and response_text:
+            if "response_text" in locals() and response_text:
                 self._log_parsing_exception(
                     artist_name=artist_name,
                     subject=subject,
                     raw_response=response_text,
                     exception=e,
-                    prompt=prompt if 'prompt' in locals() else "",
+                    prompt=prompt if "prompt" in locals() else "",
                 )
             raise RuntimeError(f"LLM query failed: {e}") from e
 
