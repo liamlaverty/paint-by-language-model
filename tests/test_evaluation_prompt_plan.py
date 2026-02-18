@@ -10,7 +10,7 @@ sys.path.insert(
     0, str(Path(__file__).parent.parent / "src" / "paint_by_language_model")
 )
 
-from models.painting_plan import PaintingPlan, PlanLayer
+from models.painting_plan import PaintingPlan
 from services.evaluation_vlm_client import EvaluationVLMClient
 
 
@@ -87,7 +87,7 @@ class TestLayerContextInPrompt:
     ) -> None:
         """Test that prompt includes layer evaluation criteria when current_layer is provided."""
         current_layer = sample_plan["layers"][1]
-        
+
         prompt = eval_client._build_evaluation_prompt(
             artist_name="Test Artist",
             subject="Test Subject",
@@ -104,7 +104,7 @@ class TestLayerContextInPrompt:
     ) -> None:
         """Test that prompt includes total layer count."""
         current_layer = sample_plan["layers"][1]
-        
+
         prompt = eval_client._build_evaluation_prompt(
             artist_name="Test Artist",
             subject="Test Subject",
@@ -120,7 +120,7 @@ class TestLayerContextInPrompt:
     ) -> None:
         """Test that prompt includes layer description."""
         current_layer = sample_plan["layers"][1]
-        
+
         prompt = eval_client._build_evaluation_prompt(
             artist_name="Test Artist",
             subject="Test Subject",
@@ -136,7 +136,7 @@ class TestLayerContextInPrompt:
     ) -> None:
         """Test that prompt includes expected palette."""
         current_layer = sample_plan["layers"][1]
-        
+
         prompt = eval_client._build_evaluation_prompt(
             artist_name="Test Artist",
             subject="Test Subject",
@@ -154,7 +154,7 @@ class TestLayerContextInPrompt:
     ) -> None:
         """Test that prompt includes expected techniques."""
         current_layer = sample_plan["layers"][1]
-        
+
         prompt = eval_client._build_evaluation_prompt(
             artist_name="Test Artist",
             subject="Test Subject",
@@ -171,7 +171,7 @@ class TestLayerContextInPrompt:
     ) -> None:
         """Test that prompt requests layer_complete field in response format."""
         current_layer = sample_plan["layers"][1]
-        
+
         prompt = eval_client._build_evaluation_prompt(
             artist_name="Test Artist",
             subject="Test Subject",
@@ -194,7 +194,9 @@ class TestLayerContextInPrompt:
             current_layer=None,
         )
 
-        assert "Layer" not in prompt or "Iteration" in prompt  # "Iteration" has "Layer" substring
+        assert (
+            "Layer" not in prompt or "Iteration" in prompt
+        )  # "Iteration" has "Layer" substring
         assert "layer_complete" not in prompt
 
 
@@ -206,15 +208,17 @@ class TestEvaluationResponseParsing:
     ) -> None:
         """Test that layer_complete: true is correctly parsed."""
         import json
-        
+
         current_layer = sample_plan["layers"][1]
-        response = json.dumps({
-            "score": 75.0,
-            "feedback": "Good progress",
-            "strengths": "Color is good",
-            "suggestions": "Add more detail",
-            "layer_complete": True,
-        })
+        response = json.dumps(
+            {
+                "score": 75.0,
+                "feedback": "Good progress",
+                "strengths": "Color is good",
+                "suggestions": "Add more detail",
+                "layer_complete": True,
+            }
+        )
 
         result = eval_client._parse_evaluation_response(
             response_text=response,
@@ -230,15 +234,17 @@ class TestEvaluationResponseParsing:
     ) -> None:
         """Test that layer_complete: false is correctly parsed."""
         import json
-        
+
         current_layer = sample_plan["layers"][1]
-        response = json.dumps({
-            "score": 50.0,
-            "feedback": "Needs work",
-            "strengths": "Starting well",
-            "suggestions": "Continue building",
-            "layer_complete": False,
-        })
+        response = json.dumps(
+            {
+                "score": 50.0,
+                "feedback": "Needs work",
+                "strengths": "Starting well",
+                "suggestions": "Continue building",
+                "layer_complete": False,
+            }
+        )
 
         result = eval_client._parse_evaluation_response(
             response_text=response,
@@ -254,15 +260,17 @@ class TestEvaluationResponseParsing:
     ) -> None:
         """Test that missing layer_complete defaults to False."""
         import json
-        
+
         current_layer = sample_plan["layers"][1]
-        response = json.dumps({
-            "score": 65.0,
-            "feedback": "Making progress",
-            "strengths": "Good color",
-            "suggestions": "Add texture",
-            # layer_complete is missing
-        })
+        response = json.dumps(
+            {
+                "score": 65.0,
+                "feedback": "Making progress",
+                "strengths": "Good color",
+                "suggestions": "Add texture",
+                # layer_complete is missing
+            }
+        )
 
         result = eval_client._parse_evaluation_response(
             response_text=response,
@@ -277,15 +285,17 @@ class TestEvaluationResponseParsing:
     ) -> None:
         """Test that layer_number is included in result when provided."""
         import json
-        
+
         current_layer = sample_plan["layers"][2]
-        response = json.dumps({
-            "score": 80.0,
-            "feedback": "Excellent",
-            "strengths": "Very good",
-            "suggestions": "Minor tweaks",
-            "layer_complete": True,
-        })
+        response = json.dumps(
+            {
+                "score": 80.0,
+                "feedback": "Excellent",
+                "strengths": "Very good",
+                "suggestions": "Minor tweaks",
+                "layer_complete": True,
+            }
+        )
 
         result = eval_client._parse_evaluation_response(
             response_text=response,
@@ -300,13 +310,15 @@ class TestEvaluationResponseParsing:
     ) -> None:
         """Test that EvaluationResult without layer_complete field works (backward compat)."""
         import json
-        
-        response = json.dumps({
-            "score": 70.0,
-            "feedback": "Progress made",
-            "strengths": "Good technique",
-            "suggestions": "Keep going",
-        })
+
+        response = json.dumps(
+            {
+                "score": 70.0,
+                "feedback": "Progress made",
+                "strengths": "Good technique",
+                "suggestions": "Keep going",
+            }
+        )
 
         result = eval_client._parse_evaluation_response(
             response_text=response,

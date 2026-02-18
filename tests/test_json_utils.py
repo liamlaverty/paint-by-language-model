@@ -128,7 +128,9 @@ class TestMinifyJsonFilesInDirectory:
         tmpdir = Path(tempfile.mkdtemp())
         nonexistent = tmpdir / "nonexistent"
 
-        files_processed, bytes_saved, errors = minify_json_files_in_directory(nonexistent)
+        files_processed, bytes_saved, errors = minify_json_files_in_directory(
+            nonexistent
+        )
 
         assert files_processed == 0
         assert bytes_saved == 0
