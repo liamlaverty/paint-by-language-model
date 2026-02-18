@@ -7,10 +7,12 @@ import time
 import requests
 
 from config import (
+    ANTHROPIC_VERSION,
     API_BASE_URL,
     API_KEY,
     DEFAULT_MODEL,
     MAX_TOKENS,
+    PROVIDER,
     REQUEST_TIMEOUT,
 )
 
@@ -31,6 +33,7 @@ class VLMClient:
         timeout: int = REQUEST_TIMEOUT,
         api_key: str = API_KEY,
         temperature: float = 0.7,
+        provider: str = PROVIDER,
     ):
         """
         Initialize the VLM client.
@@ -41,13 +44,20 @@ class VLMClient:
             timeout (int): Request timeout in seconds
             api_key (str): API key for authentication (empty string = no auth)
             temperature (float): Sampling temperature for responses
+            provider (str): API provider ("mistral", "lmstudio", or "anthropic")
         """
         self.base_url = base_url.rstrip("/")
         self.model = model
         self.timeout = timeout
         self.api_key = api_key
         self.temperature = temperature
-        self.chat_endpoint = f"{self.base_url}/chat/completions"
+        self.provider = provider
+
+        # Set endpoint based on provider
+        if self.provider == "anthropic":
+            self.chat_endpoint = f"{self.base_url}/messages"
+        else:
+            self.chat_endpoint = f"{self.base_url}/chat/completions"
 
     def _build_headers(self) -> dict[str, str]:
         """
@@ -57,9 +67,48 @@ class VLMClient:
             dict[str, str]: HTTP headers for API requests
         """
         headers = {"Content-Type": "application/json"}
-        if self.api_key:
-            headers["Authorization"] = f"Bearer {self.api_key}"
+        if self.provider == "anthropic":
+            if self.api_key:
+                headers["x-api-key"] = self.api_key
+            headers["anthropic-version"] = ANTHROPIC_VERSION
+        else:
+            if self.api_key:
+                headers["Authorization"] = f"Bearer {self.api_key}"
         return headers
+
+    def _build_text_payload(self, prompt: str, max_tokens: int) -> dict:
+        """
+        Build request payload for text-only query based on provider.
+
+        Args:
+            prompt (str): The text prompt to send
+            max_tokens (int): Maximum tokens in the response
+
+        Returns:
+            dict: Request payload structure for the API
+        """
+        # Text-only message format is identical for all providers
+        return {
+            "model": self.model,
+            "messages": [{"role": "user", "content": prompt}],
+            "max_tokens": max_tokens,
+            "temperature": self.temperature,
+        }
+
+    def _extract_response_text(self, response_data: dict) -> str:
+        """
+        Extract text content from API response based on provider.
+
+        Args:
+            response_data (dict): JSON response from the API
+
+        Returns:
+            str: Extracted text content
+        """
+        if self.provider == "anthropic":
+            return response_data["content"][0]["text"]
+        else:
+            return response_data["choices"][0]["message"]["content"]
 
     def query(self, prompt: str, max_tokens: int = MAX_TOKENS) -> str:
         """
@@ -76,12 +125,7 @@ class VLMClient:
             ConnectionError: If the VLM API is not reachable or auth fails
             requests.RequestException: For other HTTP errors
         """
-        payload = {
-            "model": self.model,
-            "messages": [{"role": "user", "content": prompt}],
-            "max_tokens": max_tokens,
-            "temperature": self.temperature,
-        }
+        payload = self._build_text_payload(prompt, max_tokens)
 
         try:
             # Retry loop for rate limiting
@@ -119,7 +163,7 @@ class VLMClient:
             response.raise_for_status()
 
             data = response.json()
-            content: str = data["choices"][0]["message"]["content"]
+            content: str = self._extract_response_text(data)
             return content
 
         except requests.ConnectionError as e:
@@ -136,14 +180,72 @@ class VLMClient:
             bool: True if server is reachable, False otherwise
         """
         try:
-            response = requests.get(
-                f"{self.base_url}/models",
-                headers=self._build_headers(),
-                timeout=5,
-            )
-            return response.status_code == 200
+            if self.provider == "anthropic":
+                # Anthropic doesn't document GET /v1/models, so perform a minimal message call
+                logger.debug("Checking Anthropic API availability with minimal message call")
+                payload = self._build_text_payload("test", 1)
+                response = requests.post(
+                    self.chat_endpoint,
+                    json=payload,
+                    headers=self._build_headers(),
+                    timeout=5,
+                )
+                return response.status_code in range(200, 300)
+            else:
+                # OpenAI-compatible providers support GET /v1/models
+                response = requests.get(
+                    f"{self.base_url}/models",
+                    headers=self._build_headers(),
+                    timeout=5,
+                )
+                return response.status_code == 200
         except requests.RequestException:
             return False
+
+    def _build_multimodal_payload(
+        self, prompt: str, image_bytes: bytes, max_tokens: int
+    ) -> dict:
+        """
+        Build request payload for multimodal query based on provider.
+
+        Args:
+            prompt (str): The text prompt to send with the image
+            image_bytes (bytes): Image data as bytes
+            max_tokens (int): Maximum tokens in the response
+
+        Returns:
+            dict: Request payload structure for the API
+        """
+        if self.provider == "anthropic":
+            # Anthropic uses raw base64 without data URL prefix
+            base64_image = base64.b64encode(image_bytes).decode("utf-8")
+            # Image block comes BEFORE text block (Anthropic best practice)
+            message_content = [
+                {
+                    "type": "image",
+                    "source": {
+                        "type": "base64",
+                        "media_type": "image/png",
+                        "data": base64_image,
+                    },
+                },
+                {"type": "text", "text": prompt},
+            ]
+        else:
+            # OpenAI-compatible format uses data URL
+            image_data_url = self._encode_image_to_base64(image_bytes)
+            # Text block comes before image block
+            message_content = [
+                {"type": "text", "text": prompt},
+                {"type": "image_url", "image_url": {"url": image_data_url}},
+            ]
+
+        return {
+            "model": self.model,
+            "messages": [{"role": "user", "content": message_content}],
+            "max_tokens": max_tokens,
+            "temperature": self.temperature,
+        }
 
     def query_multimodal(
         self, prompt: str, image_bytes: bytes, max_tokens: int = MAX_TOKENS
@@ -167,22 +269,8 @@ class VLMClient:
         logger.info(f"Sending multimodal query to VLM (image size: {len(image_bytes)} bytes)")
 
         try:
-            # Encode image to base64
-            image_data_url = self._encode_image_to_base64(image_bytes)
-
-            # Build multimodal message content
-            message_content = [
-                {"type": "text", "text": prompt},
-                {"type": "image_url", "image_url": {"url": image_data_url}},
-            ]
-
-            # Build request payload
-            payload = {
-                "model": self.model,
-                "messages": [{"role": "user", "content": message_content}],
-                "max_tokens": max_tokens,
-                "temperature": self.temperature,
-            }
+            # Build provider-specific multimodal payload
+            payload = self._build_multimodal_payload(prompt, image_bytes, max_tokens)
 
             # Retry loop for rate limiting
             for attempt in range(MAX_RETRIES):
@@ -218,9 +306,9 @@ class VLMClient:
 
             response.raise_for_status()
 
-            # Extract response text
+            # Extract response text using provider-specific parsing
             response_data = response.json()
-            response_text: str = response_data["choices"][0]["message"]["content"]
+            response_text: str = self._extract_response_text(response_data)
 
             logger.info(f"Received VLM response ({len(response_text)} characters)")
             return response_text
