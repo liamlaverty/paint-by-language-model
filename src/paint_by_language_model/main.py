@@ -64,7 +64,7 @@ def run_generation(
         target_score (float | None): Override TARGET_STYLE_SCORE
         strokes_per_query (int): Number of strokes to request per VLM query
         stroke_types (list[str] | None): Allowed stroke types filter
-        provider (str | None): VLM provider ("mistral" or "lmstudio")
+        provider (str | None): VLM provider ("mistral", "lmstudio", or "anthropic")
         api_key (str | None): API key for VLM provider
         gif_frame_duration (int): GIF frame duration in milliseconds
         expanded_subject (str | None): Detailed description of the final image
@@ -81,6 +81,13 @@ def run_generation(
             config.DEFAULT_MODEL = config.MISTRAL_DEFAULT_MODEL
             config.VLM_MODEL = config.MISTRAL_VLM_MODEL
             config.EVALUATION_VLM_MODEL = config.MISTRAL_EVALUATION_VLM_MODEL
+        elif provider == "anthropic":
+            config.API_BASE_URL = config.ANTHROPIC_BASE_URL
+            config.API_KEY = config.ANTHROPIC_API_KEY
+            config.DEFAULT_MODEL = config.ANTHROPIC_DEFAULT_MODEL
+            config.VLM_MODEL = config.ANTHROPIC_VLM_MODEL
+            config.EVALUATION_VLM_MODEL = config.ANTHROPIC_EVALUATION_VLM_MODEL
+            config.PLANNER_MODEL = config.ANTHROPIC_PLANNER_MODEL
         else:  # lmstudio
             config.API_BASE_URL = config.LMSTUDIO_BASE_URL
             config.API_KEY = ""
@@ -100,6 +107,14 @@ def run_generation(
     if config.PROVIDER == "mistral" and not config.API_KEY:
         logger.error(
             "Mistral provider requires an API key. Set MISTRAL_API_KEY in .env or pass --api-key."
+        )
+        sys.exit(1)
+
+    # Validate that Anthropic has an API key
+    if config.PROVIDER == "anthropic" and not config.API_KEY:
+        logger.error(
+            "ANTHROPIC_API_KEY not found in environment. "
+            "Set ANTHROPIC_API_KEY in .env or pass --api-key."
         )
         sys.exit(1)
 
@@ -231,6 +246,13 @@ Examples:
     --subject "Water Lilies" \\
     --output-id monet-002 \\
     --expanded-subject "A serene pond with floating water lilies, soft reflections of willow trees, dappled sunlight on the water surface"
+
+  # Generate using Anthropic (Claude)
+  python main.py \\
+    --artist "Salvador Dali" \\
+    --subject "Melting Clocks" \\
+    --output-id dali-002 \\
+    --provider anthropic
         """,
     )
 
@@ -283,8 +305,8 @@ Examples:
         "--provider",
         type=str,
         default=None,
-        choices=["mistral", "lmstudio"],
-        help="VLM provider (default: from PROVIDER env var or 'mistral')",
+        choices=["mistral", "lmstudio", "anthropic"],
+        help="VLM provider: 'mistral' (Mistral API), 'lmstudio' (local), or 'anthropic' (Anthropic API). Default: from PROVIDER env var or 'mistral'",
     )
 
     parser.add_argument(

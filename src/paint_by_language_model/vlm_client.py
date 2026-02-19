@@ -202,9 +202,7 @@ class VLMClient:
         except requests.RequestException:
             return False
 
-    def _build_multimodal_payload(
-        self, prompt: str, image_bytes: bytes, max_tokens: int
-    ) -> dict:
+    def _build_multimodal_payload(self, prompt: str, image_bytes: bytes, max_tokens: int) -> dict:
         """
         Build request payload for multimodal query based on provider.
 
