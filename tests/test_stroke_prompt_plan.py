@@ -11,7 +11,7 @@ sys.path.insert(
     0, str(Path(__file__).parent.parent / "src" / "paint_by_language_model")
 )
 
-from models.painting_plan import PaintingPlan, PlanLayer
+from models.painting_plan import PaintingPlan
 from services.stroke_vlm_client import StrokeVLMClient
 
 
@@ -78,7 +78,7 @@ class TestPlanContextInPrompt:
     ) -> None:
         """Test that prompt includes full plan JSON when painting_plan is provided."""
         current_layer = sample_plan["layers"][0]
-        
+
         prompt = stroke_client._build_stroke_prompt(
             artist_name="Test Artist",
             subject="Test Subject",
@@ -97,7 +97,7 @@ class TestPlanContextInPrompt:
     ) -> None:
         """Test that prompt includes 'CURRENT FOCUS' section with active layer details."""
         current_layer = sample_plan["layers"][0]
-        
+
         prompt = stroke_client._build_stroke_prompt(
             artist_name="Test Artist",
             subject="Test Subject",
@@ -109,14 +109,14 @@ class TestPlanContextInPrompt:
         )
 
         assert "=== CURRENT FOCUS ===" in prompt
-        assert "Layer 1: \"Background\"" in prompt
-        
+        assert 'Layer 1: "Background"' in prompt
+
     def test_prompt_includes_layer_description(
         self, stroke_client: StrokeVLMClient, sample_plan: PaintingPlan
     ) -> None:
         """Test that prompt includes layer description."""
         current_layer = sample_plan["layers"][0]
-        
+
         prompt = stroke_client._build_stroke_prompt(
             artist_name="Test Artist",
             subject="Test Subject",
@@ -134,7 +134,7 @@ class TestPlanContextInPrompt:
     ) -> None:
         """Test that prompt includes layer colour palette."""
         current_layer = sample_plan["layers"][0]
-        
+
         prompt = stroke_client._build_stroke_prompt(
             artist_name="Test Artist",
             subject="Test Subject",
@@ -153,7 +153,7 @@ class TestPlanContextInPrompt:
     ) -> None:
         """Test that prompt includes layer techniques."""
         current_layer = sample_plan["layers"][0]
-        
+
         prompt = stroke_client._build_stroke_prompt(
             artist_name="Test Artist",
             subject="Test Subject",
@@ -171,7 +171,7 @@ class TestPlanContextInPrompt:
     ) -> None:
         """Test that prompt includes layer shapes."""
         current_layer = sample_plan["layers"][0]
-        
+
         prompt = stroke_client._build_stroke_prompt(
             artist_name="Test Artist",
             subject="Test Subject",
@@ -189,7 +189,7 @@ class TestPlanContextInPrompt:
     ) -> None:
         """Test that prompt includes layer highlights."""
         current_layer = sample_plan["layers"][0]
-        
+
         prompt = stroke_client._build_stroke_prompt(
             artist_name="Test Artist",
             subject="Test Subject",
@@ -228,7 +228,7 @@ class TestExpandedSubjectInPrompt:
     ) -> None:
         """Test that prompt includes 'Detailed description:' when expanded_subject is provided."""
         expanded = "A very detailed description of the painting"
-        
+
         prompt = stroke_client._build_stroke_prompt(
             artist_name="Test Artist",
             subject="Test Subject",

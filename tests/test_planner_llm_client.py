@@ -1,10 +1,8 @@
 """Tests for PlannerLLMClient."""
 
 import json
-import re
 import sys
 from pathlib import Path
-from typing import Any
 from unittest.mock import Mock, patch
 
 import pytest
@@ -14,7 +12,6 @@ sys.path.insert(
 )
 
 from config import CANVAS_HEIGHT, CANVAS_WIDTH
-from models.painting_plan import PaintingPlan
 from services.planner_llm_client import PlannerLLMClient
 
 
@@ -42,7 +39,9 @@ def planner_client(mock_vlm_client: Mock) -> PlannerLLMClient:
 class TestPromptConstruction:
     """Tests for prompt construction."""
 
-    def test_prompt_includes_artist_name(self, planner_client: PlannerLLMClient) -> None:
+    def test_prompt_includes_artist_name(
+        self, planner_client: PlannerLLMClient
+    ) -> None:
         """Test that prompt includes artist name."""
         prompt = planner_client._build_planning_prompt(
             artist_name="Vincent van Gogh",
@@ -64,7 +63,9 @@ class TestPromptConstruction:
 
         assert "Water Lilies" in prompt
 
-    def test_prompt_includes_stroke_types(self, planner_client: PlannerLLMClient) -> None:
+    def test_prompt_includes_stroke_types(
+        self, planner_client: PlannerLLMClient
+    ) -> None:
         """Test that prompt includes stroke types."""
         prompt = planner_client._build_planning_prompt(
             artist_name="Test Artist",
@@ -77,7 +78,9 @@ class TestPromptConstruction:
         assert "arc" in prompt
         assert "splatter" in prompt
 
-    def test_prompt_includes_canvas_dimensions(self, planner_client: PlannerLLMClient) -> None:
+    def test_prompt_includes_canvas_dimensions(
+        self, planner_client: PlannerLLMClient
+    ) -> None:
         """Test that prompt includes canvas dimensions."""
         prompt = planner_client._build_planning_prompt(
             artist_name="Test Artist",
@@ -117,7 +120,9 @@ class TestPromptConstruction:
 
         assert "Expanded description:" not in prompt
 
-    def test_prompt_requests_json_only_response(self, planner_client: PlannerLLMClient) -> None:
+    def test_prompt_requests_json_only_response(
+        self, planner_client: PlannerLLMClient
+    ) -> None:
         """Test that prompt requests JSON-only response."""
         prompt = planner_client._build_planning_prompt(
             artist_name="Test Artist",
@@ -133,7 +138,9 @@ class TestPromptConstruction:
 class TestResponseParsingValid:
     """Tests for parsing valid responses."""
 
-    def test_well_formed_json_plan_parses(self, planner_client: PlannerLLMClient) -> None:
+    def test_well_formed_json_plan_parses(
+        self, planner_client: PlannerLLMClient
+    ) -> None:
         """Test that well-formed JSON plan with 3+ layers parses into PaintingPlan."""
         response = json.dumps(
             {
@@ -184,7 +191,9 @@ class TestResponseParsingValid:
         assert plan["total_layers"] == 3
         assert len(plan["layers"]) == 3
 
-    def test_all_plan_layer_fields_populated(self, planner_client: PlannerLLMClient) -> None:
+    def test_all_plan_layer_fields_populated(
+        self, planner_client: PlannerLLMClient
+    ) -> None:
         """Test that all PlanLayer fields are correctly populated."""
         response = json.dumps(
             {
@@ -220,7 +229,9 @@ class TestResponseParsingValid:
         assert layer["shapes"] == "Test shapes"
         assert layer["highlights"] == "Test highlights"
 
-    def test_total_layers_matches_layer_count(self, planner_client: PlannerLLMClient) -> None:
+    def test_total_layers_matches_layer_count(
+        self, planner_client: PlannerLLMClient
+    ) -> None:
         """Test that total_layers matches len(layers)."""
         response = json.dumps(
             {
@@ -542,7 +553,9 @@ class TestResponseParsingEdgeCases:
         assert plan["total_layers"] == 1
         assert len(plan["layers"]) == 1
 
-    def test_large_plan_with_many_layers(self, planner_client: PlannerLLMClient) -> None:
+    def test_large_plan_with_many_layers(
+        self, planner_client: PlannerLLMClient
+    ) -> None:
         """Test that very large plan (10+ layers) parses fine."""
         layers = []
         for i in range(1, 15):
@@ -575,7 +588,9 @@ class TestResponseParsingEdgeCases:
         assert plan["total_layers"] == 14
         assert len(plan["layers"]) == 14
 
-    def test_extra_fields_in_response_tolerated(self, planner_client: PlannerLLMClient) -> None:
+    def test_extra_fields_in_response_tolerated(
+        self, planner_client: PlannerLLMClient
+    ) -> None:
         """Test that extra fields in response are ignored/tolerated."""
         response = json.dumps(
             {
