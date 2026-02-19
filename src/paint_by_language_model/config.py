@@ -62,10 +62,10 @@ LMSTUDIO_EVALUATION_VLM_MODEL = "lmistralai/ministral-3-3b"
 # Anthropic API settings
 ANTHROPIC_BASE_URL = "https://api.anthropic.com/v1"
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
-ANTHROPIC_DEFAULT_MODEL = "claude-sonnet-4-5"
-ANTHROPIC_VLM_MODEL = "claude-sonnet-4-5"
-ANTHROPIC_EVALUATION_VLM_MODEL = "claude-sonnet-4-5"
-ANTHROPIC_PLANNER_MODEL = "claude-sonnet-4-5"
+ANTHROPIC_DEFAULT_MODEL = "claude-sonnet-4-6"
+ANTHROPIC_VLM_MODEL = "claude-sonnet-4-6"
+ANTHROPIC_EVALUATION_VLM_MODEL = "claude-sonnet-4-6"
+ANTHROPIC_PLANNER_MODEL = "claude-sonnet-4-6"
 ANTHROPIC_VERSION = "2023-06-01"
 
 # Planner LLM Settings

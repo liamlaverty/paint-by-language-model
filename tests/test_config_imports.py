@@ -205,8 +205,66 @@ class TestConfigSettings(unittest.TestCase):
         """API_BASE_URL matches PROVIDER setting."""
         if config.PROVIDER == "mistral":
             self.assertEqual(config.API_BASE_URL, config.MISTRAL_BASE_URL)
+        elif config.PROVIDER == "anthropic":
+            self.assertEqual(config.API_BASE_URL, config.ANTHROPIC_BASE_URL)
         else:
             self.assertEqual(config.API_BASE_URL, config.LMSTUDIO_BASE_URL)
+
+    def test_anthropic_base_url(self) -> None:
+        """ANTHROPIC_BASE_URL is set to the correct endpoint."""
+        self.assertEqual(config.ANTHROPIC_BASE_URL, "https://api.anthropic.com/v1")
+
+    def test_anthropic_vlm_model(self) -> None:
+        """ANTHROPIC_VLM_MODEL defaults to claude-sonnet-4-5."""
+        self.assertEqual(config.ANTHROPIC_VLM_MODEL, "claude-sonnet-4-5")
+
+    def test_anthropic_evaluation_vlm_model(self) -> None:
+        """ANTHROPIC_EVALUATION_VLM_MODEL defaults to claude-sonnet-4-5."""
+        self.assertEqual(config.ANTHROPIC_EVALUATION_VLM_MODEL, "claude-sonnet-4-5")
+
+    def test_anthropic_planner_model(self) -> None:
+        """ANTHROPIC_PLANNER_MODEL defaults to claude-sonnet-4-5."""
+        self.assertEqual(config.ANTHROPIC_PLANNER_MODEL, "claude-sonnet-4-5")
+
+    def test_anthropic_version(self) -> None:
+        """ANTHROPIC_VERSION is set to the API version string."""
+        self.assertEqual(config.ANTHROPIC_VERSION, "2023-06-01")
+
+    def test_anthropic_config_exists(self) -> None:
+        """Anthropic-specific constants exist in config."""
+        self.assertTrue(hasattr(config, "ANTHROPIC_BASE_URL"))
+        self.assertTrue(hasattr(config, "ANTHROPIC_API_KEY"))
+        self.assertTrue(hasattr(config, "ANTHROPIC_VLM_MODEL"))
+        self.assertTrue(hasattr(config, "ANTHROPIC_EVALUATION_VLM_MODEL"))
+        self.assertTrue(hasattr(config, "ANTHROPIC_PLANNER_MODEL"))
+        self.assertTrue(hasattr(config, "ANTHROPIC_VERSION"))
+
+    def test_api_base_url_resolves_for_anthropic_provider(self) -> None:
+        """When PROVIDER=anthropic, API_BASE_URL points to Anthropic endpoint."""
+        import importlib
+        import os
+
+        original_provider = os.environ.get("PROVIDER")
+        original_key = os.environ.get("ANTHROPIC_API_KEY")
+        try:
+            os.environ["PROVIDER"] = "anthropic"
+            os.environ["ANTHROPIC_API_KEY"] = "sk-ant-test"
+            importlib.reload(config)
+            self.assertEqual(config.API_BASE_URL, "https://api.anthropic.com/v1")
+            self.assertEqual(config.VLM_MODEL, "claude-sonnet-4-5")
+            self.assertEqual(config.EVALUATION_VLM_MODEL, "claude-sonnet-4-5")
+            self.assertEqual(config.PLANNER_MODEL, "claude-sonnet-4-5")
+        finally:
+            # Restore original env and reload to clean state
+            if original_provider is None:
+                os.environ.pop("PROVIDER", None)
+            else:
+                os.environ["PROVIDER"] = original_provider
+            if original_key is None:
+                os.environ.pop("ANTHROPIC_API_KEY", None)
+            else:
+                os.environ["ANTHROPIC_API_KEY"] = original_key
+            importlib.reload(config)
 
 
 if __name__ == "__main__":

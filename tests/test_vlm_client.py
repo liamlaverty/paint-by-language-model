@@ -472,3 +472,226 @@ def test_full_multimodal_workflow(
     message_content = payload["messages"][0]["content"]
     assert message_content[0]["text"] == "what is this?"
     assert "data:image/png;base64," in message_content[1]["image_url"]["url"]
+
+
+# ============================================================================
+# Anthropic Provider Tests
+# ============================================================================
+
+
+def test_build_headers_anthropic_has_x_api_key() -> None:
+    """Anthropic headers use x-api-key, not Authorization: Bearer."""
+    client = VLMClient(
+        provider="anthropic",
+        api_key="em-anthropic-test-key",
+        base_url="https://api.anthropic.com/v1",
+    )
+    headers = client._build_headers()
+
+    assert headers["x-api-key"] == "em-anthropic-test-key"
+    assert "Authorization" not in headers
+    assert headers["Content-Type"] == "application/json"
+
+
+def test_build_headers_anthropic_has_version() -> None:
+    """Anthropic headers include the anthropic-version field."""
+    client = VLMClient(
+        provider="anthropic",
+        api_key="em-anthropic-test-key",
+        base_url="https://api.anthropic.com/v1",
+    )
+    headers = client._build_headers()
+
+    assert "anthropic-version" in headers
+    assert headers["anthropic-version"] == "2023-06-01"
+
+
+def test_build_headers_anthropic_no_bearer_token() -> None:
+    """Anthropic headers must not include any Authorization header."""
+    client = VLMClient(
+        provider="anthropic",
+        api_key="em-anthropic-test-key",
+        base_url="https://api.anthropic.com/v1",
+    )
+    headers = client._build_headers()
+
+    assert "Authorization" not in headers
+
+
+def test_build_text_payload_anthropic_structure() -> None:
+    """Anthropic text payload follows Messages API format."""
+    client = VLMClient(
+        provider="anthropic",
+        model="claude-sonnet-4-5",
+        temperature=0.5,
+        base_url="https://api.anthropic.com/v1",
+    )
+    payload = client._build_text_payload("hello world", max_tokens=512)
+
+    assert payload["model"] == "claude-sonnet-4-5"
+    assert payload["max_tokens"] == 512
+    assert payload["temperature"] == 0.5
+    assert "messages" in payload
+    assert len(payload["messages"]) == 1
+    assert payload["messages"][0]["role"] == "user"
+    assert payload["messages"][0]["content"] == "hello world"
+
+
+def test_build_multimodal_payload_anthropic_image_block() -> None:
+    """Anthropic multimodal payload uses type=image with source dict."""
+    client = VLMClient(
+        provider="anthropic",
+        model="claude-sonnet-4-5",
+        base_url="https://api.anthropic.com/v1",
+    )
+    test_image = b"fake-image-data"
+    payload = client._build_multimodal_payload(
+        "describe this", test_image, max_tokens=256
+    )
+
+    message_content = payload["messages"][0]["content"]
+    assert len(message_content) == 2
+
+    image_block = message_content[0]
+    text_block = message_content[1]
+
+    # Image block uses type=image (not image_url)
+    assert image_block["type"] == "image"
+    assert "image_url" not in image_block
+
+    # Source dict structure
+    source = image_block["source"]
+    assert source["type"] == "base64"
+    assert source["media_type"] == "image/png"
+    assert "data" in source
+
+    # Raw base64 — no data URL prefix
+    assert not source["data"].startswith("data:image/png;base64,")
+    decoded = base64.b64decode(source["data"])
+    assert decoded == test_image
+
+    # Text block is second (image before text)
+    assert text_block["type"] == "text"
+    assert text_block["text"] == "describe this"
+
+
+def test_build_multimodal_payload_anthropic_image_before_text() -> None:
+    """Image block appears before the text block in Anthropic payload."""
+    client = VLMClient(
+        provider="anthropic",
+        base_url="https://api.anthropic.com/v1",
+    )
+    payload = client._build_multimodal_payload("prompt text", b"img", max_tokens=100)
+    content = payload["messages"][0]["content"]
+
+    assert content[0]["type"] == "image"
+    assert content[1]["type"] == "text"
+
+
+def test_extract_response_text_anthropic_format() -> None:
+    """_extract_response_text correctly parses Anthropic content block response."""
+    client = VLMClient(
+        provider="anthropic",
+        base_url="https://api.anthropic.com/v1",
+    )
+    response_data = {"content": [{"type": "text", "text": "hello"}]}
+    result = client._extract_response_text(response_data)
+
+    assert result == "hello"
+
+
+def test_query_anthropic_mock_http(mocker: Any) -> None:
+    """query() with Anthropic provider sends correct headers and parses response."""
+    mock_response = MagicMock()
+    mock_response.status_code = 200
+    mock_response.json.return_value = {"content": [{"type": "text", "text": "result"}]}
+    mock_response.raise_for_status = MagicMock()
+    mock_post = mocker.patch("requests.post", return_value=mock_response)
+
+    client = VLMClient(
+        provider="anthropic",
+        base_url="https://api.anthropic.com/v1",
+        model="claude-sonnet-4-5",
+        api_key="sk-ant-test",
+    )
+    result = client.query("test prompt", max_tokens=100)
+
+    assert result == "result"
+
+    call_kwargs = mock_post.call_args[1]
+    assert call_kwargs["headers"]["x-api-key"] == "sk-ant-test"
+    assert call_kwargs["headers"]["anthropic-version"] == "2023-06-01"
+    assert "Authorization" not in call_kwargs["headers"]
+    assert mock_post.call_args[0][0] == "https://api.anthropic.com/v1/messages"
+
+
+def test_query_multimodal_anthropic_mock_http(mocker: Any) -> None:
+    """query_multimodal() with Anthropic sends correct image block structure."""
+    mock_response = MagicMock()
+    mock_response.status_code = 200
+    mock_response.json.return_value = {
+        "content": [{"type": "text", "text": "image description"}]
+    }
+    mock_response.raise_for_status = MagicMock()
+    mock_post = mocker.patch("requests.post", return_value=mock_response)
+
+    client = VLMClient(
+        provider="anthropic",
+        base_url="https://api.anthropic.com/v1",
+        model="claude-sonnet-4-5",
+        api_key="sk-ant-test",
+    )
+    test_image = b"png-bytes"
+    result = client.query_multimodal("what is shown?", test_image)
+
+    assert result == "image description"
+
+    call_kwargs = mock_post.call_args[1]
+    payload = call_kwargs["json"]
+    content = payload["messages"][0]["content"]
+
+    # Image block first, text block second
+    assert content[0]["type"] == "image"
+    assert content[0]["source"]["type"] == "base64"
+    assert content[0]["source"]["media_type"] == "image/png"
+    assert content[1]["type"] == "text"
+
+
+def test_query_anthropic_rate_limit_retries(mocker: Any) -> None:
+    """Anthropic HTTP 429 triggers exponential backoff and retries."""
+    mock_429 = MagicMock()
+    mock_429.status_code = 429
+
+    mock_200 = MagicMock()
+    mock_200.status_code = 200
+    mock_200.json.return_value = {"content": [{"type": "text", "text": "ok"}]}
+    mock_200.raise_for_status = MagicMock()
+
+    mock_post = mocker.patch("requests.post", side_effect=[mock_429, mock_200])
+    mock_sleep = mocker.patch("time.sleep")
+
+    client = VLMClient(
+        provider="anthropic",
+        base_url="https://api.anthropic.com/v1",
+        api_key="sk-ant-test",
+    )
+    result = client.query("prompt")
+
+    assert result == "ok"
+    assert mock_post.call_count == 2
+    mock_sleep.assert_called_once_with(RETRY_BACKOFF * (2**0))
+
+
+def test_query_anthropic_auth_failure_401(mocker: Any) -> None:
+    """Anthropic HTTP 401 raises ConnectionError without crashing."""
+    mock_401 = MagicMock()
+    mock_401.status_code = 401
+    mocker.patch("requests.post", return_value=mock_401)
+
+    client = VLMClient(
+        provider="anthropic",
+        base_url="https://api.anthropic.com/v1",
+        api_key="invalid-key",
+    )
+    with pytest.raises(ConnectionError, match="Authentication failed"):
+        client.query("test prompt")
