@@ -72,14 +72,17 @@ def test_suggest_strokes_sends_sample_images() -> None:
     """
     client = StrokeVLMClient()
 
-    with patch.object(
-        client.client,
-        "query_multimodal_multi_image",
-        return_value=_VALID_STROKE_JSON,
-    ) as mock_multi, patch.object(
-        client.client,
-        "query_multimodal",
-    ) as mock_single:
+    with (
+        patch.object(
+            client.client,
+            "query_multimodal_multi_image",
+            return_value=_VALID_STROKE_JSON,
+        ) as mock_multi,
+        patch.object(
+            client.client,
+            "query_multimodal",
+        ) as mock_single,
+    ):
         client.suggest_strokes(
             canvas_image=b"fake_canvas_bytes",
             artist_name="Test Artist",
@@ -93,9 +96,13 @@ def test_suggest_strokes_sends_sample_images() -> None:
 
     # Inspect the images argument (passed as keyword argument)
     call_kwargs = mock_multi.call_args
-    images: list[tuple[bytes, str]] = call_kwargs.kwargs.get("images") or call_kwargs.args[1]
+    images: list[tuple[bytes, str]] = (
+        call_kwargs.kwargs.get("images") or call_kwargs.args[1]
+    )
 
-    assert len(images) == 6, f"Expected 6 images (1 canvas + 5 samples), got {len(images)}"
+    assert len(images) == 6, (
+        f"Expected 6 images (1 canvas + 5 samples), got {len(images)}"
+    )
 
     # First entry must be the current canvas
     assert images[0][1] == "Current canvas", (

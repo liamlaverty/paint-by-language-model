@@ -1,9 +1,11 @@
 """Stroke sample image generator for VLM prompt visual context."""
 
 import logging
+from pathlib import Path
 
 from config import (
     STROKE_SAMPLE_BACKGROUND,
+    STROKE_SAMPLE_DIR,
     STROKE_SAMPLE_HEIGHT,
     STROKE_SAMPLE_WIDTH,
     STROKES_PER_SAMPLE,
@@ -23,15 +25,23 @@ class StrokeSampleGenerator:
     Each sample image is a 200×100 PNG containing 5 representative strokes
     rendered with varying configurations (thickness, opacity, colour, position
     and type-specific parameters). Images are generated once using the existing
-    CanvasManager / renderer pipeline and cached for the lifetime of the instance.
+    CanvasManager / renderer pipeline, persisted to disk under ``output_dir``,
+    and cached in-memory for the lifetime of the instance.
+
+    Persisting samples to disk makes it possible to inspect exactly what visual
+    context was provided to the VLM during a generation run.
     """
 
-    def __init__(self) -> None:
-        """Initialise the generator with an empty cache.
+    def __init__(self, output_dir: Path = STROKE_SAMPLE_DIR) -> None:
+        """Initialise the generator with an empty in-memory cache.
 
-        The cache is populated lazily on first call to generate_sample() or
-        generate_all_samples().
+        Args:
+            output_dir (Path): Directory where generated PNG files are saved.
+                Defaults to ``STROKE_SAMPLE_DIR`` (``src/datafiles/stroke_samples/``).
+                The directory is created if it does not already exist.
         """
+        self._output_dir = output_dir
+        self._output_dir.mkdir(parents=True, exist_ok=True)
         self._cache: dict[str, bytes] = {}
 
     # ------------------------------------------------------------------
@@ -73,6 +83,17 @@ class StrokeSampleGenerator:
             logger.debug("Returning cached sample image for stroke type '%s'", stroke_type)
             return self._cache[stroke_type]
 
+        disk_path = self._output_dir / f"{stroke_type}.png"
+        if disk_path.exists():
+            image_bytes = disk_path.read_bytes()
+            self._cache[stroke_type] = image_bytes
+            logger.debug(
+                "Loaded sample image for '%s' from disk (%d bytes)",
+                stroke_type,
+                len(image_bytes),
+            )
+            return image_bytes
+
         logger.info("Generating sample image for stroke type '%s'", stroke_type)
 
         strokes = self._get_sample_strokes(stroke_type)
@@ -86,13 +107,16 @@ class StrokeSampleGenerator:
 
         image_bytes = canvas.get_image_bytes(format="PNG")
 
-        self._cache[stroke_type] = image_bytes
-        logger.debug(
-            "Cached sample image for '%s' (%d bytes, %d strokes)",
+        disk_path.write_bytes(image_bytes)
+        logger.info(
+            "Saved sample image for '%s' to %s (%d bytes, %d strokes)",
             stroke_type,
+            disk_path,
             len(image_bytes),
             STROKES_PER_SAMPLE,
         )
+
+        self._cache[stroke_type] = image_bytes
         return image_bytes
 
     # ------------------------------------------------------------------

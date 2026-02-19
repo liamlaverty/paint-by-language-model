@@ -171,6 +171,8 @@ STROKE_SAMPLE_BACKGROUND = "#F5F5F5"
 # Number of strokes to render per sample image
 STROKES_PER_SAMPLE = 5
 
+# Directory where generated stroke sample PNGs are persisted
+STROKE_SAMPLE_DIR = PROJECT_ROOT / "datafiles" / "stroke_samples"
 
 # ----------------------------------------------------------------------------
 # VLM (Vision Language Model) Settings

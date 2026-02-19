@@ -434,6 +434,7 @@ Edit [src/paint_by_language_model/config.py](src/paint_by_language_model/config.
 - `STROKE_SAMPLE_WIDTH` / `STROKE_SAMPLE_HEIGHT` - Sample canvas dimensions (default: 200×100)
 - `STROKE_SAMPLE_BACKGROUND` - Sample background colour (default: `#F5F5F5`)
 - `STROKES_PER_SAMPLE` - Number of example strokes per sample image (default: 5)
+- `STROKE_SAMPLE_DIR` - Directory for persisted sample PNGs (default: `src/datafiles/stroke_samples/`)
 
 **Stroke Constraints**:
 - `MAX_STROKE_THICKNESS` / `MIN_STROKE_THICKNESS` - Thickness range (default: 1-10 pixels)
@@ -508,8 +509,9 @@ Edit [src/paint_by_language_model/config.py](src/paint_by_language_model/config.
   - Generates a 200×100 PNG sample image for each of the 5 stroke types
   - Each sample contains 5 varied example strokes (differing thickness, opacity, colour, position)
   - Uses the existing `CanvasManager` and renderer pipeline for pixel-accurate samples
-  - In-memory cache prevents redundant regeneration across iterations
-  - Initialised eagerly at `StrokeVLMClient` startup
+  - Persists each PNG to `src/datafiles/stroke_samples/` on first generation; subsequent runs load from disk
+  - In-memory cache prevents redundant disk reads within a single run
+  - Initialised eagerly at `StrokeVLMClient` startup; inspect the saved PNGs to see exactly what the VLM was given
 
 - **Evaluation VLM Client** ([services/evaluation_vlm_client.py](src/paint_by_language_model/services/evaluation_vlm_client.py))
   - Evaluates canvas against target artist style and layer objectives

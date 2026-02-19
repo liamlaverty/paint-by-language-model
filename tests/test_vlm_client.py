@@ -785,7 +785,9 @@ def test_multi_image_labels_present() -> None:
         (b"img-b", "Reference artwork"),
         (b"img-c", "Style target"),
     ]
-    payload = client._build_multi_image_payload("describe differences", images, max_tokens=128)
+    payload = client._build_multi_image_payload(
+        "describe differences", images, max_tokens=128
+    )
     content = payload["messages"][0]["content"]
 
     # Check that each label appears in the correct position
