@@ -336,3 +336,142 @@ class VLMClient:
         """
         base64_image = base64.b64encode(image_bytes).decode("utf-8")
         return f"data:image/png;base64,{base64_image}"
+
+    def _build_multi_image_payload(
+        self,
+        prompt: str,
+        images: list[tuple[bytes, str]],
+        max_tokens: int,
+    ) -> dict:
+        """
+        Build request payload for a multi-image multimodal query.
+
+        Each image is preceded by a text label block. A final text block
+        containing the main prompt is appended after all image blocks.
+
+        Args:
+            prompt (str): The main text prompt appended after all images
+            images (list[tuple[bytes, str]]): List of (image_bytes, label) pairs
+            max_tokens (int): Maximum tokens in the response
+
+        Returns:
+            dict: Request payload structure for the API
+        """
+        message_content: list[dict] = []
+
+        for image_bytes, label in images:
+            base64_image = base64.b64encode(image_bytes).decode("utf-8")
+            # Label block before each image
+            message_content.append({"type": "text", "text": label})
+            if self.provider == "anthropic":
+                message_content.append(
+                    {
+                        "type": "image",
+                        "source": {
+                            "type": "base64",
+                            "media_type": "image/png",
+                            "data": base64_image,
+                        },
+                    }
+                )
+            else:
+                # OpenAI-compatible: use data URL format
+                data_url = f"data:image/png;base64,{base64_image}"
+                message_content.append({"type": "image_url", "image_url": {"url": data_url}})
+
+        # Append main prompt as final text block
+        message_content.append({"type": "text", "text": prompt})
+
+        return {
+            "model": self.model,
+            "messages": [{"role": "user", "content": message_content}],
+            "max_tokens": max_tokens,
+            "temperature": self.temperature,
+        }
+
+    def query_multimodal_multi_image(
+        self,
+        prompt: str,
+        images: list[tuple[bytes, str]],
+        max_tokens: int = MAX_TOKENS,
+    ) -> str:
+        """
+        Send multiple labelled images and a text prompt to the VLM in one request.
+
+        Each image in ``images`` is a ``(image_bytes, label)`` pair. The label
+        is inserted as a text block immediately before the corresponding image
+        block, and the main prompt is appended as the final text block.
+
+        Args:
+            prompt (str): The main text prompt sent after all images
+            images (list[tuple[bytes, str]]): List of (image_bytes, label) pairs
+            max_tokens (int): Maximum tokens in response (default from config)
+
+        Returns:
+            str: The VLM's response text
+
+        Raises:
+            ConnectionError: If VLM API server is not reachable or auth fails
+            ValueError: If image encoding fails
+            requests.RequestException: For other HTTP errors
+        """
+        total_bytes = sum(len(img_bytes) for img_bytes, _ in images)
+        logger.info(
+            f"Sending multi-image query to VLM ({len(images)} images, {total_bytes} total bytes)"
+        )
+
+        try:
+            payload = self._build_multi_image_payload(prompt, images, max_tokens)
+
+            # Retry loop for rate limiting
+            for attempt in range(MAX_RETRIES):
+                response = requests.post(
+                    self.chat_endpoint,
+                    json=payload,
+                    headers=self._build_headers(),
+                    timeout=self.timeout,
+                )
+
+                # Handle rate limiting
+                if response.status_code == 429:
+                    if attempt < MAX_RETRIES - 1:
+                        wait = RETRY_BACKOFF * (2**attempt)
+                        logger.warning(
+                            f"Rate limited. Retrying in {wait}s "
+                            f"(attempt {attempt + 1}/{MAX_RETRIES})"
+                        )
+                        time.sleep(wait)
+                        continue
+                    else:
+                        raise requests.HTTPError(f"Rate limit exceeded after {MAX_RETRIES} retries")
+
+                # Break retry loop on non-429 response
+                break
+
+            # Handle auth failures
+            if response.status_code in (401, 403):
+                raise ConnectionError(
+                    f"Authentication failed for {self.base_url}. "
+                    "Check your API key in .env or --api-key flag."
+                )
+
+            response.raise_for_status()
+
+            response_data = response.json()
+            response_text: str = self._extract_response_text(response_data)
+
+            logger.info(f"Received VLM response ({len(response_text)} characters)")
+            return response_text
+
+        except requests.ConnectionError as e:
+            logger.error(f"Failed to connect to VLM API: {e}")
+            raise ConnectionError(
+                f"Could not connect to VLM API at {self.base_url}. "
+                "Ensure the VLM API server is reachable."
+            ) from e
+        except Exception as e:
+            if "base64" in str(type(e).__name__).lower():
+                logger.error(f"Failed to encode image: {e}")
+                raise ValueError("Failed to encode image to base64") from e
+            logger.error(f"VLM multi-image request failed: {e}")
+            raise
