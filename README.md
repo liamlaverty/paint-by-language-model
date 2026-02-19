@@ -12,8 +12,9 @@ The project includes a Next.js viewer application for interactively exploring ge
 - **Python**: 3.12.2 or higher
 - **Conda**: Anaconda or Miniconda for environment management
 - A VLM provider (one of):
-  - **Mistral API** (recommended): Get an API key at https://console.mistral.ai/
+  - **Mistral API**: Get an API key at https://console.mistral.ai/
   - **LMStudio** (local): Download from https://lmstudio.ai/ and run with server enabled on port 1234
+  - **Anthropic API**: Get an API key at https://console.anthropic.com/
 
 ### Next.js Viewer (Optional)
 - **Node.js**: 18.0.0 or higher
@@ -51,17 +52,21 @@ cp .env.example .env
 Edit `.env`:
 
 ```env
-# VLM Provider ("mistral" or "lmstudio")
+# VLM Provider ("mistral", "lmstudio", or "anthropic")
 PROVIDER=mistral
 
 # Mistral API key (required when PROVIDER=mistral)
 MISTRAL_API_KEY=your_api_key_here
+
+# Anthropic API key (required when PROVIDER=anthropic)
+# ANTHROPIC_API_KEY=your_api_key_here
 ```
 
 | Provider | Use Case | Auth Required |
-|----------|----------|---------------|
+|----------|----------|---------|
 | `mistral` | Remote API, production use | Yes (`MISTRAL_API_KEY`) |
 | `lmstudio` | Local development, no API costs | No |
+| `anthropic` | Remote API, Claude models | Yes (`ANTHROPIC_API_KEY`) |
 
 The provider can also be overridden via the `--provider` CLI flag.
 
@@ -115,7 +120,7 @@ python main.py \
 | `--target-score` | `-t` | 75.0 | Target style score (0-100) to stop generation early |
 | `--strokes-per-query` | `-n` | 5 | Number of strokes per VLM query (1-20) |
 | `--stroke-types` | | all | Comma-separated stroke types to use |
-| `--provider` | | from `.env` | VLM provider: `mistral` or `lmstudio` |
+| `--provider` | | from `.env` | VLM provider: `mistral`, `lmstudio`, or `anthropic` |
 | `--api-key` | | from `.env` | API key (overrides `MISTRAL_API_KEY` env var) |
 | `--gif-frame-duration` | | 150 | GIF frame duration in milliseconds |
 | `--log-level` | | INFO | Logging level (DEBUG, INFO, WARNING, ERROR) |
@@ -431,8 +436,9 @@ Edit [src/paint_by_language_model/config.py](src/paint_by_language_model/config.
 - `SUPPORTED_STROKE_TYPES` - `["line", "arc", "polyline", "circle", "splatter"]`
 
 **Provider Settings**:
-- `PROVIDER` - VLM provider: `mistral` (default) or `lmstudio`
+- `PROVIDER` - VLM provider: `mistral` (default), `lmstudio`, or `anthropic`
 - `MISTRAL_API_KEY` - API key for Mistral (loaded from `.env`)
+- `ANTHROPIC_API_KEY` - API key for Anthropic (loaded from `.env`)
 - `VLM_MODEL` - Stroke generation model (Mistral: `pixtral-large-latest`, LMStudio: `lmistralai/ministral-3-3b`)
 - `EVALUATION_VLM_MODEL` - Style evaluation model
 - `PLANNER_MODEL` - Planning LLM model (Mistral: `mistral-large-latest`, LMStudio: `local-model`)
@@ -507,9 +513,10 @@ Edit [src/paint_by_language_model/config.py](src/paint_by_language_model/config.
   - Tracks strategic evolution over iterations and layers
 
 - **VLM Client** ([vlm_client.py](src/paint_by_language_model/vlm_client.py))
-  - Provider-agnostic client for OpenAI-compatible APIs (Mistral, LMStudio)
+  - Provider-aware client supporting Mistral, LMStudio, and Anthropic APIs
+  - Mistral and LMStudio use OpenAI-compatible format; Anthropic uses a non-OpenAI-compatible Messages API
   - Supports multimodal queries (text + image)
-  - Bearer token authentication (Mistral) or no auth (LMStudio)
+  - Bearer token authentication (Mistral), `x-api-key` header (Anthropic), or no auth (LMStudio)
   - Rate-limit retry with exponential backoff (HTTP 429)
   - Configurable temperature per request
 
