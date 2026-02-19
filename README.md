@@ -4,7 +4,7 @@ A Python application that uses Vision Language Models (VLMs) to iteratively crea
 
 The project includes a Next.js viewer application for interactively exploring generated artworks, viewing stroke-by-stroke creation timelines, and examining metadata and evaluation scores.
 
-**Current Status**: Phase 8 complete - Multi-layer planning phase with structured painting plans, layer-aware generation, and enhanced subject descriptions for coherent artwork creation.
+**Current Status**: Phase 11 complete - Stroke sample images attached to VLM prompt for visual context, multi-image VLMClient support, and StrokeSampleGenerator service.
 
 ## Prerequisites
 
@@ -430,6 +430,12 @@ Edit [src/paint_by_language_model/config.py](src/paint_by_language_model/config.
 - `CANVAS_WIDTH` / `CANVAS_HEIGHT` - Canvas dimensions (default: 800×600)
 - `CANVAS_BACKGROUND_COLOR` - Background color (default: `#FFFFFF`)
 
+**Stroke Sample Images**:
+- `STROKE_SAMPLE_WIDTH` / `STROKE_SAMPLE_HEIGHT` - Sample canvas dimensions (default: 200×100)
+- `STROKE_SAMPLE_BACKGROUND` - Sample background colour (default: `#F5F5F5`)
+- `STROKES_PER_SAMPLE` - Number of example strokes per sample image (default: 5)
+- `STROKE_SAMPLE_DIR` - Directory for persisted sample PNGs (default: `src/datafiles/stroke_samples/`)
+
 **Stroke Constraints**:
 - `MAX_STROKE_THICKNESS` / `MIN_STROKE_THICKNESS` - Thickness range (default: 1-10 pixels)
 - `MAX_STROKE_OPACITY` / `MIN_STROKE_OPACITY` - Opacity range (default: 0.1-1.0)
@@ -491,12 +497,21 @@ Edit [src/paint_by_language_model/config.py](src/paint_by_language_model/config.
   - Plans are cached to disk for resume support
 
 - **Stroke VLM Client** ([services/stroke_vlm_client.py](src/paint_by_language_model/services/stroke_vlm_client.py))
-  - Queries VLMs with canvas images
+  - Queries VLMs with canvas image plus 5 stroke sample images (one per stroke type)
   - Builds layer-aware prompts with artist context, plan, and strategy
+  - Prompt descriptions reference the attached visual sample for each stroke type
   - References current layer's palette, techniques, and objectives
   - Parses JSON responses robustly (handles malformed VLM output)
   - Supports batch stroke generation
   - Tracks interaction history for debugging
+
+- **Stroke Sample Generator** ([services/stroke_sample_generator.py](src/paint_by_language_model/services/stroke_sample_generator.py))
+  - Generates a 200×100 PNG sample image for each of the 5 stroke types
+  - Each sample contains 5 varied example strokes (differing thickness, opacity, colour, position)
+  - Uses the existing `CanvasManager` and renderer pipeline for pixel-accurate samples
+  - Persists each PNG to `src/datafiles/stroke_samples/` on first generation; subsequent runs load from disk
+  - In-memory cache prevents redundant disk reads within a single run
+  - Initialised eagerly at `StrokeVLMClient` startup; inspect the saved PNGs to see exactly what the VLM was given
 
 - **Evaluation VLM Client** ([services/evaluation_vlm_client.py](src/paint_by_language_model/services/evaluation_vlm_client.py))
   - Evaluates canvas against target artist style and layer objectives
@@ -515,7 +530,8 @@ Edit [src/paint_by_language_model/config.py](src/paint_by_language_model/config.
 - **VLM Client** ([vlm_client.py](src/paint_by_language_model/vlm_client.py))
   - Provider-aware client supporting Mistral, LMStudio, and Anthropic APIs
   - Mistral and LMStudio use OpenAI-compatible format; Anthropic uses a non-OpenAI-compatible Messages API
-  - Supports multimodal queries (text + image)
+  - Supports single-image multimodal queries (`query_multimodal()`) and multi-image queries (`query_multimodal_multi_image()`)
+  - Multi-image method accepts a list of `(image_bytes, label)` tuples; each image is preceded by its label text block
   - Bearer token authentication (Mistral), `x-api-key` header (Anthropic), or no auth (LMStudio)
   - Rate-limit retry with exponential backoff (HTTP 429)
   - Configurable temperature per request
@@ -583,7 +599,9 @@ Edit [src/paint_by_language_model/config.py](src/paint_by_language_model/config.
 - [x] Phase 3: Additional stroke types (arc, polyline, circle, splatter), multiple strokes per iteration
 - [x] Phase 4: Provider-agnostic VLM client (Mistral API + LMStudio)
 - [x] Phase 5: Interactive Next.js viewer with timeline playback
-- [ ] Phase 6: Advanced stroke types and rendering techniques
-- [ ] Phase 7: Multi-model VLM comparison and A/B testing
+- [x] Phase 6: Advanced stroke types and rendering techniques
+- [x] Phase 7: Multi-layer strategy management
 - [x] Phase 8: Multi-layer planning phase with structured painting plans
 - [ ] Phase 9: Public deployment and gallery hosting
+- [x] Phase 10: Anthropic API provider support
+- [x] Phase 11: Stroke sample images in VLM prompt for visual context

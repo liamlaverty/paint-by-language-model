@@ -181,6 +181,29 @@ class TestConfigSettings(unittest.TestCase):
         self.assertTrue(config.GIF_FILENAME.endswith(".gif"))
         self.assertGreaterEqual(config.GIF_LOOP_COUNT, 0)
 
+    def test_stroke_sample_settings_exist(self) -> None:
+        """Test stroke sample image settings are present and importable."""
+        self.assertTrue(hasattr(config, "STROKE_SAMPLE_WIDTH"))
+        self.assertTrue(hasattr(config, "STROKE_SAMPLE_HEIGHT"))
+        self.assertTrue(hasattr(config, "STROKE_SAMPLE_BACKGROUND"))
+        self.assertTrue(hasattr(config, "STROKES_PER_SAMPLE"))
+
+    def test_stroke_sample_default_values(self) -> None:
+        """Test stroke sample settings have correct default values."""
+        self.assertEqual(config.STROKE_SAMPLE_WIDTH, 200)
+        self.assertEqual(config.STROKE_SAMPLE_HEIGHT, 100)
+        self.assertEqual(config.STROKE_SAMPLE_BACKGROUND, "#F5F5F5")
+        self.assertEqual(config.STROKES_PER_SAMPLE, 5)
+
+    def test_stroke_sample_dimensions_positive(self) -> None:
+        """Test stroke sample dimensions are positive integers."""
+        self.assertIsInstance(config.STROKE_SAMPLE_WIDTH, int)
+        self.assertIsInstance(config.STROKE_SAMPLE_HEIGHT, int)
+        self.assertGreater(config.STROKE_SAMPLE_WIDTH, 0)
+        self.assertGreater(config.STROKE_SAMPLE_HEIGHT, 0)
+        self.assertIsInstance(config.STROKES_PER_SAMPLE, int)
+        self.assertGreater(config.STROKES_PER_SAMPLE, 0)
+
     def test_provider_config_exists(self) -> None:
         """Provider configuration constants exist."""
         self.assertTrue(hasattr(config, "PROVIDER"))
