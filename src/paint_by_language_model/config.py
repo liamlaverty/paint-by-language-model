@@ -158,6 +158,21 @@ MIN_DOT_SIZE = 1
 
 
 # ----------------------------------------------------------------------------
+# Stroke Sample Image Settings
+# ----------------------------------------------------------------------------
+
+# Dimensions for stroke sample images sent alongside canvas in VLM prompts
+STROKE_SAMPLE_WIDTH = 200
+STROKE_SAMPLE_HEIGHT = 100
+
+# Background colour for stroke sample images
+STROKE_SAMPLE_BACKGROUND = "#F5F5F5"
+
+# Number of strokes to render per sample image
+STROKES_PER_SAMPLE = 5
+
+
+# ----------------------------------------------------------------------------
 # VLM (Vision Language Model) Settings
 # ----------------------------------------------------------------------------
 

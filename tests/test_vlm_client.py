@@ -522,13 +522,13 @@ def test_build_text_payload_anthropic_structure() -> None:
     """Anthropic text payload follows Messages API format."""
     client = VLMClient(
         provider="anthropic",
-        model="claude-sonnet-4-5",
+        model="claude-sonnet-4-6",
         temperature=0.5,
         base_url="https://api.anthropic.com/v1",
     )
     payload = client._build_text_payload("hello world", max_tokens=512)
 
-    assert payload["model"] == "claude-sonnet-4-5"
+    assert payload["model"] == "claude-sonnet-4-6"
     assert payload["max_tokens"] == 512
     assert payload["temperature"] == 0.5
     assert "messages" in payload
@@ -541,7 +541,7 @@ def test_build_multimodal_payload_anthropic_image_block() -> None:
     """Anthropic multimodal payload uses type=image with source dict."""
     client = VLMClient(
         provider="anthropic",
-        model="claude-sonnet-4-5",
+        model="claude-sonnet-4-6",
         base_url="https://api.anthropic.com/v1",
     )
     test_image = b"fake-image-data"
@@ -611,7 +611,7 @@ def test_query_anthropic_mock_http(mocker: Any) -> None:
     client = VLMClient(
         provider="anthropic",
         base_url="https://api.anthropic.com/v1",
-        model="claude-sonnet-4-5",
+        model="claude-sonnet-4-6",
         api_key="sk-ant-test",
     )
     result = client.query("test prompt", max_tokens=100)
@@ -638,7 +638,7 @@ def test_query_multimodal_anthropic_mock_http(mocker: Any) -> None:
     client = VLMClient(
         provider="anthropic",
         base_url="https://api.anthropic.com/v1",
-        model="claude-sonnet-4-5",
+        model="claude-sonnet-4-6",
         api_key="sk-ant-test",
     )
     test_image = b"png-bytes"
