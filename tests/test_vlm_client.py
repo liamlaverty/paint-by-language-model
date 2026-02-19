@@ -695,3 +695,115 @@ def test_query_anthropic_auth_failure_401(mocker: Any) -> None:
     )
     with pytest.raises(ConnectionError, match="Authentication failed"):
         client.query("test prompt")
+
+
+# ============================================================================
+# Multi-Image Payload Tests
+# ============================================================================
+
+
+def test_multi_image_payload_anthropic() -> None:
+    """_build_multi_image_payload() builds correct Anthropic format for 3 images."""
+    client = VLMClient(
+        provider="anthropic",
+        base_url="https://api.anthropic.com/v1",
+        model="claude-sonnet-4-6",
+        temperature=0.5,
+    )
+    images = [
+        (b"image-bytes-1", "Label One"),
+        (b"image-bytes-2", "Label Two"),
+        (b"image-bytes-3", "Label Three"),
+    ]
+    payload = client._build_multi_image_payload("main prompt", images, max_tokens=256)
+
+    content = payload["messages"][0]["content"]
+
+    # 3 images × (1 label + 1 image) + 1 prompt = 7 blocks
+    assert len(content) == 7
+
+    # Verify Anthropic image block structure for each image
+    image_blocks = [block for block in content if block["type"] == "image"]
+    assert len(image_blocks) == 3
+    for image_block in image_blocks:
+        assert "image_url" not in image_block
+        source = image_block["source"]
+        assert source["type"] == "base64"
+        assert source["media_type"] == "image/png"
+        assert "data" in source
+
+    # Final block is the prompt
+    assert content[-1]["type"] == "text"
+    assert content[-1]["text"] == "main prompt"
+
+
+def test_multi_image_payload_openai_compat() -> None:
+    """_build_multi_image_payload() builds correct OpenAI-compat format for 3 images."""
+    client = VLMClient(
+        provider="mistral",
+        base_url="https://api.mistral.ai/v1",
+        model="pixtral-12b",
+        temperature=0.7,
+    )
+    images = [
+        (b"image-bytes-1", "Label One"),
+        (b"image-bytes-2", "Label Two"),
+        (b"image-bytes-3", "Label Three"),
+    ]
+    payload = client._build_multi_image_payload("main prompt", images, max_tokens=256)
+
+    content = payload["messages"][0]["content"]
+
+    # 3 images × (1 label + 1 image_url) + 1 prompt = 7 blocks
+    assert len(content) == 7
+
+    # Verify OpenAI image_url block structure
+    image_url_blocks = [block for block in content if block["type"] == "image_url"]
+    assert len(image_url_blocks) == 3
+    for image_url_block in image_url_blocks:
+        assert "source" not in image_url_block
+        assert "image_url" in image_url_block
+        assert image_url_block["image_url"]["url"].startswith("data:image/png;base64,")
+
+    # Label text block precedes each image_url block
+    for i in range(3):
+        label_idx = i * 2
+        image_idx = i * 2 + 1
+        assert content[label_idx]["type"] == "text"
+        assert content[image_idx]["type"] == "image_url"
+
+    # Final block is the prompt
+    assert content[-1]["type"] == "text"
+    assert content[-1]["text"] == "main prompt"
+
+
+def test_multi_image_labels_present() -> None:
+    """Each label string appears in the text block immediately before its image."""
+    client = VLMClient(provider="mistral", base_url="https://api.mistral.ai/v1")
+    images = [
+        (b"img-a", "Canvas before stroke"),
+        (b"img-b", "Reference artwork"),
+        (b"img-c", "Style target"),
+    ]
+    payload = client._build_multi_image_payload(
+        "describe differences", images, max_tokens=128
+    )
+    content = payload["messages"][0]["content"]
+
+    # Check that each label appears in the correct position
+    assert content[0]["type"] == "text" and content[0]["text"] == "Canvas before stroke"
+    assert content[2]["type"] == "text" and content[2]["text"] == "Reference artwork"
+    assert content[4]["type"] == "text" and content[4]["text"] == "Style target"
+
+
+def test_multi_image_empty_list() -> None:
+    """_build_multi_image_payload() with empty images list produces only the prompt block."""
+    client = VLMClient(provider="anthropic", base_url="https://api.anthropic.com/v1")
+    payload = client._build_multi_image_payload("just a prompt", [], max_tokens=64)
+
+    content = payload["messages"][0]["content"]
+
+    # Only 1 block: the prompt text
+    assert len(content) == 1
+    assert content[0]["type"] == "text"
+    assert content[0]["text"] == "just a prompt"

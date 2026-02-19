@@ -26,6 +26,7 @@ from config import (
 )
 from models.stroke import Stroke
 from models.stroke_vlm_response import StrokeVLMResponse
+from services.stroke_sample_generator import StrokeSampleGenerator
 from utils.json_utils import clean_and_parse_json
 from vlm_client import VLMClient
 
@@ -69,6 +70,10 @@ class StrokeVLMClient:
         self.last_parsed_response: StrokeVLMResponse | None = None
 
         logger.info(f"Initialized StrokeVLMClient with model: {model}")
+
+        self.sample_generator = StrokeSampleGenerator()
+        self._stroke_samples = self.sample_generator.generate_all_samples()
+        logger.info(f"Generated {len(self._stroke_samples)} stroke sample images")
 
     def suggest_strokes(
         self,
@@ -132,7 +137,16 @@ class StrokeVLMClient:
 
         # Query VLM
         try:
-            response_text = self.client.query_multimodal(prompt=prompt, image_bytes=canvas_image)
+            images: list[tuple[bytes, str]] = [
+                (canvas_image, "Current canvas"),
+            ]
+            for stroke_type, sample_bytes in self._stroke_samples.items():
+                images.append((sample_bytes, f"{stroke_type.upper()} stroke sample"))
+
+            response_text = self.client.query_multimodal_multi_image(
+                prompt=prompt,
+                images=images,
+            )
 
             # Parse response
             stroke_response = self._parse_stroke_response(response_text)
@@ -277,23 +291,23 @@ Task: Suggest {num_strokes} stroke(s) to add to this canvas that evoke {artist_n
 
 AVAILABLE STROKE TYPES:
 
-1. LINE - Straight line between two points
+1. LINE - Straight line between two points. See attached "LINE stroke sample" image showing 5 examples with varying thickness, colour, opacity, and angle.
    Example: {{"type": "line", "start_x": 100, "start_y": 200, "end_x": 300, "end_y": 400, "color_hex": "#FF5733", "thickness": 5, "opacity": 0.8}}
    Required fields: type, start_x, start_y, end_x, end_y, color_hex, thickness, opacity
 
-2. ARC - Curved arc within a bounding box
+2. ARC - Curved arc within a bounding box. See attached "ARC stroke sample" image showing 5 examples with varying bbox sizes, angle sweeps, and thickness.
    Example: {{"type": "arc", "arc_bbox": [50, 50, 250, 250], "arc_start_angle": 0, "arc_end_angle": 180, "color_hex": "#3366CC", "thickness": 3, "opacity": 0.9}}
    Required fields: type, arc_bbox (list [x0,y0,x1,y1]), arc_start_angle (degrees), arc_end_angle (degrees), color_hex, thickness, opacity
 
-3. POLYLINE - Connected series of line segments
+3. POLYLINE - Connected series of line segments. See attached "POLYLINE stroke sample" image showing 5 examples with varying point counts, path shapes, and thickness.
    Example: {{"type": "polyline", "points": [[100,100], [150,200], [200,150], [250,250]], "color_hex": "#22AA44", "thickness": 4, "opacity": 0.7}}
    Required fields: type, points (list of [x,y] coordinates), color_hex, thickness, opacity
 
-4. CIRCLE - Circle (outline or filled)
+4. CIRCLE - Circle (outline or filled). See attached "CIRCLE stroke sample" image showing 5 examples with varying radii, fill modes, and opacity.
    Example: {{"type": "circle", "center_x": 400, "center_y": 300, "radius": 50, "fill": true, "color_hex": "#FFAA00", "thickness": 2, "opacity": 0.6}}
    Required fields: type, center_x, center_y, radius, fill (true/false), color_hex, thickness, opacity
 
-5. SPLATTER - Random dots within a radius (texture effect)
+5. SPLATTER - Random dots within a radius (texture effect). See attached "SPLATTER stroke sample" image showing 5 examples with varying radius, dot count, and dot sizes.
    Example: {{"type": "splatter", "center_x": 200, "center_y": 150, "splatter_radius": 30, "splatter_count": 15, "dot_size_min": 2, "dot_size_max": 6, "color_hex": "#8B4513", "thickness": 1, "opacity": 0.5}}
    Required fields: type, center_x, center_y, splatter_radius, splatter_count, dot_size_min, dot_size_max, color_hex, thickness, opacity
 
