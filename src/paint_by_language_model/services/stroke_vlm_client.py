@@ -277,8 +277,9 @@ Techniques: {current_layer["techniques"]}
 Shapes: {current_layer["shapes"]}
 Highlights: {current_layer["highlights"]}
 
-Focus your strokes on this layer's objectives. Stay within the recommended palette
-and techniques unless artistic judgement requires deviation.
+Focus your strokes on this layer's objectives. Stay near the recommended palette
+(don't be rigidly bound by the exact colour hex values). Stay within the
+recommended techniques unless artistic judgement requires deviation.
 """
 
         prompt = f"""You are an expert artist creating a piece in the style of {artist_name}.
