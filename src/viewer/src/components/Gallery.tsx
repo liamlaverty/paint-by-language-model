@@ -92,10 +92,10 @@ export default function Gallery({ artworks }: GalleryProps): React.ReactElement 
         </div>
         <div className="gallery-empty">
           <h2>No artworks available</h2>
-        <p>
-          The gallery is currently empty. Check back soon to explore artwork created by vision
-          language models.
-        </p>
+          <p>
+            The gallery is currently empty. Check back soon to explore artwork created by vision
+            language models.
+          </p>
         </div>
       </>
     );

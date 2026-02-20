@@ -91,9 +91,21 @@ describe('getArtworkSummaries', () => {
 
       mockReadFileSync.mockImplementation((filePath: unknown) => {
         const p = filePath as string;
-        if (p.includes('artwork-old')) return makeViewerData({ artworkId: 'artwork-old', generationDate: '2024-01-01T00:00:00' });
-        if (p.includes('artwork-mid')) return makeViewerData({ artworkId: 'artwork-mid', generationDate: '2024-06-15T00:00:00' });
-        if (p.includes('artwork-new')) return makeViewerData({ artworkId: 'artwork-new', generationDate: '2025-03-20T00:00:00' });
+        if (p.includes('artwork-old'))
+          return makeViewerData({
+            artworkId: 'artwork-old',
+            generationDate: '2024-01-01T00:00:00',
+          });
+        if (p.includes('artwork-mid'))
+          return makeViewerData({
+            artworkId: 'artwork-mid',
+            generationDate: '2024-06-15T00:00:00',
+          });
+        if (p.includes('artwork-new'))
+          return makeViewerData({
+            artworkId: 'artwork-new',
+            generationDate: '2025-03-20T00:00:00',
+          });
         throw new Error(`Unexpected path: ${p}`);
       });
 
@@ -123,9 +135,15 @@ describe('getArtworkSummaries', () => {
 
       mockReadFileSync.mockImplementation((filePath: unknown) => {
         const p = filePath as string;
-        if (p.includes('artwork-nodateb')) return makeViewerData({ artworkId: 'artwork-nodateb', generationDate: null });
-        if (p.includes('artwork-dated'))   return makeViewerData({ artworkId: 'artwork-dated',   generationDate: '2024-12-01T00:00:00' });
-        if (p.includes('artwork-nodatea')) return makeViewerData({ artworkId: 'artwork-nodatea', generationDate: null });
+        if (p.includes('artwork-nodateb'))
+          return makeViewerData({ artworkId: 'artwork-nodateb', generationDate: null });
+        if (p.includes('artwork-dated'))
+          return makeViewerData({
+            artworkId: 'artwork-dated',
+            generationDate: '2024-12-01T00:00:00',
+          });
+        if (p.includes('artwork-nodatea'))
+          return makeViewerData({ artworkId: 'artwork-nodatea', generationDate: null });
         throw new Error(`Unexpected path: ${p}`);
       });
 
@@ -149,12 +167,16 @@ describe('getArtworkSummaries', () => {
         return false;
       });
 
-      mockReaddirSync.mockReturnValue([
-        makeDirent('artwork-with-model'),
-      ] as unknown as ReturnType<typeof readdirSync>);
+      mockReaddirSync.mockReturnValue([makeDirent('artwork-with-model')] as unknown as ReturnType<
+        typeof readdirSync
+      >);
 
       mockReadFileSync.mockReturnValue(
-        makeViewerData({ artworkId: 'artwork-with-model', generationDate: '2025-01-01T00:00:00', strokeGenerator: 'claude-sonnet-4-5' })
+        makeViewerData({
+          artworkId: 'artwork-with-model',
+          generationDate: '2025-01-01T00:00:00',
+          strokeGenerator: 'claude-sonnet-4-5',
+        })
       );
 
       const summaries = getArtworkSummaries();
@@ -171,12 +193,16 @@ describe('getArtworkSummaries', () => {
         return false;
       });
 
-      mockReaddirSync.mockReturnValue([
-        makeDirent('artwork-no-model'),
-      ] as unknown as ReturnType<typeof readdirSync>);
+      mockReaddirSync.mockReturnValue([makeDirent('artwork-no-model')] as unknown as ReturnType<
+        typeof readdirSync
+      >);
 
       mockReadFileSync.mockReturnValue(
-        makeViewerData({ artworkId: 'artwork-no-model', generationDate: '2025-01-01T00:00:00', strokeGenerator: null })
+        makeViewerData({
+          artworkId: 'artwork-no-model',
+          generationDate: '2025-01-01T00:00:00',
+          strokeGenerator: null,
+        })
       );
 
       const summaries = getArtworkSummaries();
@@ -195,9 +221,9 @@ describe('getArtworkSummaries', () => {
         return false;
       });
 
-      mockReaddirSync.mockReturnValue([
-        makeDirent('artwork-legacy'),
-      ] as unknown as ReturnType<typeof readdirSync>);
+      mockReaddirSync.mockReturnValue([makeDirent('artwork-legacy')] as unknown as ReturnType<
+        typeof readdirSync
+      >);
 
       // Viewer data without generation_date or vlm_models
       const legacyData = JSON.stringify({

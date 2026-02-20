@@ -37,86 +37,84 @@ label {
 
 /* ── Design Tokens ────────────────────────────────────────────────────── */
 :root {
-    --button-x-padding: 0.25em;
-    --button-y-padding: 0.25em;
-    --button-gutter: 0.5ch;
-    --button-border-width: 1px;
-    --color-background: #fff;
-    --color-text: #0f172a;
-    --color-link: #334155;
-    --color-border: #334155;
-    --color-highlight: #344a22;
-    --color-highlight-text: #fff;
-    --color-element-background: #ffffff;
-    --color-button-background: #f1f5f9;
-    --color-button-text: #0f172a;
-    --color-button-border: #0f172a;
-    --color-button-hover-background: #0f172a;
-    --color-button-hover-text: #f1f5f9;
-    --color-button-hover-border: #0f172a;
-    --color-card-background: #f1f5f9;
-    --color-card-text: #0f172a;
-    --color-card-border: #0f172a;
-    --color-card-hover-background: #0f172a;
-    --color-card-hover-text: #f1f5f9;
-    --color-card-hover-border: #0f172a;
-    --color-rating-a: #2dc937;
-    --color-rating-b: #99c140;
-    --color-rating-c: #e7b416;
-    --color-rating-d: #db7b2b;
-    --color-rating-e: #cc3232;
-    --space-xs: clamp(0.4375rem, 0.42rem + 0.1vw, 0.5rem);
-    --space-s: clamp(0.875rem, 0.83rem + 0.2vw, 1rem);
-    --space-m: clamp(1.3125rem, 1.25rem + 0.29vw, 1.5rem);
-    --space-l: clamp(2.1875rem, 2.09rem + 0.49vw, 2.5rem);
-    --space-xl: clamp(3.0625rem, 2.92rem + 0.69vw, 3.5rem);
-    --space-2xl: clamp(3.5rem, 3.34rem + 0.78vw, 4rem);
-    --space-3xl: clamp(4.375rem, 4.17rem + 0.98vw, 5rem);
-    --space-4xl: clamp(6.5625rem, 6.26rem + 1.47vw, 7.5rem);
-    --space-xs-l: clamp(0.4375rem, -0.23rem + 3.24vw, 2.5rem);
-    --space-m-l: clamp(1.3125rem, 0.93rem + 1.86vw, 2.5rem);
-    --space-2xl-4xl: clamp(3.5rem, 2.21rem + 6.27vw, 7.5rem);
-    --size-step-000: clamp(0.694375rem, 0.69rem + 0.04vw, 0.72rem);
-    --size-step-00: clamp(0.833125rem, 0.81rem + 0.1vw, 0.9rem);
-    --size-step-0: clamp(1rem, 0.96rem + 0.2vw, 1.125rem);
-    --size-step-1: clamp(1.2rem, 1.13rem + 0.32vw, 1.40625rem);
-    --size-step-2: clamp(1.44rem, 1.34rem + 0.5vw, 1.758125rem);
-    --size-step-3: clamp(1.728125rem, 1.58rem + 0.74vw, 2.1975rem);
-    --size-step-4: clamp(2.07375rem, 1.86rem + 1.06vw, 2.746875rem);
-    --size-step-5: clamp(2.488125rem, 2.18rem + 1.48vw, 3.433125rem);
-    --size-step-6: clamp(2.98625rem, 2.56rem + 2.05vw, 4.29125rem);
-    --size-step-7: clamp(3.583125rem, 3.01rem + 2.79vw, 5.364375rem);
-    --size-step-8: clamp(4.3rem, 3.52rem + 3.77vw, 6.705625rem);
-    --size-step-9: clamp(5.16rem, 4.12rem + 5.05vw, 8.381875rem);
-    --size-step-10: clamp(6.191875rem, 4.81rem + 6.72vw, 10.4775rem);
-    --leading-micro: 0.85;
-    --leading-flat: 1;
-    --leading-fine: 1.2;
-    --leading-standard: 1.4;
-    --leading-loose: 1.7;
-    --font-base:
-        ui-sans-serif, system-ui, sans-serif, Apple Color Emoji, Segoe UI Emoji,
-        Segoe UI Symbol, Noto Color Emoji;
-    --font-mono:
-        ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, Liberation Mono,
-        Courier New, monospace;
-    --font-serif: ui-serif, Georgia, Cambria, Times New Roman, Times, serif;
-    --font-regular: 400;
-    --font-medium: 500;
-    --font-bold: 700;
-    --font-black: 900;
-    --gutter: var(--space-m-l);
-    --transition-base: 250ms ease;
-    --transition-movement: 200ms linear;
-    --transition-fade: 300ms ease;
-    --transition-bounce: 500ms cubic-bezier(0.5, 0.05, 0.2, 1.5);
-    --stroke-width: 1px;
-    --stroke: var(--stroke-width) solid var(--color-border);
-    --radius-s: 0.2rem;
-    --radius-m: 0.75rem;
-    --radius-l: 2.5rem;
-    --uppercase-kerning: 0.04ch;
-
+  --button-x-padding: 0.25em;
+  --button-y-padding: 0.25em;
+  --button-gutter: 0.5ch;
+  --button-border-width: 1px;
+  --color-background: #fff;
+  --color-text: #0f172a;
+  --color-link: #334155;
+  --color-border: #334155;
+  --color-highlight: #344a22;
+  --color-highlight-text: #fff;
+  --color-element-background: #ffffff;
+  --color-button-background: #f1f5f9;
+  --color-button-text: #0f172a;
+  --color-button-border: #0f172a;
+  --color-button-hover-background: #0f172a;
+  --color-button-hover-text: #f1f5f9;
+  --color-button-hover-border: #0f172a;
+  --color-card-background: #f1f5f9;
+  --color-card-text: #0f172a;
+  --color-card-border: #0f172a;
+  --color-card-hover-background: #0f172a;
+  --color-card-hover-text: #f1f5f9;
+  --color-card-hover-border: #0f172a;
+  --color-rating-a: #2dc937;
+  --color-rating-b: #99c140;
+  --color-rating-c: #e7b416;
+  --color-rating-d: #db7b2b;
+  --color-rating-e: #cc3232;
+  --space-xs: clamp(0.4375rem, 0.42rem + 0.1vw, 0.5rem);
+  --space-s: clamp(0.875rem, 0.83rem + 0.2vw, 1rem);
+  --space-m: clamp(1.3125rem, 1.25rem + 0.29vw, 1.5rem);
+  --space-l: clamp(2.1875rem, 2.09rem + 0.49vw, 2.5rem);
+  --space-xl: clamp(3.0625rem, 2.92rem + 0.69vw, 3.5rem);
+  --space-2xl: clamp(3.5rem, 3.34rem + 0.78vw, 4rem);
+  --space-3xl: clamp(4.375rem, 4.17rem + 0.98vw, 5rem);
+  --space-4xl: clamp(6.5625rem, 6.26rem + 1.47vw, 7.5rem);
+  --space-xs-l: clamp(0.4375rem, -0.23rem + 3.24vw, 2.5rem);
+  --space-m-l: clamp(1.3125rem, 0.93rem + 1.86vw, 2.5rem);
+  --space-2xl-4xl: clamp(3.5rem, 2.21rem + 6.27vw, 7.5rem);
+  --size-step-000: clamp(0.694375rem, 0.69rem + 0.04vw, 0.72rem);
+  --size-step-00: clamp(0.833125rem, 0.81rem + 0.1vw, 0.9rem);
+  --size-step-0: clamp(1rem, 0.96rem + 0.2vw, 1.125rem);
+  --size-step-1: clamp(1.2rem, 1.13rem + 0.32vw, 1.40625rem);
+  --size-step-2: clamp(1.44rem, 1.34rem + 0.5vw, 1.758125rem);
+  --size-step-3: clamp(1.728125rem, 1.58rem + 0.74vw, 2.1975rem);
+  --size-step-4: clamp(2.07375rem, 1.86rem + 1.06vw, 2.746875rem);
+  --size-step-5: clamp(2.488125rem, 2.18rem + 1.48vw, 3.433125rem);
+  --size-step-6: clamp(2.98625rem, 2.56rem + 2.05vw, 4.29125rem);
+  --size-step-7: clamp(3.583125rem, 3.01rem + 2.79vw, 5.364375rem);
+  --size-step-8: clamp(4.3rem, 3.52rem + 3.77vw, 6.705625rem);
+  --size-step-9: clamp(5.16rem, 4.12rem + 5.05vw, 8.381875rem);
+  --size-step-10: clamp(6.191875rem, 4.81rem + 6.72vw, 10.4775rem);
+  --leading-micro: 0.85;
+  --leading-flat: 1;
+  --leading-fine: 1.2;
+  --leading-standard: 1.4;
+  --leading-loose: 1.7;
+  --font-base:
+    ui-sans-serif, system-ui, sans-serif, Apple Color Emoji, Segoe UI Emoji, Segoe UI Symbol,
+    Noto Color Emoji;
+  --font-mono:
+    ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, Liberation Mono, Courier New, monospace;
+  --font-serif: ui-serif, Georgia, Cambria, Times New Roman, Times, serif;
+  --font-regular: 400;
+  --font-medium: 500;
+  --font-bold: 700;
+  --font-black: 900;
+  --gutter: var(--space-m-l);
+  --transition-base: 250ms ease;
+  --transition-movement: 200ms linear;
+  --transition-fade: 300ms ease;
+  --transition-bounce: 500ms cubic-bezier(0.5, 0.05, 0.2, 1.5);
+  --stroke-width: 1px;
+  --stroke: var(--stroke-width) solid var(--color-border);
+  --radius-s: 0.2rem;
+  --radius-m: 0.75rem;
+  --radius-l: 2.5rem;
+  --uppercase-kerning: 0.04ch;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -763,36 +761,36 @@ body {
   }
 }
 
-
 .button {
-
-    align-items: center;
-    background: var(--color-button-background);
-    border: var(--stroke);
-    border-color: var(--color-button-border);
-    border-width: 1px;
-    color: var(--color-button-text);
-    cursor: pointer;
-    display: inline-flex;
-    font-size: var(--size-step-00);
-    font-weight: var(--font-bold);
-    gap: var(--button-gutter);
-    letter-spacing: var(--uppercase-kerning);
-    line-height: var(--leading-flat);
-    padding: var(--button-y-padding) var(--button-x-padding);
-    position: relative;
-    text-decoration: none;
-    text-transform: uppercase;
+  align-items: center;
+  background: var(--color-button-background);
+  border: var(--stroke);
+  border-color: var(--color-button-border);
+  border-width: 1px;
+  color: var(--color-button-text);
+  cursor: pointer;
+  display: inline-flex;
+  font-size: var(--size-step-00);
+  font-weight: var(--font-bold);
+  gap: var(--button-gutter);
+  letter-spacing: var(--uppercase-kerning);
+  line-height: var(--leading-flat);
+  padding: var(--button-y-padding) var(--button-x-padding);
+  position: relative;
+  text-decoration: none;
+  text-transform: uppercase;
 }
 .button,
 .button:hover {
-    filter: drop-shadow(var(--color-button-border) var(--button-border-width) var(--button-border-width) 0);
+  filter: drop-shadow(
+    var(--color-button-border) var(--button-border-width) var(--button-border-width) 0
+  );
 }
 .button:hover {
-    background: var(--color-button-hover-background);
-    border-color: var(--color-button-hover-border);
-    color: var(--color-button-hover-text);
+  background: var(--color-button-hover-background);
+  border-color: var(--color-button-hover-border);
+  color: var(--color-button-hover-text);
 }
 .button:active {
-    transform: scale(99%);
+  transform: scale(99%);
 }

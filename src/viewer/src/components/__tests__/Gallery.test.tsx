@@ -13,7 +13,15 @@ import type { ArtworkSummary } from '@/lib/types';
 
 // Mock next/link so ArtworkCard renders without router context
 jest.mock('next/link', () => {
-  const MockLink = ({ href, children, className }: { href: string; children: React.ReactNode; className?: string }) => (
+  const MockLink = ({
+    href,
+    children,
+    className,
+  }: {
+    href: string;
+    children: React.ReactNode;
+    className?: string;
+  }) => (
     <a href={href} className={className}>
       {children}
     </a>
