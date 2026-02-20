@@ -67,10 +67,12 @@ class CircleRenderer(StrokeRenderer):
             raise ValueError(f"center_y must be an integer, got {type(center_y).__name__}")
 
         # Check coordinates are within canvas bounds
-        if not (0 <= center_x < width):
-            raise ValueError(f"center_x {center_x} out of bounds [0, {width})")
-        if not (0 <= center_y < height):
-            raise ValueError(f"center_y {center_y} out of bounds [0, {height})")
+        # Allow x == width and y == height (LLMs use canvas dimensions as the far-edge
+        # coordinate; PIL clips rendering to canvas bounds automatically).
+        if not (0 <= center_x <= width):
+            raise ValueError(f"center_x {center_x} out of bounds [0, {width}]")
+        if not (0 <= center_y <= height):
+            raise ValueError(f"center_y {center_y} out of bounds [0, {height}]")
 
         # Validate radius
         radius = stroke["radius"]

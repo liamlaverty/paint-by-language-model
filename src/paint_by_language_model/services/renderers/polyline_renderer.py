@@ -81,10 +81,12 @@ class PolylineRenderer(StrokeRenderer):
                 )
 
             # Check coordinates are within canvas bounds
-            if not (0 <= x < width):
-                raise ValueError(f"Point {i} x-coordinate {x} out of bounds [0, {width})")
-            if not (0 <= y < height):
-                raise ValueError(f"Point {i} y-coordinate {y} out of bounds [0, {height})")
+            # Allow x == width and y == height (LLMs use canvas dimensions as the far-edge
+            # coordinate; PIL clips rendering to canvas bounds automatically).
+            if not (0 <= x <= width):
+                raise ValueError(f"Point {i} x-coordinate {x} out of bounds [0, {width}]")
+            if not (0 <= y <= height):
+                raise ValueError(f"Point {i} y-coordinate {y} out of bounds [0, {height}]")
 
         # Validate common stroke fields (color, thickness, opacity)
         validate_common_stroke_fields(stroke)
