@@ -28,6 +28,8 @@ export interface ViewerData {
  * @property {number} total_strokes - Total number of successfully applied strokes
  * @property {number} total_iterations - Total number of VLM query iterations
  * @property {number[]} score_progression - Evaluation score at each iteration (0-100)
+ * @property {string} [generation_date] - ISO 8601 timestamp when generation started
+ * @property {{ stroke_generator: string; evaluator: string }} [vlm_models] - VLM model identifiers used during generation
  */
 export interface ArtworkMetadata {
   artwork_id: string;
@@ -39,6 +41,11 @@ export interface ArtworkMetadata {
   total_strokes: number;
   total_iterations: number;
   score_progression: number[];
+  generation_date?: string;
+  vlm_models?: {
+    stroke_generator: string;
+    evaluator: string;
+  };
 }
 
 /**
@@ -112,6 +119,8 @@ export interface EnrichedStroke {
  * @property {number} totalStrokes - Number of strokes in the finished artwork
  * @property {number} totalIterations - Number of VLM iterations used
  * @property {string | null} thumbnailUrl - URL to the thumbnail image, or null if not available
+ * @property {string | null} generationDate - ISO 8601 timestamp when generation started, or null if missing
+ * @property {string | null} modelName - Stroke generator VLM model name, or null if missing
  */
 export interface ArtworkSummary {
   artworkId: string;
@@ -120,4 +129,6 @@ export interface ArtworkSummary {
   totalStrokes: number;
   totalIterations: number;
   thumbnailUrl: string | null;
+  generationDate: string | null;
+  modelName: string | null;
 }
