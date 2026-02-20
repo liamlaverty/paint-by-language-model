@@ -165,10 +165,17 @@ export default function InspectorClient({ artworkId }: InspectorClientProps): Re
 
   /**
    * Start playback animation.
+   * If at the final frame, wraps around to the beginning before playing.
    */
   const play = useCallback(() => {
     if (!viewerData) return;
-    if (visibleCount >= viewerData.strokes.length) return;
+
+    // If at the end, wrap around to the beginning
+    if (visibleCount >= viewerData.strokes.length) {
+      setVisibleCount(0);
+      setLockedIndex(-1);
+      setHoveredIndex(-1);
+    }
 
     setIsPlaying(true);
     // Animation loop is now handled by useEffect
