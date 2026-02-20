@@ -182,6 +182,70 @@ python main.py \
   --api-key sk-your-key-here
 ```
 
+### Batch Queue Execution
+
+Instead of running individual commands, you can queue up multiple runs in `src/datafiles/queue.json` and execute them in sequence using `run_queue.sh`.
+
+#### Queue File Format
+
+Edit `src/datafiles/queue.json` to define your runs. Each object maps directly to CLI arguments:
+
+```json
+[
+    {
+        "artist": "Vincent van Gogh",
+        "subject": "Starry Night Landscape",
+        "output-id": "vangogh-001-claude-sonnet-4-6",
+        "isComplete": false,
+        "expanded-subject": "A swirling night sky over a quiet village...",
+        "provider": "anthropic",
+        "planner-model": "claude-sonnet-4-6",
+        "max-iterations": 500,
+        "target-score": 80,
+        "strokes-per-query": 5,
+        "stroke-types": "line,arc,polyline",
+        "log-level": "INFO"
+    }
+]
+```
+
+| Field | Required | Description |
+|-------|----------|-------------|
+| `artist` | Yes | Target artist name |
+| `subject` | Yes | Short subject description |
+| `output-id` | Yes | Unique identifier for this run |
+| `isComplete` | Yes | Set to `false`; automatically updated to `true` on success |
+| `expanded-subject` | No | Detailed subject description |
+| `provider` | No | VLM provider (`mistral`, `lmstudio`, `anthropic`) |
+| `planner-model` | No | Override planner model |
+| `max-iterations` | No | Maximum iterations |
+| `target-score` | No | Target style score (0-100) |
+| `strokes-per-query` | No | Strokes per VLM query |
+| `stroke-types` | No | Comma-separated stroke types |
+| `api-key` | No | API key override |
+| `gif-frame-duration` | No | GIF frame duration in ms |
+| `log-level` | No | Logging level |
+
+#### Running the Queue
+
+From the project root:
+
+```sh
+# Run all incomplete entries
+./run_queue.sh
+
+# Preview commands without executing
+./run_queue.sh --dry-run
+```
+
+The script will:
+- Skip any entries where `"isComplete": true`
+- Execute each incomplete run in order
+- Automatically set `"isComplete": true` in the JSON file after each successful run
+- Halt immediately if any run fails
+
+> **Requires** `jq`: install with `brew install jq`
+
 ### Generation Process
 
 The application will:
