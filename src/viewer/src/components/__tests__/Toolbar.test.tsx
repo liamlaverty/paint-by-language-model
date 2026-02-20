@@ -21,6 +21,8 @@ describe('Toolbar', () => {
     speed: 50,
     onSpeedChange: jest.fn(),
     infoText: 'test-artwork · 42/70 strokes',
+    highlightEnabled: false,
+    onToggleHighlight: jest.fn(),
   };
 
   beforeEach(() => {

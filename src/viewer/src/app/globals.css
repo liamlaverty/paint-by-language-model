@@ -229,6 +229,20 @@ body {
   margin-left: auto;
 }
 
+.toolbar-toggle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  font-size: var(--size-step-00);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.toolbar-toggle input[type='checkbox'] {
+  accent-color: var(--color-highlight);
+  cursor: pointer;
+}
+
 /* ── Main Area ────────────────────────────────────────────────────────── */
 .main {
   display: flex;

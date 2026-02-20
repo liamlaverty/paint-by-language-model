@@ -45,9 +45,13 @@ export default function InspectorClient({ artworkId }: InspectorClientProps): Re
   const [speed, setSpeed] = useState<number>(50);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string>('');
+  const [highlightEnabled, setHighlightEnabled] = useState<boolean>(false);
 
   // Animation timer ref
   const animTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Tracks whether the user is actively hovering with the mouse (vs auto-hover set by playback)
+  const isUserHoveringRef = useRef<boolean>(false);
 
   /**
    * Calculate animation delay from speed slider value.
@@ -192,6 +196,7 @@ export default function InspectorClient({ artworkId }: InspectorClientProps): Re
    */
   const handleStrokeHover = useCallback(
     (index: number) => {
+      isUserHoveringRef.current = index >= 0;
       if (lockedIndex === -1) {
         setHoveredIndex(index);
       }
@@ -332,7 +337,16 @@ export default function InspectorClient({ artworkId }: InspectorClientProps): Re
         ? viewerData.strokes[hoveredIndex]
         : null;
 
-  const highlightedIndex = lockedIndex >= 0 ? lockedIndex : hoveredIndex;
+  const highlightedIndex = (() => {
+    // Locked strokes are always highlighted (user clicked to inspect)
+    if (lockedIndex >= 0) return lockedIndex;
+    // User is actively hovering — always show highlight
+    if (isUserHoveringRef.current && hoveredIndex >= 0) return hoveredIndex;
+    // During playback, only auto-highlight if the toggle is on
+    if (isPlaying && !highlightEnabled) return -1;
+    // Default: show the hovered index
+    return hoveredIndex;
+  })();
 
   const infoText = viewerData
     ? `${viewerData.metadata.artwork_id} · ${visibleCount}/${viewerData.metadata.total_strokes} strokes`
@@ -352,6 +366,8 @@ export default function InspectorClient({ artworkId }: InspectorClientProps): Re
         speed={speed}
         onSpeedChange={handleSpeedChange}
         infoText={infoText}
+        highlightEnabled={highlightEnabled}
+        onToggleHighlight={setHighlightEnabled}
       />
 
       <div className="content-grid">
