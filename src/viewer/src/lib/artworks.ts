@@ -65,6 +65,7 @@ export function getArtworkSummaries(): ArtworkSummary[] {
           thumbnailUrl,
           generationDate: viewerData.metadata.generation_date ?? null,
           modelName: viewerData.metadata.vlm_models?.stroke_generator ?? null,
+          finalScore: viewerData.metadata.final_score ?? null,
         });
       } catch (error) {
         console.warn(`Error reading ${artworkId}:`, error);

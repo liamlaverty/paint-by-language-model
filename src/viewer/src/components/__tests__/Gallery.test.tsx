@@ -41,6 +41,7 @@ function makeArtwork(overrides: Partial<ArtworkSummary> & { artworkId: string })
     thumbnailUrl: overrides.thumbnailUrl ?? null,
     generationDate: overrides.generationDate ?? null,
     modelName: overrides.modelName ?? null,
+    finalScore: overrides.finalScore ?? null,
   };
 }
 
