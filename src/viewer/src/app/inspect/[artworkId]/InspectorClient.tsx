@@ -45,9 +45,13 @@ export default function InspectorClient({ artworkId }: InspectorClientProps): Re
   const [speed, setSpeed] = useState<number>(50);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string>('');
+  const [highlightEnabled, setHighlightEnabled] = useState<boolean>(false);
 
   // Animation timer ref
   const animTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Tracks whether the user is actively hovering with the mouse (vs auto-hover set by playback)
+  const isUserHoveringRef = useRef<boolean>(false);
 
   /**
    * Calculate animation delay from speed slider value.
@@ -161,10 +165,17 @@ export default function InspectorClient({ artworkId }: InspectorClientProps): Re
 
   /**
    * Start playback animation.
+   * If at the final frame, wraps around to the beginning before playing.
    */
   const play = useCallback(() => {
     if (!viewerData) return;
-    if (visibleCount >= viewerData.strokes.length) return;
+
+    // If at the end, wrap around to the beginning
+    if (visibleCount >= viewerData.strokes.length) {
+      setVisibleCount(0);
+      setLockedIndex(-1);
+      setHoveredIndex(-1);
+    }
 
     setIsPlaying(true);
     // Animation loop is now handled by useEffect
@@ -192,6 +203,7 @@ export default function InspectorClient({ artworkId }: InspectorClientProps): Re
    */
   const handleStrokeHover = useCallback(
     (index: number) => {
+      isUserHoveringRef.current = index >= 0;
       if (lockedIndex === -1) {
         setHoveredIndex(index);
       }
@@ -332,7 +344,16 @@ export default function InspectorClient({ artworkId }: InspectorClientProps): Re
         ? viewerData.strokes[hoveredIndex]
         : null;
 
-  const highlightedIndex = lockedIndex >= 0 ? lockedIndex : hoveredIndex;
+  const highlightedIndex = (() => {
+    // Locked strokes are always highlighted (user clicked to inspect)
+    if (lockedIndex >= 0) return lockedIndex;
+    // User is actively hovering — always show highlight
+    if (isUserHoveringRef.current && hoveredIndex >= 0) return hoveredIndex;
+    // During playback, only auto-highlight if the toggle is on
+    if (isPlaying && !highlightEnabled) return -1;
+    // Default: show the hovered index
+    return hoveredIndex;
+  })();
 
   const infoText = viewerData
     ? `${viewerData.metadata.artwork_id} · ${visibleCount}/${viewerData.metadata.total_strokes} strokes`
@@ -340,55 +361,61 @@ export default function InspectorClient({ artworkId }: InspectorClientProps): Re
 
   return (
     <div className="viewer-container">
-      <Toolbar
-        onReset={reset}
-        onPlay={play}
-        onPause={pause}
-        onStepBackward={stepBackward}
-        onStepForward={stepForward}
-        onShowAll={showAll}
-        isPlaying={isPlaying}
-        isLoaded={viewerData !== null}
-        speed={speed}
-        onSpeedChange={handleSpeedChange}
-        infoText={infoText}
-      />
-
       <div className="content-grid">
-        <div className="canvas-container">
-          {viewerData ? (
-            <StrokeCanvas
-              strokes={viewerData.strokes}
-              metadata={viewerData.metadata}
-              visibleCount={visibleCount}
-              onStrokeHover={handleStrokeHover}
-              onStrokeClick={handleStrokeClick}
-              onBackgroundClick={handleBackgroundClick}
-              lockedIndex={lockedIndex}
-              highlightedIndex={highlightedIndex}
+        <div className="left-panel">
+          <Toolbar
+            onReset={reset}
+            onPlay={play}
+            onPause={pause}
+            onStepBackward={stepBackward}
+            onStepForward={stepForward}
+            onShowAll={showAll}
+            isPlaying={isPlaying}
+            isLoaded={viewerData !== null}
+            speed={speed}
+            onSpeedChange={handleSpeedChange}
+            infoText={infoText}
+            highlightEnabled={highlightEnabled}
+            onToggleHighlight={setHighlightEnabled}
+          />
+
+          <div className="canvas-container">
+            {viewerData ? (
+              <StrokeCanvas
+                strokes={viewerData.strokes}
+                metadata={viewerData.metadata}
+                visibleCount={visibleCount}
+                onStrokeHover={handleStrokeHover}
+                onStrokeClick={handleStrokeClick}
+                onBackgroundClick={handleBackgroundClick}
+                lockedIndex={lockedIndex}
+                highlightedIndex={highlightedIndex}
+              />
+            ) : (
+              <EmptyState isLoading={isLoading} error={error} />
+            )}
+          </div>
+
+          {viewerData && (
+            <Timeline
+              current={visibleCount}
+              total={viewerData.strokes.length}
+              onChange={handleTimelineChange}
             />
-          ) : (
-            <EmptyState isLoading={isLoading} error={error} />
           )}
         </div>
 
         {viewerData && (
-          <SidePanel
-            stroke={displayedStroke}
-            metadata={viewerData.metadata}
-            isLocked={lockedIndex >= 0}
-            onClearSelection={clearSelection}
-          />
+          <div className="right-panel">
+            <SidePanel
+              stroke={displayedStroke}
+              metadata={viewerData.metadata}
+              isLocked={lockedIndex >= 0}
+              onClearSelection={clearSelection}
+            />
+          </div>
         )}
       </div>
-
-      {viewerData && (
-        <Timeline
-          current={visibleCount}
-          total={viewerData.strokes.length}
-          onChange={handleTimelineChange}
-        />
-      )}
     </div>
   );
 }

@@ -14,10 +14,6 @@ export default function HomePage(): React.ReactElement {
 
   return (
     <main className="gallery-page">
-      <div className="gallery-header">
-        <h1>Generated Artworks</h1>
-        <p>Explore artwork created by vision language models, stroke by stroke</p>
-      </div>
       <Gallery artworks={artworks} />
     </main>
   );

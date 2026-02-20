@@ -312,7 +312,8 @@ AVAILABLE STROKE TYPES:
    Required fields: type, center_x, center_y, splatter_radius, splatter_count, dot_size_min, dot_size_max, color_hex, thickness, opacity
 
 Canvas dimensions: {CANVAS_WIDTH}x{CANVAS_HEIGHT} pixels
-All coordinates must be within bounds (0 to {CANVAS_WIDTH - 1} for x, 0 to {CANVAS_HEIGHT - 1} for y).
+All coordinates must be within bounds (0 to {CANVAS_WIDTH} for x, 0 to {CANVAS_HEIGHT} for y).
+Use 0 for the left/top edge and {CANVAS_WIDTH}/{CANVAS_HEIGHT} for the right/bottom edge.
 
 Stroke constraints:
 - Thickness: {MIN_STROKE_THICKNESS} to {MAX_STROKE_THICKNESS} pixels
