@@ -128,8 +128,8 @@
   {
     "artist": "Frida Kahlo",
     "subject": "Self-Portrait with Thorn Necklace and Hummingbird",
-    "output-id": "kahlo-001",
-    "isComplete": true,
+    "output-id": "kahlo-002",
+    "isComplete": false,
     "expanded-subject": "A striking self-portrait featuring a woman with a serene yet intense gaze, adorned with a necklace of thorns that draw tiny drops of blood. A black hummingbird hangs delicately from the thorns, its wings spread as if frozen in mid-flight. The background is lush with large green leaves and vibrant flowers, creating a stark contrast with the subject's dark hair and neutral-toned face. The artwork should use bold, symbolic colors and intricate details to convey themes of pain, resilience, and nature.",
     "provider": "anthropic",
     "planner-model": "mistral-large-2512",
