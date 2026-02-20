@@ -75,14 +75,16 @@ class ArcRenderer(StrokeRenderer):
             raise ValueError(f"Invalid arc_bbox: y0 ({y0}) must be less than y1 ({y1})")
 
         # Check coordinates are within canvas bounds
-        if not (0 <= x0 < width):
-            raise ValueError(f"arc_bbox x0 {x0} out of bounds [0, {width})")
-        if not (0 <= y0 < height):
-            raise ValueError(f"arc_bbox y0 {y0} out of bounds [0, {height})")
-        if not (0 <= x1 < width):
-            raise ValueError(f"arc_bbox x1 {x1} out of bounds [0, {width})")
-        if not (0 <= y1 < height):
-            raise ValueError(f"arc_bbox y1 {y1} out of bounds [0, {height})")
+        # Allow x == width and y == height (LLMs use canvas dimensions as the far-edge
+        # coordinate; PIL clips rendering to canvas bounds automatically).
+        if not (0 <= x0 <= width):
+            raise ValueError(f"arc_bbox x0 {x0} out of bounds [0, {width}]")
+        if not (0 <= y0 <= height):
+            raise ValueError(f"arc_bbox y0 {y0} out of bounds [0, {height}]")
+        if not (0 <= x1 <= width):
+            raise ValueError(f"arc_bbox x1 {x1} out of bounds [0, {width}]")
+        if not (0 <= y1 <= height):
+            raise ValueError(f"arc_bbox y1 {y1} out of bounds [0, {height}]")
 
         # Validate angles
         arc_start_angle = stroke["arc_start_angle"]

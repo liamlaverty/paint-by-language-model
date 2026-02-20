@@ -16,6 +16,8 @@ import Link from 'next/link';
  * @property {number} speed - Current playback speed (1-100)
  * @property {(speed: number) => void} onSpeedChange - Callback when the speed slider value changes
  * @property {string} infoText - Artwork info text for the toolbar (e.g. "cubist-mary-001 · 42/70 strokes")
+ * @property {boolean} highlightEnabled - Whether the stroke highlight overlay is enabled during playback
+ * @property {(enabled: boolean) => void} onToggleHighlight - Callback to toggle the highlight state
  */
 interface ToolbarProps {
   onReset: () => void;
@@ -29,6 +31,8 @@ interface ToolbarProps {
   speed: number;
   onSpeedChange: (speed: number) => void;
   infoText: string;
+  highlightEnabled: boolean;
+  onToggleHighlight: (enabled: boolean) => void;
 }
 
 /**
@@ -53,12 +57,14 @@ export default function Toolbar({
   speed,
   onSpeedChange,
   infoText,
+  highlightEnabled,
+  onToggleHighlight,
 }: ToolbarProps): React.ReactElement {
   return (
     <div className="toolbar">
       <Link href="/">
         <button type="button" className="button">
-          Gallery
+          Home
         </button>
       </Link>
 
@@ -139,6 +145,16 @@ export default function Toolbar({
         disabled={!isLoaded}
         title={`Playback speed: ${speed}`}
       />
+
+      <div className="sep" />
+      <label className="toolbar-toggle">
+        <input
+          type="checkbox"
+          checked={highlightEnabled}
+          onChange={(e) => onToggleHighlight(e.target.checked)}
+        />
+        Highlight strokes
+      </label>
 
       <div className="info">{infoText}</div>
     </div>

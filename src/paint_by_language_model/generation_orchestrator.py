@@ -856,6 +856,11 @@ class GenerationOrchestrator:
                 "total_strokes": len(enriched_strokes),
                 "total_iterations": len(batch_files),
                 "score_progression": [e["score"] for e in self.evaluations],
+                "generation_date": self.generation_start_time.isoformat(),
+                "vlm_models": {
+                    "stroke_generator": VLM_MODEL,
+                    "evaluator": EVALUATION_VLM_MODEL,
+                },
             },
             "painting_plan": self.painting_plan,
             "strokes": enriched_strokes,

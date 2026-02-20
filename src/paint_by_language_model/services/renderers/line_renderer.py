@@ -69,14 +69,16 @@ class LineRenderer(StrokeRenderer):
             raise ValueError(f"end_y must be an integer, got {type(end_y).__name__}")
 
         # Check coordinates are within canvas bounds
-        if not (0 <= start_x < width):
-            raise ValueError(f"start_x {start_x} out of bounds [0, {width})")
-        if not (0 <= start_y < height):
-            raise ValueError(f"start_y {start_y} out of bounds [0, {height})")
-        if not (0 <= end_x < width):
-            raise ValueError(f"end_x {end_x} out of bounds [0, {width})")
-        if not (0 <= end_y < height):
-            raise ValueError(f"end_y {end_y} out of bounds [0, {height})")
+        # Allow x == width and y == height (LLMs use canvas dimensions as the far-edge
+        # coordinate; PIL clips rendering to canvas bounds automatically).
+        if not (0 <= start_x <= width):
+            raise ValueError(f"start_x {start_x} out of bounds [0, {width}]")
+        if not (0 <= start_y <= height):
+            raise ValueError(f"start_y {start_y} out of bounds [0, {height}]")
+        if not (0 <= end_x <= width):
+            raise ValueError(f"end_x {end_x} out of bounds [0, {width}]")
+        if not (0 <= end_y <= height):
+            raise ValueError(f"end_y {end_y} out of bounds [0, {height}]")
 
         # Validate common stroke fields (color, thickness, opacity)
         validate_common_stroke_fields(stroke)
