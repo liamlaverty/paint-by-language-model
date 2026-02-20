@@ -15,7 +15,13 @@ import type { ArtworkSummary } from '@/lib/types';
 /**
  * Sort option values for the gallery sort control.
  */
-type SortOption = 'date-desc' | 'date-asc' | 'artist-asc' | 'artist-desc' | 'model-asc' | 'model-desc';
+type SortOption =
+  | 'date-desc'
+  | 'date-asc'
+  | 'artist-asc'
+  | 'artist-desc'
+  | 'model-asc'
+  | 'model-desc';
 
 /**
  * Props for the artwork gallery grid.
@@ -43,7 +49,7 @@ export default function Gallery({ artworks }: GalleryProps): React.ReactElement 
   // Compute unique model names from artworks
   const models = useMemo(
     () => [...new Set(artworks.map((a) => a.modelName).filter(Boolean))] as string[],
-    [artworks],
+    [artworks]
   );
 
   // Apply filter then sort
