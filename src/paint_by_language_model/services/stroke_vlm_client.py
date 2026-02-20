@@ -277,8 +277,9 @@ Techniques: {current_layer["techniques"]}
 Shapes: {current_layer["shapes"]}
 Highlights: {current_layer["highlights"]}
 
-Focus your strokes on this layer's objectives. Stay within the recommended palette
-and techniques unless artistic judgement requires deviation.
+Focus your strokes on this layer's objectives. Stay near the recommended palette
+(don't be rigidly bound by the exact colour hex values). Stay within the
+recommended techniques unless artistic judgement requires deviation.
 """
 
         prompt = f"""You are an expert artist creating a piece in the style of {artist_name}.
@@ -312,7 +313,8 @@ AVAILABLE STROKE TYPES:
    Required fields: type, center_x, center_y, splatter_radius, splatter_count, dot_size_min, dot_size_max, color_hex, thickness, opacity
 
 Canvas dimensions: {CANVAS_WIDTH}x{CANVAS_HEIGHT} pixels
-All coordinates must be within bounds (0 to {CANVAS_WIDTH - 1} for x, 0 to {CANVAS_HEIGHT - 1} for y).
+All coordinates must be within bounds (0 to {CANVAS_WIDTH} for x, 0 to {CANVAS_HEIGHT} for y).
+Use 0 for the left/top edge and {CANVAS_WIDTH}/{CANVAS_HEIGHT} for the right/bottom edge.
 
 Stroke constraints:
 - Thickness: {MIN_STROKE_THICKNESS} to {MAX_STROKE_THICKNESS} pixels

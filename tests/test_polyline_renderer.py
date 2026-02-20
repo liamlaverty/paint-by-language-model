@@ -223,7 +223,7 @@ def test_validation_invalid_thickness() -> None:
         "type": "polyline",
         "points": [[10, 20], [50, 80]],
         "color_hex": "#228B22",
-        "thickness": 150,  # Exceeds max thickness of 50
+        "thickness": 350,  # Exceeds max thickness of 300
         "opacity": 0.7,
     }
     canvas_size = (800, 600)

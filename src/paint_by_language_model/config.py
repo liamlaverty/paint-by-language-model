@@ -98,11 +98,11 @@ else:  # lmstudio
 # Planner prompt settings
 PLANNER_PROMPT_TEMPERATURE = 0.4
 PLANNER_TIMEOUT = 180
-PLANNER_MAX_TOKENS = 8192  # Planner needs much more tokens for detailed multi-layer plans
+PLANNER_MAX_TOKENS = 16384  # Planner needs much more tokens for detailed multi-layer plans
 
 # Request settings
 REQUEST_TIMEOUT = 120  # seconds - LLM responses can be slow
-MAX_TOKENS = 1024
+MAX_TOKENS = 8192
 
 
 # ============================================================================
@@ -126,7 +126,7 @@ CANVAS_BACKGROUND_COLOR = "#FFFFFF"  # White background
 # ----------------------------------------------------------------------------
 
 # Thickness limits (in pixels)
-MAX_STROKE_THICKNESS = 100
+MAX_STROKE_THICKNESS = 300
 MIN_STROKE_THICKNESS = 1
 
 # Opacity limits (0.0 = fully transparent, 1.0 = fully opaque)

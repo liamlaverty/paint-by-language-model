@@ -63,6 +63,8 @@ export function getArtworkSummaries(): ArtworkSummary[] {
           totalStrokes: viewerData.metadata.total_strokes,
           totalIterations: viewerData.metadata.total_iterations,
           thumbnailUrl,
+          generationDate: viewerData.metadata.generation_date ?? null,
+          modelName: viewerData.metadata.vlm_models?.stroke_generator ?? null,
           finalScore: viewerData.metadata.final_score ?? null,
         });
       } catch (error) {
@@ -71,8 +73,13 @@ export function getArtworkSummaries(): ArtworkSummary[] {
       }
     }
 
-    // Sort alphabetically by artwork ID
-    return summaries.sort((a, b) => a.artworkId.localeCompare(b.artworkId));
+    // Sort by generation date descending (newest first), nulls last
+    return summaries.sort((a, b) => {
+      if (!a.generationDate && !b.generationDate) return 0;
+      if (!a.generationDate) return 1;
+      if (!b.generationDate) return -1;
+      return b.generationDate.localeCompare(a.generationDate);
+    });
   } catch (error) {
     console.error('Error scanning public/data directory:', error);
     return [];

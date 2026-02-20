@@ -90,6 +90,8 @@ export interface ViewerData {
  * @property {number} total_strokes - Total number of successfully applied strokes
  * @property {number} total_iterations - Total number of VLM query iterations
  * @property {number[]} score_progression - Evaluation score at each iteration (0-100)
+ * @property {string} [generation_date] - ISO 8601 timestamp when generation started
+ * @property {{ stroke_generator: string; evaluator: string }} [vlm_models] - VLM model identifiers used during generation
  * @property {number | null} [final_score] - Final evaluation score (0-100), or null if not evaluated
  * @property {string | null} [planner_model] - Model identifier used for the planning phase
  * @property {BatchStatistics | null} [batch_statistics] - Aggregate stroke generation statistics
@@ -106,6 +108,11 @@ export interface ArtworkMetadata {
   total_strokes: number;
   total_iterations: number;
   score_progression: number[];
+  generation_date?: string;
+  vlm_models?: {
+    stroke_generator: string;
+    evaluator: string;
+  };
   final_score?: number | null;
   planner_model?: string | null;
   batch_statistics?: BatchStatistics | null;
@@ -183,6 +190,8 @@ export interface EnrichedStroke {
  * @property {number} totalStrokes - Number of strokes in the finished artwork
  * @property {number} totalIterations - Number of VLM iterations used
  * @property {string | null} thumbnailUrl - URL to the thumbnail image, or null if not available
+ * @property {string | null} generationDate - ISO 8601 timestamp when generation started, or null if missing
+ * @property {string | null} modelName - Stroke generator VLM model name, or null if missing
  * @property {number | null} finalScore - Final evaluation score (0-100)
  */
 export interface ArtworkSummary {
@@ -192,5 +201,7 @@ export interface ArtworkSummary {
   totalStrokes: number;
   totalIterations: number;
   thumbnailUrl: string | null;
+  generationDate: string | null;
+  modelName: string | null;
   finalScore: number | null;
 }
