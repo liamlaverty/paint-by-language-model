@@ -1,0 +1,356 @@
+# Generation Report: impressionist-elephant-001
+
+## Artwork Information
+- **Artist Style**: Impressionist
+- **Subject**: A patchwork elephant
+- **Artwork ID**: impressionist-elephant-001
+
+## Generation Details
+- **Start Time**: 2026-02-12T12:30:58.216926
+- **End Time**: 2026-02-12T14:07:41.577605
+- **Duration**: 5803.4 seconds
+- **Total Iterations**: 307
+- **Total Strokes**: 1535
+- **Interrupted**: True
+
+## Batch Statistics
+- **Strokes Per Query (Configured)**: 5
+- **Total Strokes Requested**: 1535
+- **Total Strokes Applied**: 1535
+- **Total Strokes Skipped**: 0
+- **Average Applied Per Iteration**: 5.00
+
+### Stroke Type Breakdown
+- **arc**: 310
+- **circle**: 303
+- **line**: 306
+- **polyline**: 309
+- **splatter**: 307
+
+## Results
+- **Final Score**: 55.0/100
+- **Canvas Dimensions**: 800x600
+
+## Models Used
+- **Stroke Generator**: mistral-large-2512
+- **Evaluator**: mistral-large-2512
+
+## Score Progression
+- Iteration 1: 35.0/100
+- Iteration 2: 45.0/100
+- Iteration 3: 45.0/100
+- Iteration 4: 45.0/100
+- Iteration 5: 55.0/100
+- Iteration 6: 55.0/100
+- Iteration 7: 55.0/100
+- Iteration 8: 45.0/100
+- Iteration 9: 45.0/100
+- Iteration 10: 45.0/100
+- Iteration 11: 45.0/100
+- Iteration 12: 45.0/100
+- Iteration 13: 45.0/100
+- Iteration 14: 45.0/100
+- Iteration 15: 45.0/100
+- Iteration 16: 55.0/100
+- Iteration 17: 45.0/100
+- Iteration 18: 45.0/100
+- Iteration 19: 45.0/100
+- Iteration 20: 55.0/100
+- Iteration 21: 45.0/100
+- Iteration 22: 45.0/100
+- Iteration 23: 55.0/100
+- Iteration 24: 45.0/100
+- Iteration 25: 45.0/100
+- Iteration 26: 45.0/100
+- Iteration 27: 45.0/100
+- Iteration 28: 45.0/100
+- Iteration 29: 45.0/100
+- Iteration 30: 45.0/100
+- Iteration 31: 45.0/100
+- Iteration 32: 55.0/100
+- Iteration 33: 55.0/100
+- Iteration 34: 45.0/100
+- Iteration 35: 55.0/100
+- Iteration 36: 55.0/100
+- Iteration 37: 45.0/100
+- Iteration 38: 55.0/100
+- Iteration 39: 55.0/100
+- Iteration 40: 45.0/100
+- Iteration 41: 45.0/100
+- Iteration 42: 45.0/100
+- Iteration 43: 45.0/100
+- Iteration 44: 45.0/100
+- Iteration 45: 55.0/100
+- Iteration 46: 55.0/100
+- Iteration 47: 45.0/100
+- Iteration 48: 55.0/100
+- Iteration 49: 45.0/100
+- Iteration 50: 45.0/100
+- Iteration 51: 45.0/100
+- Iteration 52: 45.0/100
+- Iteration 53: 45.0/100
+- Iteration 54: 45.0/100
+- Iteration 55: 45.0/100
+- Iteration 56: 45.0/100
+- Iteration 57: 45.0/100
+- Iteration 58: 45.0/100
+- Iteration 59: 55.0/100
+- Iteration 60: 45.0/100
+- Iteration 61: 45.0/100
+- Iteration 62: 55.0/100
+- Iteration 63: 55.0/100
+- Iteration 64: 45.0/100
+- Iteration 65: 55.0/100
+- Iteration 66: 55.0/100
+- Iteration 67: 45.0/100
+- Iteration 68: 55.0/100
+- Iteration 69: 45.0/100
+- Iteration 70: 55.0/100
+- Iteration 71: 55.0/100
+- Iteration 72: 55.0/100
+- Iteration 73: 55.0/100
+- Iteration 74: 55.0/100
+- Iteration 75: 55.0/100
+- Iteration 76: 55.0/100
+- Iteration 77: 55.0/100
+- Iteration 78: 55.0/100
+- Iteration 79: 55.0/100
+- Iteration 80: 55.0/100
+- Iteration 81: 55.0/100
+- Iteration 82: 55.0/100
+- Iteration 83: 55.0/100
+- Iteration 84: 55.0/100
+- Iteration 85: 55.0/100
+- Iteration 86: 55.0/100
+- Iteration 87: 55.0/100
+- Iteration 88: 55.0/100
+- Iteration 89: 55.0/100
+- Iteration 90: 55.0/100
+- Iteration 91: 55.0/100
+- Iteration 92: 55.0/100
+- Iteration 93: 55.0/100
+- Iteration 94: 55.0/100
+- Iteration 95: 55.0/100
+- Iteration 96: 55.0/100
+- Iteration 97: 55.0/100
+- Iteration 98: 55.0/100
+- Iteration 99: 55.0/100
+- Iteration 100: 55.0/100
+- Iteration 101: 55.0/100
+- Iteration 102: 55.0/100
+- Iteration 103: 55.0/100
+- Iteration 104: 55.0/100
+- Iteration 105: 55.0/100
+- Iteration 106: 55.0/100
+- Iteration 107: 55.0/100
+- Iteration 108: 55.0/100
+- Iteration 109: 55.0/100
+- Iteration 110: 55.0/100
+- Iteration 111: 55.0/100
+- Iteration 112: 55.0/100
+- Iteration 113: 55.0/100
+- Iteration 114: 45.0/100
+- Iteration 115: 55.0/100
+- Iteration 116: 45.0/100
+- Iteration 117: 55.0/100
+- Iteration 118: 55.0/100
+- Iteration 119: 55.0/100
+- Iteration 120: 55.0/100
+- Iteration 121: 45.0/100
+- Iteration 122: 55.0/100
+- Iteration 123: 55.0/100
+- Iteration 124: 45.0/100
+- Iteration 125: 55.0/100
+- Iteration 126: 45.0/100
+- Iteration 127: 45.0/100
+- Iteration 128: 55.0/100
+- Iteration 129: 55.0/100
+- Iteration 130: 55.0/100
+- Iteration 131: 45.0/100
+- Iteration 132: 55.0/100
+- Iteration 133: 45.0/100
+- Iteration 134: 45.0/100
+- Iteration 135: 55.0/100
+- Iteration 136: 45.0/100
+- Iteration 137: 55.0/100
+- Iteration 138: 55.0/100
+- Iteration 139: 45.0/100
+- Iteration 140: 55.0/100
+- Iteration 141: 45.0/100
+- Iteration 142: 55.0/100
+- Iteration 143: 55.0/100
+- Iteration 144: 55.0/100
+- Iteration 145: 55.0/100
+- Iteration 146: 45.0/100
+- Iteration 147: 55.0/100
+- Iteration 148: 55.0/100
+- Iteration 149: 55.0/100
+- Iteration 150: 55.0/100
+- Iteration 151: 55.0/100
+- Iteration 152: 55.0/100
+- Iteration 153: 55.0/100
+- Iteration 154: 55.0/100
+- Iteration 155: 55.0/100
+- Iteration 156: 55.0/100
+- Iteration 157: 45.0/100
+- Iteration 158: 45.0/100
+- Iteration 159: 55.0/100
+- Iteration 160: 55.0/100
+- Iteration 161: 55.0/100
+- Iteration 162: 55.0/100
+- Iteration 163: 55.0/100
+- Iteration 164: 55.0/100
+- Iteration 165: 55.0/100
+- Iteration 166: 55.0/100
+- Iteration 167: 55.0/100
+- Iteration 168: 55.0/100
+- Iteration 169: 55.0/100
+- Iteration 170: 55.0/100
+- Iteration 171: 55.0/100
+- Iteration 172: 55.0/100
+- Iteration 173: 55.0/100
+- Iteration 174: 45.0/100
+- Iteration 175: 55.0/100
+- Iteration 176: 55.0/100
+- Iteration 177: 55.0/100
+- Iteration 178: 55.0/100
+- Iteration 179: 55.0/100
+- Iteration 180: 55.0/100
+- Iteration 181: 55.0/100
+- Iteration 182: 55.0/100
+- Iteration 183: 55.0/100
+- Iteration 184: 55.0/100
+- Iteration 185: 55.0/100
+- Iteration 186: 55.0/100
+- Iteration 187: 55.0/100
+- Iteration 188: 55.0/100
+- Iteration 189: 55.0/100
+- Iteration 190: 55.0/100
+- Iteration 191: 55.0/100
+- Iteration 192: 55.0/100
+- Iteration 193: 55.0/100
+- Iteration 194: 55.0/100
+- Iteration 195: 55.0/100
+- Iteration 196: 55.0/100
+- Iteration 197: 55.0/100
+- Iteration 198: 55.0/100
+- Iteration 199: 55.0/100
+- Iteration 200: 55.0/100
+- Iteration 201: 55.0/100
+- Iteration 202: 55.0/100
+- Iteration 203: 55.0/100
+- Iteration 204: 55.0/100
+- Iteration 205: 55.0/100
+- Iteration 206: 55.0/100
+- Iteration 207: 55.0/100
+- Iteration 208: 55.0/100
+- Iteration 209: 55.0/100
+- Iteration 210: 55.0/100
+- Iteration 211: 55.0/100
+- Iteration 212: 55.0/100
+- Iteration 213: 55.0/100
+- Iteration 214: 55.0/100
+- Iteration 215: 55.0/100
+- Iteration 216: 55.0/100
+- Iteration 217: 55.0/100
+- Iteration 218: 55.0/100
+- Iteration 219: 55.0/100
+- Iteration 220: 55.0/100
+- Iteration 221: 55.0/100
+- Iteration 222: 55.0/100
+- Iteration 223: 55.0/100
+- Iteration 224: 55.0/100
+- Iteration 225: 55.0/100
+- Iteration 226: 55.0/100
+- Iteration 227: 55.0/100
+- Iteration 228: 55.0/100
+- Iteration 229: 55.0/100
+- Iteration 230: 55.0/100
+- Iteration 231: 55.0/100
+- Iteration 232: 55.0/100
+- Iteration 233: 55.0/100
+- Iteration 234: 55.0/100
+- Iteration 235: 55.0/100
+- Iteration 236: 55.0/100
+- Iteration 237: 55.0/100
+- Iteration 238: 55.0/100
+- Iteration 239: 55.0/100
+- Iteration 240: 55.0/100
+- Iteration 241: 55.0/100
+- Iteration 242: 55.0/100
+- Iteration 243: 55.0/100
+- Iteration 244: 55.0/100
+- Iteration 245: 55.0/100
+- Iteration 246: 55.0/100
+- Iteration 247: 55.0/100
+- Iteration 248: 55.0/100
+- Iteration 249: 55.0/100
+- Iteration 250: 55.0/100
+- Iteration 251: 55.0/100
+- Iteration 252: 55.0/100
+- Iteration 253: 55.0/100
+- Iteration 254: 55.0/100
+- Iteration 255: 55.0/100
+- Iteration 256: 55.0/100
+- Iteration 257: 55.0/100
+- Iteration 258: 55.0/100
+- Iteration 259: 55.0/100
+- Iteration 260: 55.0/100
+- Iteration 261: 55.0/100
+- Iteration 262: 55.0/100
+- Iteration 263: 55.0/100
+- Iteration 264: 55.0/100
+- Iteration 265: 55.0/100
+- Iteration 266: 55.0/100
+- Iteration 267: 55.0/100
+- Iteration 268: 55.0/100
+- Iteration 269: 55.0/100
+- Iteration 270: 55.0/100
+- Iteration 271: 55.0/100
+- Iteration 272: 55.0/100
+- Iteration 273: 55.0/100
+- Iteration 274: 55.0/100
+- Iteration 275: 55.0/100
+- Iteration 276: 55.0/100
+- Iteration 277: 55.0/100
+- Iteration 278: 65.0/100
+- Iteration 279: 55.0/100
+- Iteration 280: 55.0/100
+- Iteration 281: 55.0/100
+- Iteration 282: 55.0/100
+- Iteration 283: 55.0/100
+- Iteration 284: 55.0/100
+- Iteration 285: 55.0/100
+- Iteration 286: 55.0/100
+- Iteration 287: 55.0/100
+- Iteration 288: 55.0/100
+- Iteration 289: 55.0/100
+- Iteration 290: 55.0/100
+- Iteration 291: 55.0/100
+- Iteration 292: 55.0/100
+- Iteration 293: 55.0/100
+- Iteration 294: 55.0/100
+- Iteration 295: 55.0/100
+- Iteration 296: 55.0/100
+- Iteration 297: 55.0/100
+- Iteration 298: 55.0/100
+- Iteration 299: 55.0/100
+- Iteration 300: 55.0/100
+- Iteration 301: 55.0/100
+- Iteration 302: 65.0/100
+- Iteration 303: 55.0/100
+- Iteration 304: 55.0/100
+- Iteration 305: 55.0/100
+- Iteration 306: 55.0/100
+- Iteration 307: 55.0/100
+
+## Evaluation Feedback
+
+### Final Evaluation (Iteration 307)
+**Score**: 55.0/100
+
+**Feedback**: The image presents an abstract interpretation of a patchwork elephant with vibrant colors and a loose, dynamic composition that evokes some qualities of Impressionism. However, it diverges significantly from traditional Impressionist techniques and aesthetics. The use of digital or algorithmic generation creates a style that feels more contemporary and abstract rather than rooted in the 19th-century Impressionist movement. The emotional and atmospheric qualities are present but lack the nuanced light play and organic brushwork characteristic of Impressionism.
+
+**Strengths**: The color palette is bright and varied, reminiscent of the Impressionists' love for vibrant hues and natural light. The composition has a sense of movement and spontaneity, which aligns with the Impressionist emphasis on capturing fleeting moments. The patchwork design also introduces a textural quality that loosely parallels the visible brushstrokes of Impressionist paintings.
+
+**Suggestions**: To better embody Impressionist style, the image could incorporate more naturalistic light effects, such as the interplay of sunlight and shadow, which are hallmarks of the movement. The brushwork or texture should appear more organic and less digitally uniform. Additionally, focusing on a more cohesive scene or subject matter—such as a landscape or everyday life—would align more closely with traditional Impressionist themes. Reducing the abstract fragmentation and emphasizing atmospheric depth would also enhance the resemblance.
