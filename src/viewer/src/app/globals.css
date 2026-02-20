@@ -703,9 +703,21 @@ body {
 }
 
 /* ── Score Badge on Gallery Card ───────────────────────────────── */
-.badge-score-low { background: #ef4444; color: white; border-color: #ef4444; }
-.badge-score-mid { background: #f59e0b; color: white; border-color: #f59e0b; }
-.badge-score-high { background: #22c55e; color: white; border-color: #22c55e; }
+.badge-score-low {
+  background: #ef4444;
+  color: white;
+  border-color: #ef4444;
+}
+.badge-score-mid {
+  background: #f59e0b;
+  color: white;
+  border-color: #f59e0b;
+}
+.badge-score-high {
+  background: #22c55e;
+  color: white;
+  border-color: #22c55e;
+}
 
 /* ============================================================
    Gallery Controls Bar
