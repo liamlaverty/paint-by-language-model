@@ -64,7 +64,7 @@ export default function Toolbar({
     <div className="toolbar">
       <Link href="/">
         <button type="button" className="button">
-          Gallery
+          Home
         </button>
       </Link>
 

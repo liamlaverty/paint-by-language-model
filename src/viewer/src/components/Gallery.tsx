@@ -85,19 +85,29 @@ export default function Gallery({ artworks }: GalleryProps): React.ReactElement 
   // Empty state
   if (artworks.length === 0) {
     return (
-      <div className="gallery-empty">
-        <h2>No artworks available</h2>
+      <>
+        <div className="gallery-header">
+          <h1>Generated Artworks</h1>
+          <p>Explore artwork created by vision language models, stroke by stroke</p>
+        </div>
+        <div className="gallery-empty">
+          <h2>No artworks available</h2>
         <p>
           The gallery is currently empty. Check back soon to explore artwork created by vision
           language models.
         </p>
-      </div>
+        </div>
+      </>
     );
   }
 
   // Gallery grid with controls
   return (
     <>
+      <div className="gallery-header">
+        <h1>Generated Artworks</h1>
+        <p>Explore artwork created by vision language models, stroke by stroke</p>
+      </div>
       <div className="gallery-controls">
         <div className="gallery-control-group">
           <label htmlFor="sort-select">Sort by:</label>

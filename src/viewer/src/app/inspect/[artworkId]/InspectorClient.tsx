@@ -361,57 +361,61 @@ export default function InspectorClient({ artworkId }: InspectorClientProps): Re
 
   return (
     <div className="viewer-container">
-      <Toolbar
-        onReset={reset}
-        onPlay={play}
-        onPause={pause}
-        onStepBackward={stepBackward}
-        onStepForward={stepForward}
-        onShowAll={showAll}
-        isPlaying={isPlaying}
-        isLoaded={viewerData !== null}
-        speed={speed}
-        onSpeedChange={handleSpeedChange}
-        infoText={infoText}
-        highlightEnabled={highlightEnabled}
-        onToggleHighlight={setHighlightEnabled}
-      />
-
       <div className="content-grid">
-        <div className="canvas-container">
-          {viewerData ? (
-            <StrokeCanvas
-              strokes={viewerData.strokes}
-              metadata={viewerData.metadata}
-              visibleCount={visibleCount}
-              onStrokeHover={handleStrokeHover}
-              onStrokeClick={handleStrokeClick}
-              onBackgroundClick={handleBackgroundClick}
-              lockedIndex={lockedIndex}
-              highlightedIndex={highlightedIndex}
+        <div className="left-panel">
+          <Toolbar
+            onReset={reset}
+            onPlay={play}
+            onPause={pause}
+            onStepBackward={stepBackward}
+            onStepForward={stepForward}
+            onShowAll={showAll}
+            isPlaying={isPlaying}
+            isLoaded={viewerData !== null}
+            speed={speed}
+            onSpeedChange={handleSpeedChange}
+            infoText={infoText}
+            highlightEnabled={highlightEnabled}
+            onToggleHighlight={setHighlightEnabled}
+          />
+
+          <div className="canvas-container">
+            {viewerData ? (
+              <StrokeCanvas
+                strokes={viewerData.strokes}
+                metadata={viewerData.metadata}
+                visibleCount={visibleCount}
+                onStrokeHover={handleStrokeHover}
+                onStrokeClick={handleStrokeClick}
+                onBackgroundClick={handleBackgroundClick}
+                lockedIndex={lockedIndex}
+                highlightedIndex={highlightedIndex}
+              />
+            ) : (
+              <EmptyState isLoading={isLoading} error={error} />
+            )}
+          </div>
+
+          {viewerData && (
+            <Timeline
+              current={visibleCount}
+              total={viewerData.strokes.length}
+              onChange={handleTimelineChange}
             />
-          ) : (
-            <EmptyState isLoading={isLoading} error={error} />
           )}
         </div>
 
         {viewerData && (
-          <SidePanel
-            stroke={displayedStroke}
-            metadata={viewerData.metadata}
-            isLocked={lockedIndex >= 0}
-            onClearSelection={clearSelection}
-          />
+          <div className="right-panel">
+            <SidePanel
+              stroke={displayedStroke}
+              metadata={viewerData.metadata}
+              isLocked={lockedIndex >= 0}
+              onClearSelection={clearSelection}
+            />
+          </div>
         )}
       </div>
-
-      {viewerData && (
-        <Timeline
-          current={visibleCount}
-          total={viewerData.strokes.length}
-          onChange={handleTimelineChange}
-        />
-      )}
     </div>
   );
 }

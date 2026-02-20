@@ -33,7 +33,7 @@ describe('Toolbar', () => {
     it('should render all control buttons', () => {
       render(<Toolbar {...defaultProps} />);
 
-      expect(screen.getByText('Gallery')).toBeInTheDocument();
+      expect(screen.getByText('Home')).toBeInTheDocument();
       expect(screen.getByText('⏮ Reset')).toBeInTheDocument();
       expect(screen.getByText('▶️ Play')).toBeInTheDocument();
       expect(screen.getByText('⏮ Step Back')).toBeInTheDocument();
@@ -54,11 +54,11 @@ describe('Toolbar', () => {
       expect(screen.getByText('test-artwork · 42/70 strokes')).toBeInTheDocument();
     });
 
-    it('should render Gallery link', () => {
+    it('should render Home link', () => {
       render(<Toolbar {...defaultProps} />);
 
-      const galleryLink = screen.getByRole('link', { name: /gallery/i });
-      expect(galleryLink).toHaveAttribute('href', '/');
+      const homeLink = screen.getByRole('link', { name: /home/i });
+      expect(homeLink).toHaveAttribute('href', '/');
     });
   });
 
@@ -79,7 +79,7 @@ describe('Toolbar', () => {
   });
 
   describe('Button disabled states', () => {
-    it('should disable all buttons except Gallery when isLoaded is false', () => {
+    it('should disable all buttons except Home when isLoaded is false', () => {
       render(<Toolbar {...defaultProps} isLoaded={false} />);
 
       expect(screen.getByText('⏮ Reset')).toBeDisabled();
@@ -89,8 +89,8 @@ describe('Toolbar', () => {
       expect(screen.getByText('⏩ Fin')).toBeDisabled();
       expect(screen.getByRole('slider')).toBeDisabled();
 
-      // Gallery link should not be disabled
-      expect(screen.getByRole('link', { name: /gallery/i })).not.toHaveAttribute('disabled');
+      // Home link should not be disabled
+      expect(screen.getByRole('link', { name: /home/i })).not.toHaveAttribute('disabled');
     });
 
     it('should disable Reset, Step Back, Step Forward, and Fin when playing', () => {
@@ -212,6 +212,46 @@ describe('Toolbar', () => {
 
       const slider = screen.getByRole('slider', { name: /speed/i });
       expect(slider).toHaveAttribute('title', 'Playback speed: 42');
+    });
+  });
+
+  describe('Highlight strokes toggle', () => {
+    it('should render "Highlight strokes" checkbox', () => {
+      render(<Toolbar {...defaultProps} />);
+
+      expect(screen.getByRole('checkbox', { name: /highlight strokes/i })).toBeInTheDocument();
+    });
+
+    it('should render checkbox unchecked when highlightEnabled is false', () => {
+      render(<Toolbar {...defaultProps} highlightEnabled={false} />);
+
+      expect(screen.getByRole('checkbox', { name: /highlight strokes/i })).not.toBeChecked();
+    });
+
+    it('should render checkbox checked when highlightEnabled is true', () => {
+      render(<Toolbar {...defaultProps} highlightEnabled={true} />);
+
+      expect(screen.getByRole('checkbox', { name: /highlight strokes/i })).toBeChecked();
+    });
+
+    it('should call onToggleHighlight(true) when unchecked checkbox is clicked', async () => {
+      const user = userEvent.setup();
+      render(<Toolbar {...defaultProps} highlightEnabled={false} />);
+
+      await user.click(screen.getByRole('checkbox', { name: /highlight strokes/i }));
+
+      expect(defaultProps.onToggleHighlight).toHaveBeenCalledTimes(1);
+      expect(defaultProps.onToggleHighlight).toHaveBeenCalledWith(true);
+    });
+
+    it('should call onToggleHighlight(false) when checked checkbox is clicked', async () => {
+      const user = userEvent.setup();
+      render(<Toolbar {...defaultProps} highlightEnabled={true} />);
+
+      await user.click(screen.getByRole('checkbox', { name: /highlight strokes/i }));
+
+      expect(defaultProps.onToggleHighlight).toHaveBeenCalledTimes(1);
+      expect(defaultProps.onToggleHighlight).toHaveBeenCalledWith(false);
     });
   });
 });
