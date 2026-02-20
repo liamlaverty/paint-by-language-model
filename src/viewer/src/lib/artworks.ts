@@ -63,6 +63,7 @@ export function getArtworkSummaries(): ArtworkSummary[] {
           totalStrokes: viewerData.metadata.total_strokes,
           totalIterations: viewerData.metadata.total_iterations,
           thumbnailUrl,
+          finalScore: viewerData.metadata.final_score ?? null,
         });
       } catch (error) {
         console.warn(`Error reading ${artworkId}:`, error);
