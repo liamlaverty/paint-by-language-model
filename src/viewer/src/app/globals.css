@@ -623,3 +623,48 @@ body {
   text-transform: uppercase;
   letter-spacing: var(--uppercase-kerning);
 }
+
+.badge-model {
+  background: var(--color-highlight);
+  color: var(--color-highlight-text);
+  border-color: var(--color-highlight);
+}
+
+/* ============================================================
+   Gallery Controls Bar
+   ============================================================ */
+
+.gallery-controls {
+  display: flex;
+  gap: var(--space-m);
+  margin-bottom: var(--space-m);
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.gallery-control-group {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+}
+
+.gallery-control-group select {
+  padding: var(--space-xs) var(--space-s);
+  background: var(--color-element-background);
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-s);
+  font-size: var(--size-step-00);
+  cursor: pointer;
+}
+
+.gallery-control-group label {
+  font-size: var(--size-step-00);
+  white-space: nowrap;
+}
+
+.gallery-count {
+  font-size: var(--size-step-00);
+  color: var(--color-text-muted);
+  margin-left: auto;
+}

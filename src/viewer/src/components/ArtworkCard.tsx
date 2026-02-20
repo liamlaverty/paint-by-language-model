@@ -49,6 +49,9 @@ export default function ArtworkCard({ artwork }: ArtworkCardProps): React.ReactE
         <div className="badges">
           <span className="badge">{artwork.totalStrokes} strokes</span>
           <span className="badge">{artwork.totalIterations} iterations</span>
+          {artwork.modelName && (
+            <span className="badge badge-model">{artwork.modelName}</span>
+          )}
         </div>
       </div>
     </Link>
