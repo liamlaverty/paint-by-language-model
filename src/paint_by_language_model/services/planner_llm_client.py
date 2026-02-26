@@ -169,11 +169,13 @@ class PlannerLLMClient:
         try:
             response_text = self.client.query(prompt=prompt, max_tokens=PLANNER_MAX_TOKENS)
 
+            # Store raw response immediately so it is available even if parsing fails
+            self.last_raw_response = response_text
+
             # Parse response
             painting_plan = self._parse_plan_response(response_text)
 
-            # Store raw and parsed responses
-            self.last_raw_response = response_text
+            # Store parsed response
             self.last_parsed_response = painting_plan
 
             # Record interaction in history
