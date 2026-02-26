@@ -26,6 +26,7 @@ from config import (
 )
 from models.stroke import Stroke
 from models.stroke_vlm_response import StrokeVLMResponse
+from services.prompt_logger import PromptLogger
 from services.stroke_sample_generator import StrokeSampleGenerator
 from utils.json_utils import clean_and_parse_json
 from vlm_client import VLMClient
@@ -43,6 +44,7 @@ class StrokeVLMClient:
         timeout: int = VLM_TIMEOUT,
         api_key: str = API_KEY,
         temperature: float = STROKE_PROMPT_TEMPERATURE,
+        prompt_logger: PromptLogger | None = None,
     ):
         """
         Initialize Stroke VLM Client.
@@ -53,6 +55,8 @@ class StrokeVLMClient:
             timeout (int): Request timeout in seconds
             api_key (str): API key for authentication
             temperature (float): Sampling temperature for stroke generation
+            prompt_logger (PromptLogger | None): Optional logger for persisting
+                full prompt/response pairs to disk
         """
         self.client = VLMClient(
             base_url=base_url,
@@ -63,6 +67,7 @@ class StrokeVLMClient:
         )
         self.model = model
         self.timeout = timeout
+        self.prompt_logger = prompt_logger
 
         # Storage for interaction history (for debugging and tracing)
         self.interaction_history: list[dict[str, Any]] = []
@@ -148,11 +153,14 @@ class StrokeVLMClient:
                 images=images,
             )
 
+            # Store raw response immediately so it is always available,
+            # even if parsing fails below.
+            self.last_raw_response = response_text
+
             # Parse response
             stroke_response = self._parse_stroke_response(response_text)
 
-            # Store raw and parsed responses
-            self.last_raw_response = response_text
+            # Store parsed response
             self.last_parsed_response = stroke_response
 
             # Store in interaction history
@@ -167,6 +175,36 @@ class StrokeVLMClient:
                 num_strokes_parsed=len(stroke_response["strokes"]),
             )
 
+            if self.prompt_logger:
+                image_metadata: list[dict[str, Any]] = [
+                    {"label": "Current canvas", "size_bytes": len(canvas_image)}
+                ]
+                for stroke_type, sample_bytes in self._stroke_samples.items():
+                    image_metadata.append(
+                        {
+                            "label": f"{stroke_type.upper()} stroke sample",
+                            "size_bytes": len(sample_bytes),
+                        }
+                    )
+                self.prompt_logger.log_interaction(
+                    prompt_type="stroke",
+                    prompt=prompt,
+                    raw_response=response_text,
+                    model=self.model,
+                    provider=self.client.provider,
+                    temperature=self.client.temperature,
+                    images=image_metadata,
+                    context={
+                        "iteration": iteration,
+                        "artist_name": artist_name,
+                        "subject": subject,
+                        "num_strokes_requested": num_strokes,
+                        "num_strokes_parsed": len(stroke_response["strokes"]),
+                        "layer_number": current_layer["layer_number"] if current_layer else None,
+                        "layer_name": current_layer["name"] if current_layer else None,
+                    },
+                )
+
             logger.info(
                 f"Received {len(stroke_response['strokes'])} strokes: "
                 f"{stroke_response['batch_reasoning']}"
@@ -178,10 +216,48 @@ class StrokeVLMClient:
             raise
         except json.JSONDecodeError as e:
             logger.error(f"Failed to parse VLM response as JSON: {e}")
-            logger.debug(f"Raw response: {response_text}")
+            logger.error(f"Raw response (first 500 chars): {response_text[:500]}")
+            if self.prompt_logger:
+                self.prompt_logger.log_interaction(
+                    prompt_type="stroke",
+                    prompt=prompt,
+                    raw_response=response_text,
+                    model=self.model,
+                    provider=self.client.provider,
+                    temperature=self.client.temperature,
+                    context={
+                        "iteration": iteration,
+                        "artist_name": artist_name,
+                        "subject": subject,
+                        "num_strokes_requested": num_strokes,
+                        "num_strokes_parsed": 0,
+                        "parse_error": True,
+                        "layer_number": current_layer["layer_number"] if current_layer else None,
+                        "layer_name": current_layer["name"] if current_layer else None,
+                    },
+                )
             raise ValueError(f"VLM returned invalid JSON: {e}") from e
         except Exception as e:
             logger.error(f"Unexpected error during VLM query: {e}")
+            if self.last_raw_response is not None and self.prompt_logger:
+                self.prompt_logger.log_interaction(
+                    prompt_type="stroke",
+                    prompt=prompt,
+                    raw_response=self.last_raw_response,
+                    model=self.model,
+                    provider=self.client.provider,
+                    temperature=self.client.temperature,
+                    context={
+                        "iteration": iteration,
+                        "artist_name": artist_name,
+                        "subject": subject,
+                        "num_strokes_requested": num_strokes,
+                        "num_strokes_parsed": 0,
+                        "parse_error": True,
+                        "layer_number": current_layer["layer_number"] if current_layer else None,
+                        "layer_name": current_layer["name"] if current_layer else None,
+                    },
+                )
             raise RuntimeError(f"VLM query failed: {e}") from e
 
     def suggest_stroke(

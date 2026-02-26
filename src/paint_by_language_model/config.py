@@ -237,6 +237,7 @@ OUTPUT_STRUCTURE = {
     "report": "generation_report.md",  # Human-readable report
     "viewer": "viewer",  # HTML Canvas viewer
     "painting_plan": "painting_plan.json",  # Painting plan from planner VLM
+    "prompt_log": "prompt-log",  # Full LLM prompt/response pairs
 }
 
 # Supported image export formats
