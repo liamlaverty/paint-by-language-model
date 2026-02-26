@@ -22,6 +22,7 @@ from config import (
     SUPPORTED_STROKE_TYPES,
 )
 from models.painting_plan import PaintingPlan, PlanLayer
+from services.prompt_logger import PromptLogger
 from utils.json_utils import clean_and_parse_json
 from vlm_client import VLMClient
 
@@ -38,6 +39,7 @@ class PlannerLLMClient:
         timeout: int = PLANNER_TIMEOUT,
         api_key: str = API_KEY,
         temperature: float = PLANNER_PROMPT_TEMPERATURE,
+        prompt_logger: PromptLogger | None = None,
     ) -> None:
         """
         Initialize Planner LLM Client.
@@ -48,6 +50,8 @@ class PlannerLLMClient:
             timeout (int): Request timeout in seconds
             api_key (str): API key for authentication
             temperature (float): Sampling temperature for plan generation
+            prompt_logger (PromptLogger | None): Optional logger for persisting
+                full prompt/response pairs to disk
         """
         self.client = VLMClient(
             base_url=base_url,
@@ -58,6 +62,7 @@ class PlannerLLMClient:
         )
         self.model = model
         self.timeout = timeout
+        self.prompt_logger = prompt_logger
 
         # Storage for interaction history (for debugging and tracing)
         self.interaction_history: list[dict[str, Any]] = []
@@ -180,6 +185,22 @@ class PlannerLLMClient:
                 parsed_response=painting_plan,
                 layer_count=painting_plan["total_layers"],
             )
+
+            if self.prompt_logger:
+                self.prompt_logger.log_interaction(
+                    prompt_type="plan",
+                    prompt=prompt,
+                    raw_response=response_text,
+                    model=self.model,
+                    provider=self.client.provider,
+                    temperature=self.client.temperature,
+                    images=None,
+                    context={
+                        "artist_name": artist_name,
+                        "subject": subject,
+                        "layer_count": painting_plan["total_layers"],
+                    },
+                )
 
             logger.info(
                 f"Generated painting plan with {painting_plan['total_layers']} layers: "

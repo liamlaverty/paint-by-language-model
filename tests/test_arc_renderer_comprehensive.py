@@ -85,7 +85,9 @@ def test_various_arcs() -> None:
         print(f"✓ Test case {i + 1}: {stroke['reasoning']}")
 
     # Save test image
-    output_path = "test_output/arc_test_various.png"
+    output_dir = project_root / "test_output"
+    output_dir.mkdir(parents=True, exist_ok=True)
+    output_path = output_dir / "arc_test_various.png"
     canvas.save(output_path)
     print(f"✓ All arc variations saved to {output_path}")
 

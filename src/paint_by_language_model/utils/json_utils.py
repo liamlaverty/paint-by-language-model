@@ -48,6 +48,14 @@ def clean_and_parse_json(response_text: str) -> dict[str, Any]:
     # Strategy: Find all string values and replace internal newlines with spaces
     json_text = fix_multiline_strings_in_json(json_text)
 
+    # Step 4.5: Fix missing commas between consecutive key-value pairs.
+    # Some local models omit commas, e.g.:
+    #   {"key1": "value1"
+    #    "key2": "value2"}
+    # A closing quote/digit/}/] followed by a newline and then a quote is
+    # unambiguously missing a comma.  Only insert when there isn't one already.
+    json_text = re.sub(r'(["\d\}\]])\s*\n(\s*")', r"\1,\n\2", json_text)
+
     # Step 5: Remove trailing commas before closing braces/brackets
     # LLMs sometimes add these
     json_text = re.sub(r",\s*([\]}])", r"\1", json_text)

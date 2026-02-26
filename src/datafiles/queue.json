@@ -73,7 +73,7 @@
     "artist": "L.S. Lowry",
     "subject": "Call Center Office at Night, 2020s",
     "output-id": "lowry-call-center",
-    "isComplete": false,
+    "isComplete": true,
     "expanded-subject": "A modern call center office, its open-plan floor filled with rows of desks and workers under the glow of fluorescent lights. The figures are rendered in Lowry's signature style—small, slightly hunched, and anonymous—with their faces illuminated by the blue light of computer screens. Outside the large windows, a dark cityscape of office blocks and neon signs stretches into the night. The painting should capture the isolation of modern work life, using Lowry's muted tones but adding the eerie glow of digital screens.",
     "provider": "mistral",
     "planner-model": "mistral-large-2512",

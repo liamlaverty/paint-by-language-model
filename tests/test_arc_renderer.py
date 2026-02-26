@@ -42,7 +42,9 @@ def test_arc_renderer() -> None:
     print("✓ Arc stroke rendered successfully")
 
     # Save test image
-    output_path = "test_output/arc_test.png"
+    output_dir = project_root / "test_output"
+    output_dir.mkdir(parents=True, exist_ok=True)
+    output_path = output_dir / "arc_test.png"
     canvas.save(output_path)
     print(f"✓ Test image saved to {output_path}")
 

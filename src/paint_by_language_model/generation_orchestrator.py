@@ -30,6 +30,7 @@ from config import (
 from models import EvaluationResult, PaintingPlan, PlanLayer, Stroke
 from services import CanvasManager, EvaluationVLMClient, PlannerLLMClient, StrokeVLMClient
 from services.gif_generator import GifGenerator
+from services.prompt_logger import PromptLogger
 from strategy_manager import StrategyManager
 from utils.json_utils import minify_json_file
 
@@ -73,9 +74,10 @@ class GenerationOrchestrator:
         # Initialize components
         logger.info(f"Initializing generation for '{subject}' in style of {artist_name}")
 
+        self.prompt_logger = PromptLogger(artwork_dir=self.artwork_dir)
         self.canvas_manager = CanvasManager()
-        self.stroke_vlm = StrokeVLMClient()
-        self.eval_vlm = EvaluationVLMClient()
+        self.stroke_vlm = StrokeVLMClient(prompt_logger=self.prompt_logger)
+        self.eval_vlm = EvaluationVLMClient(prompt_logger=self.prompt_logger)
         self.strategy_manager = StrategyManager(artwork_id=artwork_id, output_dir=output_dir)
 
         # Log provider information
@@ -218,7 +220,12 @@ class GenerationOrchestrator:
             except (ValueError, RuntimeError) as e:
                 # Stroke VLM failed - log and skip this iteration
                 logger.error(f"Stroke generation failed in iteration {iteration}: {e}")
-                self._log_exception(iteration, e, "stroke_generation")
+                self._log_exception(
+                    iteration,
+                    e,
+                    "stroke_generation",
+                    raw_response=self.stroke_vlm.last_raw_response,
+                )
                 logger.warning("Skipping this iteration and continuing...")
                 return False  # Continue to next iteration
 
@@ -432,7 +439,7 @@ class GenerationOrchestrator:
 
         # Generate new plan
         logger.info("Generating new painting plan...")
-        planner = PlannerLLMClient()
+        planner = PlannerLLMClient(prompt_logger=self.prompt_logger)
         plan = planner.generate_plan(
             self.artist_name, self.subject, self.expanded_subject, SUPPORTED_STROKE_TYPES
         )
@@ -466,7 +473,7 @@ class GenerationOrchestrator:
                 "report",
                 "final_artwork",
                 "painting_plan",
-            ]:  # These are files
+            ]:  # These are files, not directories
                 dir_path = self.artwork_dir / dirname
                 dir_path.mkdir(parents=True, exist_ok=True)
 
@@ -609,7 +616,13 @@ class GenerationOrchestrator:
 
         logger.info(f"Will resume from iteration {self.starting_iteration}")
 
-    def _log_exception(self, iteration: int, exception: Exception, error_type: str) -> None:
+    def _log_exception(
+        self,
+        iteration: int,
+        exception: Exception,
+        error_type: str,
+        raw_response: str | None = None,
+    ) -> None:
         """
         Log exception details to file for debugging.
 
@@ -617,6 +630,7 @@ class GenerationOrchestrator:
             iteration (int): Iteration number where error occurred
             exception (Exception): The exception that was raised
             error_type (str): Type of error (e.g., "evaluation", "stroke")
+            raw_response (str | None): Raw VLM response text, if available
         """
         # Create exception log directory
         exception_log_dir = self.output_dir / "exception_logs" / self.artwork_id
@@ -640,6 +654,12 @@ class GenerationOrchestrator:
             f.write("-" * 80 + "\n")
             f.write(traceback.format_exc())
             f.write("-" * 80 + "\n")
+
+            if raw_response is not None:
+                f.write("\nRaw VLM Response:\n")
+                f.write("-" * 80 + "\n")
+                f.write(raw_response)
+                f.write("\n" + "-" * 80 + "\n")
 
         logger.info(f"Exception logged to: {log_filepath}")
 
