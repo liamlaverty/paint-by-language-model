@@ -104,6 +104,9 @@ class EvaluationVLMClient:
         try:
             response_text = self.client.query_multimodal(prompt=prompt, image_bytes=canvas_image)
 
+            # Store raw response immediately so it is available even if parsing fails
+            self.last_raw_response = response_text
+
             # Parse response
             evaluation = self._parse_evaluation_response(
                 response_text=response_text,
@@ -111,8 +114,7 @@ class EvaluationVLMClient:
                 current_layer=current_layer,
             )
 
-            # Store raw and parsed responses
-            self.last_raw_response = response_text
+            # Store parsed response
             self.last_parsed_response = evaluation
 
             # Store in interaction history

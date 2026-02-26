@@ -371,7 +371,12 @@ class GenerationOrchestrator:
             except (ValueError, RuntimeError) as e:
                 # VLM evaluation failed - log and continue
                 logger.error(f"Evaluation failed in iteration {iteration}: {e}")
-                self._log_exception(iteration, e, "evaluation")
+                self._log_exception(
+                    iteration,
+                    e,
+                    "evaluation",
+                    raw_response=self.eval_vlm.last_raw_response,
+                )
                 logger.warning("Skipping evaluation for this iteration and continuing...")
                 should_stop = False  # Continue despite evaluation failure
 
