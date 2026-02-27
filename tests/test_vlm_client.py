@@ -4,7 +4,7 @@ import base64
 import sys
 from pathlib import Path
 from typing import Any
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 import requests
@@ -807,3 +807,238 @@ def test_multi_image_empty_list() -> None:
     assert len(content) == 1
     assert content[0]["type"] == "text"
     assert content[0]["text"] == "just a prompt"
+
+
+# ============================================================================
+# 4.1 — VLMClient payload builder tests (prompt caching)
+# ============================================================================
+
+
+def test_build_multimodal_payload_anthropic_system_no_cache() -> None:
+    """Anthropic payload with system= and cache_after_image=False has no cache_control."""
+    client = VLMClient(
+        provider="anthropic",
+        base_url="https://api.anthropic.com/v1",
+    )
+    payload = client._build_multimodal_payload(
+        prompt="p",
+        image_bytes=b"img",
+        max_tokens=100,
+        system="instructions",
+        cache_after_image=False,
+    )
+
+    # Top-level "system" key must be present and equal to the passed string
+    assert "system" in payload
+    assert payload["system"] == "instructions"
+
+    # No content block in the user message should carry cache_control
+    content = payload["messages"][0]["content"]
+    for block in content:
+        assert "cache_control" not in block, (
+            f"Unexpected cache_control on block: {block}"
+        )
+
+
+def test_build_multimodal_payload_anthropic_cache_after_image() -> None:
+    """Anthropic payload with cache_after_image=True adds cache_control to the image block."""
+    client = VLMClient(
+        provider="anthropic",
+        base_url="https://api.anthropic.com/v1",
+    )
+    with patch("vlm_client.ANTHROPIC_PROMPT_CACHING", True):
+        payload = client._build_multimodal_payload(
+            prompt="p",
+            image_bytes=b"img",
+            max_tokens=100,
+            system="instructions",
+            cache_after_image=True,
+        )
+
+    content = payload["messages"][0]["content"]
+    # The image block is first in Anthropic payloads
+    image_block = content[0]
+    assert image_block["type"] == "image"
+    assert "cache_control" in image_block
+    assert image_block["cache_control"] == {"type": "ephemeral"}
+
+    # The text block must not carry cache_control
+    text_block = content[1]
+    assert "cache_control" not in text_block
+
+
+def test_build_multimodal_payload_lmstudio_system_no_cache() -> None:
+    """LMStudio (non-Anthropic) payload uses message-level system, no top-level system key."""
+    client = VLMClient(
+        provider="lmstudio",
+        base_url="http://localhost:1234/v1",
+    )
+    payload = client._build_multimodal_payload(
+        prompt="p",
+        image_bytes=b"img",
+        max_tokens=100,
+        system="instructions",
+    )
+
+    # No top-level "system" key for non-Anthropic providers
+    assert "system" not in payload
+
+    # First message is the system message
+    assert payload["messages"][0] == {"role": "system", "content": "instructions"}
+
+    # No content block carries cache_control
+    user_message = payload["messages"][1]
+    for block in user_message["content"]:
+        assert "cache_control" not in block, (
+            f"Unexpected cache_control on block: {block}"
+        )
+
+
+def test_build_multi_image_payload_anthropic_cache_after_index() -> None:
+    """cache_after_index=2 adds cache_control only to the 3rd image block (idx 2)."""
+    client = VLMClient(
+        provider="anthropic",
+        base_url="https://api.anthropic.com/v1",
+    )
+    images = [(b"a", "img1"), (b"b", "img2"), (b"c", "img3")]
+
+    with patch("vlm_client.ANTHROPIC_PROMPT_CACHING", True):
+        payload = client._build_multi_image_payload(
+            prompt="p",
+            images=images,
+            max_tokens=100,
+            cache_after_index=2,
+        )
+
+    content = payload["messages"][0]["content"]
+    # Layout: [label0, image0, label1, image1, label2, image2, prompt]
+    # cache_control must appear on exactly one block: image at idx=2 → content[5]
+    blocks_with_cache = [b for b in content if "cache_control" in b]
+    assert len(blocks_with_cache) == 1
+
+    # Confirm it is the image block for image index 2 (content position 5)
+    assert content[5]["type"] == "image"
+    assert content[5]["cache_control"] == {"type": "ephemeral"}
+
+
+def test_build_multi_image_payload_anthropic_no_cache_after_index() -> None:
+    """cache_after_index=None produces no cache_control on any block."""
+    client = VLMClient(
+        provider="anthropic",
+        base_url="https://api.anthropic.com/v1",
+    )
+    images = [(b"a", "img1"), (b"b", "img2"), (b"c", "img3")]
+
+    payload = client._build_multi_image_payload(
+        prompt="p",
+        images=images,
+        max_tokens=100,
+        cache_after_index=None,
+    )
+
+    content = payload["messages"][0]["content"]
+    for block in content:
+        assert "cache_control" not in block, (
+            f"Unexpected cache_control on block: {block}"
+        )
+
+
+def test_build_multimodal_payload_caching_disabled() -> None:
+    """When ANTHROPIC_PROMPT_CACHING=False, cache_after_image=True is ignored."""
+    client = VLMClient(
+        provider="anthropic",
+        base_url="https://api.anthropic.com/v1",
+    )
+
+    with patch("vlm_client.ANTHROPIC_PROMPT_CACHING", False):
+        payload = client._build_multimodal_payload(
+            prompt="p",
+            image_bytes=b"img",
+            max_tokens=100,
+            system="instructions",
+            cache_after_image=True,
+        )
+
+    content = payload["messages"][0]["content"]
+    for block in content:
+        assert "cache_control" not in block, (
+            f"Expected no cache_control when caching disabled, but found it on: {block}"
+        )
+
+
+# ============================================================================
+# 4.2 — VLMClient cache usage counter tests
+# ============================================================================
+
+
+def test_cache_counters_increment_after_anthropic_response(mocker: Any) -> None:
+    """After an Anthropic response with cache usage, counters reflect those values."""
+    mock_response = MagicMock()
+    mock_response.status_code = 200
+    mock_response.raise_for_status = MagicMock()
+    mock_response.json.return_value = {
+        "content": [{"type": "text", "text": "ok"}],
+        "usage": {
+            "cache_creation_input_tokens": 500,
+            "cache_read_input_tokens": 2000,
+            "input_tokens": 10,
+        },
+    }
+    mocker.patch("requests.post", return_value=mock_response)
+
+    client = VLMClient(
+        provider="anthropic",
+        base_url="https://api.anthropic.com/v1",
+        api_key="sk-ant-test",
+    )
+    client.query("test")
+
+    assert client.total_cache_write_tokens == 500
+    assert client.total_cache_read_tokens == 2000
+
+
+def test_cache_counters_accumulate_across_calls(mocker: Any) -> None:
+    """Cache write counter accumulates across multiple Anthropic calls."""
+    mock_response = MagicMock()
+    mock_response.status_code = 200
+    mock_response.raise_for_status = MagicMock()
+    mock_response.json.return_value = {
+        "content": [{"type": "text", "text": "ok"}],
+        "usage": {
+            "cache_creation_input_tokens": 500,
+            "cache_read_input_tokens": 0,
+            "input_tokens": 10,
+        },
+    }
+    mocker.patch("requests.post", return_value=mock_response)
+
+    client = VLMClient(
+        provider="anthropic",
+        base_url="https://api.anthropic.com/v1",
+        api_key="sk-ant-test",
+    )
+    client.query("test")
+    client.query("test")
+
+    assert client.total_cache_write_tokens == 1000
+
+
+def test_cache_counters_zero_for_non_anthropic(mocker: Any) -> None:
+    """Non-Anthropic (lmstudio) response leaves both cache counters at zero."""
+    mock_response = MagicMock()
+    mock_response.status_code = 200
+    mock_response.raise_for_status = MagicMock()
+    mock_response.json.return_value = {
+        "choices": [{"message": {"content": "ok"}}],
+    }
+    mocker.patch("requests.post", return_value=mock_response)
+
+    client = VLMClient(
+        provider="lmstudio",
+        base_url="http://localhost:1234/v1",
+        api_key="",
+    )
+    client.query("test")
+
+    assert client.total_cache_write_tokens == 0
+    assert client.total_cache_read_tokens == 0
