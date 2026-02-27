@@ -100,9 +100,17 @@ class EvaluationVLMClient:
             current_layer=current_layer,
         )
 
+        # Build static instructions for system-prompt caching
+        static_instructions = self._build_static_evaluation_instructions(artist_name)
+
         # Query VLM
         try:
-            response_text = self.client.query_multimodal(prompt=prompt, image_bytes=canvas_image)
+            response_text = self.client.query_multimodal(
+                prompt=prompt,
+                image_bytes=canvas_image,
+                system=static_instructions,
+                cache_after_image=False,
+            )
 
             # Store raw response immediately so it is available even if parsing fails
             self.last_raw_response = response_text
@@ -198,13 +206,33 @@ Layer objectives:
 - Expected techniques: {current_layer["techniques"]}
 """
 
-        prompt = f"""You are an art critic evaluating artwork for stylistic similarity to {artist_name}.
-
-Current Canvas: [Image attached]
+        prompt = f"""Current Canvas: [Image attached]
 Subject: {subject}
 Iteration: {iteration}{layer_section}
 
 Task: Rate how well this image embodies {artist_name}'s artistic style on a scale of 0-100.
+
+(See system instructions for evaluation criteria and response format.)"""
+
+        return prompt
+
+    def _build_static_evaluation_instructions(self, artist_name: str) -> str:
+        """
+        Build static evaluation instructions for caching.
+
+        Returns the portion of the evaluation prompt that does not change
+        between iterations: the role preamble, evaluation criteria, score
+        rubric, JSON response schema, and output format instructions.
+        These are intended to be sent as an Anthropic system prompt so they
+        can be cached and reused across iterations.
+
+        Args:
+            artist_name (str): Target artist name for the evaluation
+
+        Returns:
+            str: Static evaluation instructions text
+        """
+        return f"""You are an art critic evaluating artwork for stylistic similarity to {artist_name}.
 
 Consider:
 - Color palette characteristic of {artist_name}
@@ -225,8 +253,6 @@ Respond in JSON format:
 }}
 
 IMPORTANT: Respond ONLY with valid JSON. Do not include any text before or after the JSON object."""
-
-        return prompt
 
     def _parse_evaluation_response(
         self,
