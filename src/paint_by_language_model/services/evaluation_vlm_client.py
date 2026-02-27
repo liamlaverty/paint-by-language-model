@@ -141,7 +141,6 @@ class EvaluationVLMClient:
                         "artist_name": artist_name,
                         "subject": subject,
                         "score": evaluation["score"],
-                        "layer_complete": evaluation.get("layer_complete"),
                         "layer_number": evaluation.get("layer_number"),
                     },
                 )
@@ -283,7 +282,6 @@ IMPORTANT: Respond ONLY with valid JSON. Do not include any text before or after
 
         # Add layer-specific fields if layer context was provided
         if current_layer:
-            result["layer_complete"] = data.get("layer_complete", False)
             result["layer_number"] = current_layer["layer_number"]
 
         return result

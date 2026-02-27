@@ -226,7 +226,6 @@ class TestEvaluationResponseParsing:
             current_layer=current_layer,
         )
 
-        assert result.get("layer_complete") is True
         assert result.get("layer_number") == current_layer["layer_number"]
 
     def test_layer_complete_false_parsed_correctly(
@@ -252,7 +251,6 @@ class TestEvaluationResponseParsing:
             current_layer=current_layer,
         )
 
-        assert result.get("layer_complete") is False
         assert result.get("layer_number") == current_layer["layer_number"]
 
     def test_missing_layer_complete_defaults_to_false(
@@ -278,7 +276,8 @@ class TestEvaluationResponseParsing:
             current_layer=current_layer,
         )
 
-        assert result.get("layer_complete") is False
+        assert result.get("layer_number") == current_layer["layer_number"]
+        assert "layer_complete" not in result
 
     def test_layer_number_included_when_provided(
         self, eval_client: EvaluationVLMClient, sample_plan: PaintingPlan

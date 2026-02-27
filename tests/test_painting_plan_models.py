@@ -126,8 +126,8 @@ class TestPaintingPlan:
 class TestEvaluationResult:
     """Tests for EvaluationResult with optional layer fields."""
 
-    def test_evaluation_result_with_layer_complete_and_number(self) -> None:
-        """Test that EvaluationResult with optional layer_complete and layer_number fields works."""
+    def test_evaluation_result_with_layer_number(self) -> None:
+        """Test that EvaluationResult with optional layer_number field works."""
         result: EvaluationResult = {
             "score": 75.0,
             "feedback": "Good progress",
@@ -135,11 +135,9 @@ class TestEvaluationResult:
             "suggestions": "Add more detail",
             "timestamp": "2026-01-01T00:00:00",
             "iteration": 10,
-            "layer_complete": True,
             "layer_number": 2,
         }
 
-        assert result["layer_complete"] is True
         assert result["layer_number"] == 2
 
     def test_evaluation_result_without_layer_fields(self) -> None:
@@ -154,11 +152,10 @@ class TestEvaluationResult:
         }
 
         assert result["score"] == 65.0
-        assert "layer_complete" not in result
         assert "layer_number" not in result
 
-    def test_evaluation_result_with_layer_complete_false(self) -> None:
-        """Test that EvaluationResult with layer_complete: False works."""
+    def test_evaluation_result_with_layer_number_only(self) -> None:
+        """Test that EvaluationResult with layer_number but no layer_complete works."""
         result: EvaluationResult = {
             "score": 50.0,
             "feedback": "Needs work",
@@ -166,9 +163,7 @@ class TestEvaluationResult:
             "suggestions": "Keep going",
             "timestamp": "2026-01-01T00:00:00",
             "iteration": 3,
-            "layer_complete": False,
             "layer_number": 1,
         }
 
-        assert result["layer_complete"] is False
         assert result["layer_number"] == 1
