@@ -142,15 +142,19 @@ class StrokeVLMClient:
 
         # Query VLM
         try:
-            images: list[tuple[bytes, str]] = [
-                (canvas_image, "Current canvas"),
-            ]
+            images: list[tuple[bytes, str]] = []
             for stroke_type, sample_bytes in self._stroke_samples.items():
                 images.append((sample_bytes, f"{stroke_type.upper()} stroke sample"))
+            images.append((canvas_image, "Current canvas"))
+
+            static_instructions = self._build_static_stroke_instructions()
+            cache_breakpoint_index = len(self._stroke_samples) - 1
 
             response_text = self.client.query_multimodal_multi_image(
                 prompt=prompt,
                 images=images,
+                system=static_instructions,
+                cache_after_index=cache_breakpoint_index,
             )
 
             # Store raw response immediately so it is always available,
@@ -176,9 +180,7 @@ class StrokeVLMClient:
             )
 
             if self.prompt_logger:
-                image_metadata: list[dict[str, Any]] = [
-                    {"label": "Current canvas", "size_bytes": len(canvas_image)}
-                ]
+                image_metadata: list[dict[str, Any]] = []
                 for stroke_type, sample_bytes in self._stroke_samples.items():
                     image_metadata.append(
                         {
@@ -186,6 +188,7 @@ class StrokeVLMClient:
                             "size_bytes": len(sample_bytes),
                         }
                     )
+                image_metadata.append({"label": "Current canvas", "size_bytes": len(canvas_image)})
                 self.prompt_logger.log_interaction(
                     prompt_type="stroke",
                     prompt=prompt,
@@ -371,13 +374,46 @@ have been adequately addressed on the canvas.
 
         prompt = f"""You are an expert artist creating a piece in the style of {artist_name}.
 
-Current Canvas: [Image attached]
+Current Canvas: [Image attached — the last image provided]
 {subject_section}
 Iteration: {iteration}{strategy_section}{plan_section}
 
+(See system instructions for available stroke types and their parameters.)
+
 Task: Suggest {num_strokes} stroke(s) to add to this canvas that evoke {artist_name}'s artistic style.
 
-AVAILABLE STROKE TYPES:
+Consider:
+- {artist_name}'s characteristic techniques, color palette, and composition style
+- The current state of the canvas and how to build upon it
+- Creating cohesive, original artwork (not copying specific existing pieces)
+- Using varied stroke types to achieve different artistic effects
+
+RESPONSE FORMAT (JSON only):
+{{
+  "strokes": [
+    // {num_strokes} stroke object(s) here - each must include all required fields for its type
+  ],
+  "updated_strategy": "<optional strategy update for future iterations, or null>",
+  "batch_reasoning": "<REQUIRED: explanation for this batch of strokes>"{layer_complete_field}
+}}
+
+IMPORTANT: Respond ONLY with valid JSON. Do not include any markdown formatting, code blocks, or text before/after the JSON."""
+
+        return prompt
+
+    def _build_static_stroke_instructions(self) -> str:
+        """
+        Build the static portion of the stroke prompt for use as a cacheable system prompt.
+
+        Returns the text describing available stroke types, canvas dimensions, and stroke
+        constraints. This content is identical across all iterations of a run and is
+        therefore a good candidate for Anthropic prompt caching.
+
+        Returns:
+            str: Static stroke instruction text containing stroke type definitions,
+                canvas coordinate bounds, and thickness/opacity constraints.
+        """
+        return f"""AVAILABLE STROKE TYPES:
 
 1. LINE - Straight line between two points. See attached "LINE stroke sample" image showing 5 examples with varying thickness, colour, opacity, and angle.
    Example: {{"type": "line", "start_x": 100, "start_y": 200, "end_x": 300, "end_y": 400, "color_hex": "#FF5733", "thickness": 5, "opacity": 0.8}}
@@ -405,26 +441,7 @@ Use 0 for the left/top edge and {CANVAS_WIDTH}/{CANVAS_HEIGHT} for the right/bot
 
 Stroke constraints:
 - Thickness: {MIN_STROKE_THICKNESS} to {MAX_STROKE_THICKNESS} pixels
-- Opacity: {MIN_STROKE_OPACITY} to {MAX_STROKE_OPACITY} (0.0 = transparent, 1.0 = opaque)
-
-Consider:
-- {artist_name}'s characteristic techniques, color palette, and composition style
-- The current state of the canvas and how to build upon it
-- Creating cohesive, original artwork (not copying specific existing pieces)
-- Using varied stroke types to achieve different artistic effects
-
-RESPONSE FORMAT (JSON only):
-{{
-  "strokes": [
-    // {num_strokes} stroke object(s) here - each must include all required fields for its type
-  ],
-  "updated_strategy": "<optional strategy update for future iterations, or null>",
-  "batch_reasoning": "<REQUIRED: explanation for this batch of strokes>"{layer_complete_field}
-}}
-
-IMPORTANT: Respond ONLY with valid JSON. Do not include any markdown formatting, code blocks, or text before/after the JSON."""
-
-        return prompt
+- Opacity: {MIN_STROKE_OPACITY} to {MAX_STROKE_OPACITY} (0.0 = transparent, 1.0 = opaque)"""
 
     def _parse_stroke_response(self, response_text: str) -> StrokeVLMResponse:
         """
