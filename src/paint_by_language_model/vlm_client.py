@@ -7,6 +7,7 @@ import time
 import requests
 
 from config import (
+    ANTHROPIC_PROMPT_CACHING,
     ANTHROPIC_VERSION,
     API_BASE_URL,
     API_KEY,
@@ -52,6 +53,8 @@ class VLMClient:
         self.api_key = api_key
         self.temperature = temperature
         self.provider = provider
+        self.total_cache_write_tokens: int = 0
+        self.total_cache_read_tokens: int = 0
 
         # Set endpoint based on provider
         if self.provider == "anthropic":
@@ -76,24 +79,57 @@ class VLMClient:
                 headers["Authorization"] = f"Bearer {self.api_key}"
         return headers
 
-    def _build_text_payload(self, prompt: str, max_tokens: int) -> dict:
+    def _apply_cache_breakpoint(self, block: dict, ttl: str = "5m") -> dict:
+        """
+        Return a copy of block with cache_control appended (Anthropic only).
+
+        Args:
+            block (dict): The content block to annotate with a cache breakpoint
+            ttl (str): Cache TTL hint — "5m" (default, ephemeral) or "1h"
+
+        Returns:
+            dict: A shallow copy of block with a "cache_control" key added
+        """
+        result = dict(block)
+        cache_control: dict[str, str] = {"type": "ephemeral"}
+        if ttl == "1h":
+            cache_control["ttl"] = "1h"
+        result["cache_control"] = cache_control
+        return result
+
+    def _build_text_payload(
+        self,
+        prompt: str,
+        max_tokens: int,
+        system: str | list[dict] | None = None,
+    ) -> dict:
         """
         Build request payload for text-only query based on provider.
 
         Args:
             prompt (str): The text prompt to send
             max_tokens (int): Maximum tokens in the response
+            system (str | list[dict] | None): Optional system prompt. For Anthropic,
+                added as a top-level "system" key. For other providers, prepended
+                as a {"role": "system"} message when a non-empty string.
 
         Returns:
             dict: Request payload structure for the API
         """
-        # Text-only message format is identical for all providers
-        return {
+        messages: list[dict] = []
+        if self.provider != "anthropic" and isinstance(system, str) and system:
+            messages.append({"role": "system", "content": system})
+        messages.append({"role": "user", "content": prompt})
+
+        payload: dict = {
             "model": self.model,
-            "messages": [{"role": "user", "content": prompt}],
+            "messages": messages,
             "max_tokens": max_tokens,
             "temperature": self.temperature,
         }
+        if self.provider == "anthropic" and system is not None:
+            payload["system"] = system
+        return payload
 
     def _extract_response_text(self, response_data: dict) -> str:
         """
@@ -106,17 +142,24 @@ class VLMClient:
             str: Extracted text content
         """
         if self.provider == "anthropic":
-            return response_data["content"][0]["text"]
+            return str(response_data["content"][0]["text"])
         else:
-            return response_data["choices"][0]["message"]["content"]
+            return str(response_data["choices"][0]["message"]["content"])
 
-    def query(self, prompt: str, max_tokens: int = MAX_TOKENS) -> str:
+    def query(
+        self,
+        prompt: str,
+        max_tokens: int = MAX_TOKENS,
+        system: str | list[dict] | None = None,
+    ) -> str:
         """
         Send a prompt to the VLM API and return the response.
 
         Args:
             prompt (str): The prompt to send to the LLM
             max_tokens (int): Maximum tokens in the response
+            system (str | list[dict] | None): Optional system prompt forwarded
+                to the payload builder.
 
         Returns:
             str: The LLM's response text
@@ -125,7 +168,7 @@ class VLMClient:
             ConnectionError: If the VLM API is not reachable or auth fails
             requests.RequestException: For other HTTP errors
         """
-        payload = self._build_text_payload(prompt, max_tokens)
+        payload = self._build_text_payload(prompt, max_tokens, system=system)
 
         try:
             # Retry loop for rate limiting
@@ -163,6 +206,16 @@ class VLMClient:
             response.raise_for_status()
 
             data = response.json()
+            if self.provider == "anthropic":
+                usage = data.get("usage", {})
+                cache_write = usage.get("cache_creation_input_tokens", 0)
+                cache_read = usage.get("cache_read_input_tokens", 0)
+                if cache_write or cache_read:
+                    logger.debug(
+                        f"Anthropic cache — write: {cache_write} tokens, read: {cache_read} tokens"
+                    )
+                self.total_cache_write_tokens += cache_write
+                self.total_cache_read_tokens += cache_read
             content: str = self._extract_response_text(data)
             return content
 
@@ -202,7 +255,14 @@ class VLMClient:
         except requests.RequestException:
             return False
 
-    def _build_multimodal_payload(self, prompt: str, image_bytes: bytes, max_tokens: int) -> dict:
+    def _build_multimodal_payload(
+        self,
+        prompt: str,
+        image_bytes: bytes,
+        max_tokens: int,
+        system: str | list[dict] | None = None,
+        cache_after_image: bool = False,
+    ) -> dict:
         """
         Build request payload for multimodal query based on provider.
 
@@ -210,6 +270,12 @@ class VLMClient:
             prompt (str): The text prompt to send with the image
             image_bytes (bytes): Image data as bytes
             max_tokens (int): Maximum tokens in the response
+            system (str | list[dict] | None): Optional system prompt. For Anthropic,
+                added as a top-level "system" key. For other providers, prepended
+                as a {"role": "system"} message when a non-empty string.
+            cache_after_image (bool): When True, Anthropic provider, and
+                ANTHROPIC_PROMPT_CACHING is enabled, attaches a cache_control
+                breakpoint to the image content block.
 
         Returns:
             dict: Request payload structure for the API
@@ -217,36 +283,53 @@ class VLMClient:
         if self.provider == "anthropic":
             # Anthropic uses raw base64 without data URL prefix
             base64_image = base64.b64encode(image_bytes).decode("utf-8")
-            # Image block comes BEFORE text block (Anthropic best practice)
-            message_content = [
-                {
-                    "type": "image",
-                    "source": {
-                        "type": "base64",
-                        "media_type": "image/png",
-                        "data": base64_image,
-                    },
+            image_block: dict = {
+                "type": "image",
+                "source": {
+                    "type": "base64",
+                    "media_type": "image/png",
+                    "data": base64_image,
                 },
+            }
+            if cache_after_image and ANTHROPIC_PROMPT_CACHING:
+                image_block = self._apply_cache_breakpoint(image_block)
+            # Image block comes BEFORE text block (Anthropic best practice)
+            message_content: list[dict] = [
+                image_block,
                 {"type": "text", "text": prompt},
             ]
         else:
             # OpenAI-compatible format uses data URL
             image_data_url = self._encode_image_to_base64(image_bytes)
             # Text block comes before image block
-            message_content = [
+            other_message_content: list[dict] = [
                 {"type": "text", "text": prompt},
                 {"type": "image_url", "image_url": {"url": image_data_url}},
             ]
+            message_content = other_message_content
 
-        return {
+        messages: list[dict] = []
+        if self.provider != "anthropic" and isinstance(system, str) and system:
+            messages.append({"role": "system", "content": system})
+        messages.append({"role": "user", "content": message_content})
+
+        payload: dict = {
             "model": self.model,
-            "messages": [{"role": "user", "content": message_content}],
+            "messages": messages,
             "max_tokens": max_tokens,
             "temperature": self.temperature,
         }
+        if self.provider == "anthropic" and system is not None:
+            payload["system"] = system
+        return payload
 
     def query_multimodal(
-        self, prompt: str, image_bytes: bytes, max_tokens: int = MAX_TOKENS
+        self,
+        prompt: str,
+        image_bytes: bytes,
+        max_tokens: int = MAX_TOKENS,
+        system: str | list[dict] | None = None,
+        cache_after_image: bool = False,
     ) -> str:
         """
         Send an image and text prompt to the VLM and return the response.
@@ -255,6 +338,11 @@ class VLMClient:
             prompt (str): The text prompt to send with the image
             image_bytes (bytes): Image data as bytes (PNG, JPEG, etc.)
             max_tokens (int): Maximum tokens in response (default from config)
+            system (str | list[dict] | None): Optional system prompt forwarded
+                to the payload builder.
+            cache_after_image (bool): When True, Anthropic provider, and
+                ANTHROPIC_PROMPT_CACHING is enabled, attaches a cache_control
+                breakpoint to the image content block.
 
         Returns:
             str: The VLM's response text
@@ -268,7 +356,13 @@ class VLMClient:
 
         try:
             # Build provider-specific multimodal payload
-            payload = self._build_multimodal_payload(prompt, image_bytes, max_tokens)
+            payload = self._build_multimodal_payload(
+                prompt,
+                image_bytes,
+                max_tokens,
+                system=system,
+                cache_after_image=cache_after_image,
+            )
 
             # Retry loop for rate limiting
             for attempt in range(MAX_RETRIES):
@@ -306,6 +400,16 @@ class VLMClient:
 
             # Extract response text using provider-specific parsing
             response_data = response.json()
+            if self.provider == "anthropic":
+                usage = response_data.get("usage", {})
+                cache_write = usage.get("cache_creation_input_tokens", 0)
+                cache_read = usage.get("cache_read_input_tokens", 0)
+                if cache_write or cache_read:
+                    logger.debug(
+                        f"Anthropic cache — write: {cache_write} tokens, read: {cache_read} tokens"
+                    )
+                self.total_cache_write_tokens += cache_write
+                self.total_cache_read_tokens += cache_read
             response_text: str = self._extract_response_text(response_data)
 
             logger.info(f"Received VLM response ({len(response_text)} characters)")
@@ -342,6 +446,8 @@ class VLMClient:
         prompt: str,
         images: list[tuple[bytes, str]],
         max_tokens: int,
+        system: str | list[dict] | None = None,
+        cache_after_index: int | None = None,
     ) -> dict:
         """
         Build request payload for a multi-image multimodal query.
@@ -353,27 +459,38 @@ class VLMClient:
             prompt (str): The main text prompt appended after all images
             images (list[tuple[bytes, str]]): List of (image_bytes, label) pairs
             max_tokens (int): Maximum tokens in the response
+            system (str | list[dict] | None): Optional system prompt. For Anthropic,
+                added as a top-level "system" key. For other providers, prepended
+                as a {"role": "system"} message when a non-empty string.
+            cache_after_index (int | None): Zero-based image index at which to
+                attach a cache_control breakpoint (Anthropic + ANTHROPIC_PROMPT_CACHING
+                only). Image index ``i`` corresponds to ``message_content[i*2 + 1]``.
 
         Returns:
             dict: Request payload structure for the API
         """
         message_content: list[dict] = []
 
-        for image_bytes, label in images:
+        for idx, (image_bytes, label) in enumerate(images):
             base64_image = base64.b64encode(image_bytes).decode("utf-8")
             # Label block before each image
             message_content.append({"type": "text", "text": label})
             if self.provider == "anthropic":
-                message_content.append(
-                    {
-                        "type": "image",
-                        "source": {
-                            "type": "base64",
-                            "media_type": "image/png",
-                            "data": base64_image,
-                        },
-                    }
-                )
+                image_block: dict = {
+                    "type": "image",
+                    "source": {
+                        "type": "base64",
+                        "media_type": "image/png",
+                        "data": base64_image,
+                    },
+                }
+                if (
+                    cache_after_index is not None
+                    and idx == cache_after_index
+                    and ANTHROPIC_PROMPT_CACHING
+                ):
+                    image_block = self._apply_cache_breakpoint(image_block)
+                message_content.append(image_block)
             else:
                 # OpenAI-compatible: use data URL format
                 data_url = f"data:image/png;base64,{base64_image}"
@@ -382,18 +499,28 @@ class VLMClient:
         # Append main prompt as final text block
         message_content.append({"type": "text", "text": prompt})
 
-        return {
+        messages: list[dict] = []
+        if self.provider != "anthropic" and isinstance(system, str) and system:
+            messages.append({"role": "system", "content": system})
+        messages.append({"role": "user", "content": message_content})
+
+        payload: dict = {
             "model": self.model,
-            "messages": [{"role": "user", "content": message_content}],
+            "messages": messages,
             "max_tokens": max_tokens,
             "temperature": self.temperature,
         }
+        if self.provider == "anthropic" and system is not None:
+            payload["system"] = system
+        return payload
 
     def query_multimodal_multi_image(
         self,
         prompt: str,
         images: list[tuple[bytes, str]],
         max_tokens: int = MAX_TOKENS,
+        system: str | list[dict] | None = None,
+        cache_after_index: int | None = None,
     ) -> str:
         """
         Send multiple labelled images and a text prompt to the VLM in one request.
@@ -406,6 +533,11 @@ class VLMClient:
             prompt (str): The main text prompt sent after all images
             images (list[tuple[bytes, str]]): List of (image_bytes, label) pairs
             max_tokens (int): Maximum tokens in response (default from config)
+            system (str | list[dict] | None): Optional system prompt forwarded
+                to the payload builder.
+            cache_after_index (int | None): Zero-based image index at which to
+                attach a cache_control breakpoint (Anthropic + ANTHROPIC_PROMPT_CACHING
+                only).
 
         Returns:
             str: The VLM's response text
@@ -421,7 +553,13 @@ class VLMClient:
         )
 
         try:
-            payload = self._build_multi_image_payload(prompt, images, max_tokens)
+            payload = self._build_multi_image_payload(
+                prompt,
+                images,
+                max_tokens,
+                system=system,
+                cache_after_index=cache_after_index,
+            )
 
             # Retry loop for rate limiting
             for attempt in range(MAX_RETRIES):
@@ -458,6 +596,16 @@ class VLMClient:
             response.raise_for_status()
 
             response_data = response.json()
+            if self.provider == "anthropic":
+                usage = response_data.get("usage", {})
+                cache_write = usage.get("cache_creation_input_tokens", 0)
+                cache_read = usage.get("cache_read_input_tokens", 0)
+                if cache_write or cache_read:
+                    logger.debug(
+                        f"Anthropic cache — write: {cache_write} tokens, read: {cache_read} tokens"
+                    )
+                self.total_cache_write_tokens += cache_write
+                self.total_cache_read_tokens += cache_read
             response_text: str = self._extract_response_text(response_data)
 
             logger.info(f"Received VLM response ({len(response_text)} characters)")

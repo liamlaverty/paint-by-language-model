@@ -67,6 +67,7 @@ ANTHROPIC_VLM_MODEL = "claude-sonnet-4-6"
 ANTHROPIC_EVALUATION_VLM_MODEL = "claude-sonnet-4-6"
 ANTHROPIC_PLANNER_MODEL = "claude-sonnet-4-6"
 ANTHROPIC_VERSION = "2023-06-01"
+ANTHROPIC_PROMPT_CACHING: bool = os.getenv("ANTHROPIC_PROMPT_CACHING", "true").lower() == "true"
 
 # Planner LLM Settings
 MISTRAL_PLANNER_MODEL = "mistral-large-latest"
