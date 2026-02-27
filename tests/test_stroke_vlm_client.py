@@ -62,13 +62,13 @@ def test_sample_generator_initialized_at_init() -> None:
 
 
 def test_suggest_strokes_sends_sample_images() -> None:
-    """suggest_strokes() calls query_multimodal_multi_image with canvas + 5 sample images.
+    """suggest_strokes() calls query_multimodal_multi_image with 5 sample images then canvas.
 
     Verifies:
     - ``query_multimodal_multi_image`` is called (not ``query_multimodal``)
-    - The ``images`` argument contains exactly 6 entries (1 canvas + 5 samples)
-    - The first image label is ``"Current canvas"``
-    - The remaining 5 labels match the expected stroke sample names
+    - The ``images`` argument contains exactly 6 entries (5 samples + 1 canvas)
+    - The last image label is ``"Current canvas"``
+    - The first 5 labels match the expected stroke sample names
     """
     client = StrokeVLMClient()
 
@@ -101,36 +101,32 @@ def test_suggest_strokes_sends_sample_images() -> None:
     )
 
     assert len(images) == 6, (
-        f"Expected 6 images (1 canvas + 5 samples), got {len(images)}"
+        f"Expected 6 images (5 samples + 1 canvas), got {len(images)}"
     )
 
-    # First entry must be the current canvas
-    assert images[0][1] == "Current canvas", (
-        f"First image label should be 'Current canvas', got '{images[0][1]}'"
+    # Last entry must be the current canvas
+    assert images[-1][1] == "Current canvas", (
+        f"Last image label should be 'Current canvas', got '{images[-1][1]}'"
     )
 
-    # Remaining 5 labels must be the stroke sample labels
-    sample_labels = {label for _, label in images[1:]}
+    # First 5 labels must be the stroke sample labels
+    sample_labels = {label for _, label in images[:-1]}
     assert sample_labels == _EXPECTED_SAMPLE_LABELS, (
         f"Sample labels mismatch. Expected {_EXPECTED_SAMPLE_LABELS}, got {sample_labels}"
     )
 
 
 def test_prompt_references_samples() -> None:
-    """_build_stroke_prompt() includes visual sample references for every stroke type.
+    """_build_static_stroke_instructions() includes visual sample references for every stroke type.
 
-    Verifies that the returned prompt string contains the label strings that
-    match the images sent via ``query_multimodal_multi_image``.
+    Verifies that the returned static instructions string contains the label strings
+    that match the images sent via ``query_multimodal_multi_image``.
     """
     client = StrokeVLMClient()
 
-    prompt = client._build_stroke_prompt(
-        artist_name="Test Artist",
-        subject="Test Subject",
-        iteration=1,
-        strategy_context="",
-        num_strokes=3,
-    )
+    static_instructions = client._build_static_stroke_instructions()
 
     for label in _EXPECTED_SAMPLE_LABELS:
-        assert label in prompt, f"Prompt should contain '{label}' but it was not found"
+        assert label in static_instructions, (
+            f"Static instructions should contain '{label}' but it was not found"
+        )
