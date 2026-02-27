@@ -3,7 +3,6 @@
 import sys
 from pathlib import Path
 
-
 sys.path.insert(
     0, str(Path(__file__).parent.parent / "src" / "paint_by_language_model")
 )
@@ -153,6 +152,7 @@ class TestEvaluationResult:
 
         assert result["score"] == 65.0
         assert "layer_number" not in result
+        assert "layer_complete" not in result
 
     def test_evaluation_result_with_layer_number_only(self) -> None:
         """Test that EvaluationResult with layer_number but no layer_complete works."""
@@ -167,3 +167,33 @@ class TestEvaluationResult:
         }
 
         assert result["layer_number"] == 1
+
+
+class TestStrokeVLMResponseModel:
+    """Tests for StrokeVLMResponse TypedDict with optional layer_complete field."""
+
+    def test_stroke_vlm_response_with_layer_complete(self) -> None:
+        """Test that StrokeVLMResponse can be constructed with layer_complete: True."""
+        from models.stroke_vlm_response import StrokeVLMResponse
+
+        response: StrokeVLMResponse = {
+            "strokes": [],
+            "updated_strategy": None,
+            "batch_reasoning": "Test reasoning",
+            "layer_complete": True,
+        }
+
+        assert response["layer_complete"] is True
+        assert "layer_complete" in response
+
+    def test_stroke_vlm_response_without_layer_complete(self) -> None:
+        """Test that StrokeVLMResponse can be constructed without layer_complete."""
+        from models.stroke_vlm_response import StrokeVLMResponse
+
+        response: StrokeVLMResponse = {
+            "strokes": [],
+            "updated_strategy": None,
+            "batch_reasoning": "Test reasoning",
+        }
+
+        assert "layer_complete" not in response

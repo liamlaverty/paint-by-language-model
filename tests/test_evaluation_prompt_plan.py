@@ -166,10 +166,10 @@ class TestLayerContextInPrompt:
         assert "Expected techniques:" in prompt
         assert current_layer["techniques"] in prompt
 
-    def test_prompt_requests_layer_complete_field(
+    def test_prompt_does_not_request_layer_complete_field(
         self, eval_client: EvaluationVLMClient, sample_plan: PaintingPlan
     ) -> None:
-        """Test that prompt requests layer_complete field in response format."""
+        """Test that prompt does NOT request layer_complete field in response format."""
         current_layer = sample_plan["layers"][1]
 
         prompt = eval_client._build_evaluation_prompt(
@@ -180,7 +180,7 @@ class TestLayerContextInPrompt:
             current_layer=current_layer,
         )
 
-        assert "layer_complete" in prompt
+        assert "layer_complete" not in prompt
 
     def test_prompt_unchanged_when_layer_is_none(
         self, eval_client: EvaluationVLMClient
@@ -202,82 +202,6 @@ class TestLayerContextInPrompt:
 
 class TestEvaluationResponseParsing:
     """Tests for evaluation response parsing with layer context."""
-
-    def test_layer_complete_true_parsed_correctly(
-        self, eval_client: EvaluationVLMClient, sample_plan: PaintingPlan
-    ) -> None:
-        """Test that layer_complete: true is correctly parsed."""
-        import json
-
-        current_layer = sample_plan["layers"][1]
-        response = json.dumps(
-            {
-                "score": 75.0,
-                "feedback": "Good progress",
-                "strengths": "Color is good",
-                "suggestions": "Add more detail",
-                "layer_complete": True,
-            }
-        )
-
-        result = eval_client._parse_evaluation_response(
-            response_text=response,
-            iteration=10,
-            current_layer=current_layer,
-        )
-
-        assert result.get("layer_number") == current_layer["layer_number"]
-
-    def test_layer_complete_false_parsed_correctly(
-        self, eval_client: EvaluationVLMClient, sample_plan: PaintingPlan
-    ) -> None:
-        """Test that layer_complete: false is correctly parsed."""
-        import json
-
-        current_layer = sample_plan["layers"][1]
-        response = json.dumps(
-            {
-                "score": 50.0,
-                "feedback": "Needs work",
-                "strengths": "Starting well",
-                "suggestions": "Continue building",
-                "layer_complete": False,
-            }
-        )
-
-        result = eval_client._parse_evaluation_response(
-            response_text=response,
-            iteration=10,
-            current_layer=current_layer,
-        )
-
-        assert result.get("layer_number") == current_layer["layer_number"]
-
-    def test_missing_layer_complete_defaults_to_false(
-        self, eval_client: EvaluationVLMClient, sample_plan: PaintingPlan
-    ) -> None:
-        """Test that missing layer_complete defaults to False."""
-        import json
-
-        current_layer = sample_plan["layers"][1]
-        response = json.dumps(
-            {
-                "score": 65.0,
-                "feedback": "Making progress",
-                "strengths": "Good color",
-                "suggestions": "Add texture",
-                # layer_complete is missing
-            }
-        )
-
-        result = eval_client._parse_evaluation_response(
-            response_text=response,
-            iteration=10,
-            current_layer=current_layer,
-        )
-
-        assert result.get("layer_number") == current_layer["layer_number"]
-        assert "layer_complete" not in result
 
     def test_layer_number_included_when_provided(
         self, eval_client: EvaluationVLMClient, sample_plan: PaintingPlan

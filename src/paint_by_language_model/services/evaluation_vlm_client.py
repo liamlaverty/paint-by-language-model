@@ -182,7 +182,6 @@ class EvaluationVLMClient:
         """
         # Build layer context section if available
         layer_section = ""
-        response_format_addition = ""
         if painting_plan and current_layer:
             layer_number = current_layer["layer_number"]
             layer_name = current_layer["name"]
@@ -193,12 +192,10 @@ class EvaluationVLMClient:
 You are also evaluating progress on Layer {layer_number}: "{layer_name}".
 The overall plan has {total_layers} layers.
 
-Consider whether this layer's objectives have been adequately achieved:
 - {current_layer["description"]}
 - Expected palette: {", ".join(current_layer["colour_palette"])}
 - Expected techniques: {current_layer["techniques"]}
 """
-            response_format_addition = ',\n  "layer_complete": <boolean - true if this layer\'s objectives are sufficiently met>'
 
         prompt = f"""You are an art critic evaluating artwork for stylistic similarity to {artist_name}.
 
@@ -223,7 +220,7 @@ Respond in JSON format:
   "score": <float 0-100>,
   "feedback": "<detailed qualitative assessment>",
   "strengths": "<what's working well stylistically>",
-  "suggestions": "<areas that could be improved>"{response_format_addition}
+  "suggestions": "<areas that could be improved>"
 }}
 
 IMPORTANT: Respond ONLY with valid JSON. Do not include any text before or after the JSON object."""

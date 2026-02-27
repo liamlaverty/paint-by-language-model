@@ -255,3 +255,97 @@ class TestExpandedSubjectInPrompt:
         )
 
         assert "Detailed description:" not in prompt
+
+
+class TestLayerCompleteInPromptAndParsing:
+    """Tests for layer_complete field in stroke prompt and response parsing."""
+
+    def test_stroke_prompt_includes_layer_complete_field_when_layer_provided(
+        self, stroke_client: StrokeVLMClient, sample_plan: PaintingPlan
+    ) -> None:
+        """Test that prompt includes layer_complete field when current_layer is provided."""
+        current_layer = sample_plan["layers"][0]
+
+        prompt = stroke_client._build_stroke_prompt(
+            artist_name="Test Artist",
+            subject="Test Subject",
+            iteration=1,
+            strategy_context="",
+            num_strokes=5,
+            painting_plan=sample_plan,
+            current_layer=current_layer,
+        )
+
+        assert "layer_complete" in prompt
+
+    def test_stroke_prompt_excludes_layer_complete_when_no_layer(
+        self, stroke_client: StrokeVLMClient, sample_plan: PaintingPlan
+    ) -> None:
+        """Test that prompt does NOT include layer_complete when current_layer is None."""
+        prompt = stroke_client._build_stroke_prompt(
+            artist_name="Test Artist",
+            subject="Test Subject",
+            iteration=1,
+            strategy_context="",
+            num_strokes=5,
+            painting_plan=None,
+            current_layer=None,
+        )
+
+        assert "layer_complete" not in prompt
+
+    def test_parse_stroke_response_with_layer_complete_true(
+        self, stroke_client: StrokeVLMClient
+    ) -> None:
+        """Test that _parse_stroke_response() returns layer_complete True when present."""
+        import json
+
+        response_text = json.dumps(
+            {
+                "strokes": [],
+                "updated_strategy": None,
+                "batch_reasoning": "Test reasoning",
+                "layer_complete": True,
+            }
+        )
+
+        result = stroke_client._parse_stroke_response(response_text)
+
+        assert result.get("layer_complete") is True
+
+    def test_parse_stroke_response_with_layer_complete_false(
+        self, stroke_client: StrokeVLMClient
+    ) -> None:
+        """Test that _parse_stroke_response() returns layer_complete False when present."""
+        import json
+
+        response_text = json.dumps(
+            {
+                "strokes": [],
+                "updated_strategy": None,
+                "batch_reasoning": "Test reasoning",
+                "layer_complete": False,
+            }
+        )
+
+        result = stroke_client._parse_stroke_response(response_text)
+
+        assert result.get("layer_complete") is False
+
+    def test_parse_stroke_response_without_layer_complete(
+        self, stroke_client: StrokeVLMClient
+    ) -> None:
+        """Test that _parse_stroke_response() omits layer_complete when absent in response."""
+        import json
+
+        response_text = json.dumps(
+            {
+                "strokes": [],
+                "updated_strategy": None,
+                "batch_reasoning": "Test reasoning",
+            }
+        )
+
+        result = stroke_client._parse_stroke_response(response_text)
+
+        assert "layer_complete" not in result
