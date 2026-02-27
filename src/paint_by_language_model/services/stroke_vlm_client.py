@@ -357,6 +357,17 @@ Focus your strokes on this layer's objectives. Stay near the recommended palette
 (don't be rigidly bound by the exact colour hex values). Stay within the
 recommended techniques unless artistic judgement requires deviation.
 """
+            plan_section += """
+
+Also assess whether this layer's objectives have been sufficiently met.
+If the layer goals are complete and it's time to move on, set "layer_complete" to true.
+Only signal completion when the layer's description, palette, shapes, and techniques
+have been adequately addressed on the canvas.
+"""
+
+        layer_complete_field = ""
+        if painting_plan and current_layer:
+            layer_complete_field = ',\n  "layer_complete": <boolean - true if this layer\'s objectives are sufficiently met, false otherwise>'
 
         prompt = f"""You are an expert artist creating a piece in the style of {artist_name}.
 
@@ -408,7 +419,7 @@ RESPONSE FORMAT (JSON only):
     // {num_strokes} stroke object(s) here - each must include all required fields for its type
   ],
   "updated_strategy": "<optional strategy update for future iterations, or null>",
-  "batch_reasoning": "<REQUIRED: explanation for this batch of strokes>"
+  "batch_reasoning": "<REQUIRED: explanation for this batch of strokes>"{layer_complete_field}
 }}
 
 IMPORTANT: Respond ONLY with valid JSON. Do not include any markdown formatting, code blocks, or text before/after the JSON."""
@@ -487,6 +498,10 @@ IMPORTANT: Respond ONLY with valid JSON. Do not include any markdown formatting,
             "updated_strategy": data.get("updated_strategy"),
             "batch_reasoning": batch_reasoning,
         }
+
+        # Forward layer_complete if present in VLM response
+        if "layer_complete" in data:
+            response["layer_complete"] = bool(data["layer_complete"])
 
         return response
 

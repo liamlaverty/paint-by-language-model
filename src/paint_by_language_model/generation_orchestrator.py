@@ -285,7 +285,12 @@ class GenerationOrchestrator:
 
             # Step 4b: Save batch metadata
             self._save_stroke_batch(
-                strokes_batch, iteration, batch_reasoning, results, current_layer
+                strokes_batch,
+                iteration,
+                batch_reasoning,
+                results,
+                current_layer,
+                layer_complete=stroke_response.get("layer_complete"),
             )
 
             # Update current stroke file with last successful stroke
@@ -318,6 +323,20 @@ class GenerationOrchestrator:
                 self.strategy_manager.save_strategy(iteration=iteration, strategy=strategy_text)
                 self.strategy_manager.save_current_strategy_link()
                 logger.info("Updated strategy")
+
+            # Check for layer advancement (from stroke VLM)
+            if (
+                stroke_response.get("layer_complete", False)
+                and self.painting_plan is not None
+                and self.current_layer_index < len(self.painting_plan["layers"]) - 1
+            ):
+                self.current_layer_index += 1
+                next_layer = self.painting_plan["layers"][self.current_layer_index]
+                logger.info(
+                    f"Advancing to Layer {next_layer['layer_number']}: {next_layer['name']}"
+                )
+                # Update current_layer so evaluation uses the new layer
+                current_layer = next_layer
 
             # Step 7: Get updated canvas bytes for evaluation
             canvas_bytes = self.canvas_manager.get_image_bytes()
@@ -352,18 +371,6 @@ class GenerationOrchestrator:
                 if current_layer:
                     layer_num = current_layer["layer_number"]
                     self.layer_iterations[layer_num] = self.layer_iterations.get(layer_num, 0) + 1
-
-                # Check for layer advancement
-                if (
-                    evaluation.get("layer_complete", False)
-                    and self.painting_plan is not None
-                    and self.current_layer_index < len(self.painting_plan["layers"]) - 1
-                ):
-                    self.current_layer_index += 1
-                    next_layer = self.painting_plan["layers"][self.current_layer_index]
-                    logger.info(
-                        f"Advancing to Layer {next_layer['layer_number']}: {next_layer['name']}"
-                    )
 
                 # Step 10: Check stopping conditions
                 should_stop = self._check_stopping_conditions(iteration, evaluation)
@@ -708,6 +715,7 @@ class GenerationOrchestrator:
         batch_reasoning: str,
         results: list[dict[str, Any]],
         current_layer: PlanLayer | None = None,
+        layer_complete: bool | None = None,
     ) -> None:
         """
         Save batch of strokes with metadata to JSON file.
@@ -718,6 +726,7 @@ class GenerationOrchestrator:
             batch_reasoning (str): VLM reasoning for this batch
             results (list[dict[str, Any]]): Application results for each stroke
             current_layer (PlanLayer | None): Current painting layer information
+            layer_complete (bool | None): Whether the stroke VLM signalled layer completion
         """
         strokes_dir = self.artwork_dir / OUTPUT_STRUCTURE["strokes"]
         filename = f"iteration-{iteration:03d}_batch.json"
@@ -736,6 +745,7 @@ class GenerationOrchestrator:
             "timestamp": datetime.now().isoformat(),
             "layer_number": current_layer["layer_number"] if current_layer else None,
             "layer_name": current_layer["name"] if current_layer else None,
+            "layer_complete": layer_complete,
             "results": [
                 {
                     "stroke_index": i,
