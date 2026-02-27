@@ -294,6 +294,22 @@ class TestLayerCompleteInPromptAndParsing:
 
         assert "layer_complete" not in prompt
 
+    def test_stroke_prompt_excludes_layer_complete_when_plan_provided_but_no_layer(
+        self, stroke_client: StrokeVLMClient, sample_plan: PaintingPlan
+    ) -> None:
+        """Test that prompt does NOT include layer_complete when painting_plan is set but current_layer is None."""
+        prompt = stroke_client._build_stroke_prompt(
+            artist_name="Test Artist",
+            subject="Test Subject",
+            iteration=1,
+            strategy_context="",
+            num_strokes=5,
+            painting_plan=sample_plan,
+            current_layer=None,
+        )
+
+        assert "layer_complete" not in prompt
+
     def test_parse_stroke_response_with_layer_complete_true(
         self, stroke_client: StrokeVLMClient
     ) -> None:

@@ -192,6 +192,7 @@ class EvaluationVLMClient:
 You are also evaluating progress on Layer {layer_number}: "{layer_name}".
 The overall plan has {total_layers} layers.
 
+Layer objectives:
 - {current_layer["description"]}
 - Expected palette: {", ".join(current_layer["colour_palette"])}
 - Expected techniques: {current_layer["techniques"]}
