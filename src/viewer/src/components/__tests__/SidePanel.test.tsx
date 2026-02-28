@@ -42,8 +42,8 @@ describe('SidePanel', () => {
     jest.clearAllMocks();
   });
 
-  describe('Empty state (no stroke selected)', () => {
-    it('should render artwork header when no stroke is selected', () => {
+  describe('Tab bar', () => {
+    it('should always render Run Info and Stroke Info tab buttons', () => {
       render(
         <SidePanel
           stroke={null}
@@ -53,11 +53,89 @@ describe('SidePanel', () => {
         />
       );
 
-      expect(screen.getByText(/Test Artist.*test-001/)).toBeInTheDocument();
+      expect(screen.getByText('Run Info')).toBeInTheDocument();
+      expect(screen.getByText('Stroke Info')).toBeInTheDocument();
+    });
+
+    it('should default to Run Info tab when no stroke is selected', () => {
+      render(
+        <SidePanel
+          stroke={null}
+          metadata={mockMetadata}
+          isLocked={false}
+          onClearSelection={jest.fn()}
+        />
+      );
+
+      const runTab = screen.getByText('Run Info');
+      expect(runTab).toHaveClass('active');
+    });
+
+    it('should auto-switch to Stroke Info tab when stroke is provided', () => {
+      render(
+        <SidePanel
+          stroke={createLineStroke()}
+          metadata={mockMetadata}
+          isLocked={false}
+          onClearSelection={jest.fn()}
+        />
+      );
+
+      const strokeTab = screen.getByText('Stroke Info');
+      expect(strokeTab).toHaveClass('active');
+    });
+
+    it('should switch to Run Info when clicking Run Info tab', async () => {
+      const user = userEvent.setup();
+      render(
+        <SidePanel
+          stroke={createLineStroke()}
+          metadata={mockMetadata}
+          isLocked={false}
+          onClearSelection={jest.fn()}
+        />
+      );
+
+      await user.click(screen.getByText('Run Info'));
+
+      expect(screen.getByText('Run Info')).toHaveClass('active');
+      expect(screen.getByText('Artist / Style')).toBeInTheDocument();
+    });
+
+    it('should switch to Stroke Info when clicking Stroke Info tab', async () => {
+      const user = userEvent.setup();
+      render(
+        <SidePanel
+          stroke={null}
+          metadata={mockMetadata}
+          isLocked={false}
+          onClearSelection={jest.fn()}
+        />
+      );
+
+      await user.click(screen.getByText('Stroke Info'));
+
+      expect(screen.getByText('Stroke Info')).toHaveClass('active');
+      expect(screen.getByText(/Hover over a stroke to inspect it/i)).toBeInTheDocument();
+    });
+  });
+
+  describe('Run Info tab content', () => {
+    it('should show artist name and subject', () => {
+      render(
+        <SidePanel
+          stroke={null}
+          metadata={mockMetadata}
+          isLocked={false}
+          onClearSelection={jest.fn()}
+        />
+      );
+
+      expect(screen.getByText('Test Artist')).toBeInTheDocument();
       expect(screen.getByText('Test Subject')).toBeInTheDocument();
     });
 
-    it('should render hover hint when no stroke is selected', () => {
+    it('should show canvas size', () => {
       render(
         <SidePanel
           stroke={null}
@@ -66,36 +144,141 @@ describe('SidePanel', () => {
           onClearSelection={jest.fn()}
         />
       );
+
+      expect(screen.getByText('Canvas Size')).toBeInTheDocument();
+      expect(screen.getByText('800 × 600')).toBeInTheDocument();
+    });
+
+    it('should show total iterations and strokes', () => {
+      render(
+        <SidePanel
+          stroke={null}
+          metadata={mockMetadata}
+          isLocked={false}
+          onClearSelection={jest.fn()}
+        />
+      );
+
+      expect(screen.getByText('Total Iterations')).toBeInTheDocument();
+      expect(screen.getByText('10')).toBeInTheDocument();
+      expect(screen.getByText('Total Strokes')).toBeInTheDocument();
+      expect(screen.getByText('100')).toBeInTheDocument();
+    });
+
+    it('should show final score with bar', () => {
+      render(
+        <SidePanel
+          stroke={null}
+          metadata={{ ...mockMetadata, final_score: 75 }}
+          isLocked={false}
+          onClearSelection={jest.fn()}
+        />
+      );
+
+      expect(screen.getByText('Final Score')).toBeInTheDocument();
+      expect(screen.getByText('75/100')).toBeInTheDocument();
+      const scoreBar = document.querySelector('.run-info .score-bar');
+      expect(scoreBar).toHaveStyle({ width: '75%', backgroundColor: '#22c55e' });
+    });
+
+    it('should show 0/100 when final_score is not set', () => {
+      render(
+        <SidePanel
+          stroke={null}
+          metadata={mockMetadata}
+          isLocked={false}
+          onClearSelection={jest.fn()}
+        />
+      );
+
+      expect(screen.getByText('0/100')).toBeInTheDocument();
+    });
+
+    it('should show expanded subject when available', () => {
+      render(
+        <SidePanel
+          stroke={null}
+          metadata={{ ...mockMetadata, expanded_subject: 'A detailed expanded subject' }}
+          isLocked={false}
+          onClearSelection={jest.fn()}
+        />
+      );
+
+      expect(screen.getByText('Expanded Subject')).toBeInTheDocument();
+      expect(screen.getByText('A detailed expanded subject')).toBeInTheDocument();
+    });
+
+    it('should not show expanded subject when not available', () => {
+      render(
+        <SidePanel
+          stroke={null}
+          metadata={mockMetadata}
+          isLocked={false}
+          onClearSelection={jest.fn()}
+        />
+      );
+
+      expect(screen.queryByText('Expanded Subject')).not.toBeInTheDocument();
+    });
+
+    it('should show formatted generation date when available', () => {
+      render(
+        <SidePanel
+          stroke={null}
+          metadata={{ ...mockMetadata, generation_date: '2025-06-15T12:00:00Z' }}
+          isLocked={false}
+          onClearSelection={jest.fn()}
+        />
+      );
+
+      expect(screen.getByText('Date')).toBeInTheDocument();
+      expect(screen.getByText('15/06/2025')).toBeInTheDocument();
+    });
+
+    it('should not show date row when generation_date is not set', () => {
+      render(
+        <SidePanel
+          stroke={null}
+          metadata={mockMetadata}
+          isLocked={false}
+          onClearSelection={jest.fn()}
+        />
+      );
+
+      expect(screen.queryByText('Date')).not.toBeInTheDocument();
+    });
+
+    it('should not render stroke metadata when Run Info tab is active', () => {
+      render(
+        <SidePanel
+          stroke={null}
+          metadata={mockMetadata}
+          isLocked={false}
+          onClearSelection={jest.fn()}
+        />
+      );
+
+      expect(screen.queryByText('Identity')).not.toBeInTheDocument();
+      expect(screen.queryByText('Appearance')).not.toBeInTheDocument();
+    });
+  });
+
+  describe('Stroke Info tab — hover hint (no stroke)', () => {
+    it('should render hover hint on Stroke Info tab when no stroke selected', async () => {
+      const user = userEvent.setup();
+      render(
+        <SidePanel
+          stroke={null}
+          metadata={mockMetadata}
+          isLocked={false}
+          onClearSelection={jest.fn()}
+        />
+      );
+
+      await user.click(screen.getByText('Stroke Info'));
 
       expect(screen.getByText(/Hover over a stroke to inspect it/i)).toBeInTheDocument();
       expect(screen.getByText(/Click a stroke to lock its metadata/i)).toBeInTheDocument();
-    });
-
-    it('should not render stroke metadata when no stroke is selected', () => {
-      render(
-        <SidePanel
-          stroke={null}
-          metadata={mockMetadata}
-          isLocked={false}
-          onClearSelection={jest.fn()}
-        />
-      );
-
-      expect(screen.queryByText(/Identity/i)).not.toBeInTheDocument();
-      expect(screen.queryByText(/Appearance/i)).not.toBeInTheDocument();
-    });
-
-    it('should not render Clear Selection button when no stroke is selected', () => {
-      render(
-        <SidePanel
-          stroke={null}
-          metadata={mockMetadata}
-          isLocked={true}
-          onClearSelection={jest.fn()}
-        />
-      );
-
-      expect(screen.queryByText(/Clear Selection/i)).not.toBeInTheDocument();
     });
   });
 
@@ -207,7 +390,7 @@ describe('SidePanel', () => {
       expect(screen.queryByText('Locked')).not.toBeInTheDocument();
     });
 
-    it('should show Clear Selection button when locked', () => {
+    it('should show Clear Selection button when locked with stroke', () => {
       render(
         <SidePanel
           stroke={createLineStroke()}
@@ -226,6 +409,19 @@ describe('SidePanel', () => {
           stroke={createLineStroke()}
           metadata={mockMetadata}
           isLocked={false}
+          onClearSelection={jest.fn()}
+        />
+      );
+
+      expect(screen.queryByText('Clear Selection')).not.toBeInTheDocument();
+    });
+
+    it('should not show Clear Selection button when locked but no stroke', () => {
+      render(
+        <SidePanel
+          stroke={null}
+          metadata={mockMetadata}
+          isLocked={true}
           onClearSelection={jest.fn()}
         />
       );
@@ -449,7 +645,9 @@ describe('SidePanel', () => {
         />
       );
 
-      const scoreBar = document.querySelector('.score-bar');
+      const scoreBars = document.querySelectorAll('.score-bar');
+      // The stroke info score bar (second one, since run info may not be visible)
+      const scoreBar = scoreBars[0];
       expect(scoreBar).toHaveStyle({ backgroundColor: '#ef4444' });
     });
 
@@ -537,6 +735,58 @@ describe('SidePanel', () => {
       );
 
       expect(screen.getByText('76%')).toBeInTheDocument();
+    });
+  });
+
+  describe('Auto-switch behavior', () => {
+    it('should auto-switch to Stroke Info when stroke transitions from null to non-null', () => {
+      const { rerender } = render(
+        <SidePanel
+          stroke={null}
+          metadata={mockMetadata}
+          isLocked={false}
+          onClearSelection={jest.fn()}
+        />
+      );
+
+      expect(screen.getByText('Run Info')).toHaveClass('active');
+
+      rerender(
+        <SidePanel
+          stroke={createLineStroke()}
+          metadata={mockMetadata}
+          isLocked={false}
+          onClearSelection={jest.fn()}
+        />
+      );
+
+      expect(screen.getByText('Stroke Info')).toHaveClass('active');
+      expect(screen.getByText('Identity')).toBeInTheDocument();
+    });
+
+    it('should auto-switch to Run Info when stroke transitions from non-null to null', () => {
+      const { rerender } = render(
+        <SidePanel
+          stroke={createLineStroke()}
+          metadata={mockMetadata}
+          isLocked={false}
+          onClearSelection={jest.fn()}
+        />
+      );
+
+      expect(screen.getByText('Stroke Info')).toHaveClass('active');
+
+      rerender(
+        <SidePanel
+          stroke={null}
+          metadata={mockMetadata}
+          isLocked={false}
+          onClearSelection={jest.fn()}
+        />
+      );
+
+      expect(screen.getByText('Run Info')).toHaveClass('active');
+      expect(screen.getByText('Artist / Style')).toBeInTheDocument();
     });
   });
 });

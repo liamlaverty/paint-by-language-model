@@ -4,7 +4,6 @@ A Python application that uses Vision Language Models (VLMs) to iteratively crea
 
 The project includes a Next.js viewer application for interactively exploring generated artworks, viewing stroke-by-stroke creation timelines, and examining metadata and evaluation scores.
 
-**Current Status**: Phase 11 complete - Stroke sample images attached to VLM prompt for visual context, multi-image VLMClient support, and StrokeSampleGenerator service.
 
 ## Prerequisites
 

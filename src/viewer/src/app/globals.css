@@ -397,6 +397,56 @@ body {
   padding-bottom: var(--space-xs);
 }
 
+/* ── Panel Tabs ───────────────────────────────────────────────────────── */
+.panel-tabs {
+  display: flex;
+  border-bottom: 1px solid var(--color-border);
+  margin-bottom: var(--space-s);
+}
+
+.panel-tab {
+  flex: 1;
+  padding: var(--space-xs) var(--space-s);
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--color-text);
+  opacity: 0.6;
+  font-size: var(--size-step-00);
+  font-weight: var(--font-medium);
+  cursor: pointer;
+  transition: opacity var(--transition-base), border-color var(--transition-base);
+  text-align: center;
+}
+
+.panel-tab:hover {
+  opacity: 0.9;
+}
+
+.panel-tab.active {
+  opacity: 1;
+  border-bottom-color: var(--color-highlight);
+  color: var(--color-highlight);
+}
+
+/* ── Run Info ─────────────────────────────────────────────────────────── */
+.run-info .meta-value {
+  white-space: normal;
+  word-break: break-word;
+}
+
+.meta-row-stacked {
+  display: flex;
+  flex-direction: column;
+  padding: 3px 0;
+}
+
+.meta-label-bold {
+  color: var(--color-text);
+  font-weight: var(--font-bold);
+  margin-bottom: 2px;
+}
+
 /* ── Stroke Metadata ──────────────────────────────────────────────────── */
 .meta-row {
   display: flex;
