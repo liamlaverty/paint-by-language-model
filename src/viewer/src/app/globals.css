@@ -415,7 +415,9 @@ body {
   font-size: var(--size-step-00);
   font-weight: var(--font-medium);
   cursor: pointer;
-  transition: opacity var(--transition-base), border-color var(--transition-base);
+  transition:
+    opacity var(--transition-base),
+    border-color var(--transition-base);
   text-align: center;
 }
 
