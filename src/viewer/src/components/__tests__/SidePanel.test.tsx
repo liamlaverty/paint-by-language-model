@@ -9,6 +9,13 @@ import userEvent from '@testing-library/user-event';
 import SidePanel from '@/components/SidePanel';
 import { EnrichedStroke, ArtworkMetadata } from '@/lib/types';
 
+// Mock marked to avoid ESM import issues in Jest
+jest.mock('marked', () => ({
+  marked: {
+    parse: (md: string) => md,
+  },
+}));
+
 describe('SidePanel', () => {
   const mockMetadata: ArtworkMetadata = {
     artwork_id: 'test-001',
@@ -38,12 +45,18 @@ describe('SidePanel', () => {
     ...overrides,
   });
 
+  const originalFetch = global.fetch;
+
   beforeEach(() => {
     jest.clearAllMocks();
   });
 
+  afterEach(() => {
+    global.fetch = originalFetch;
+  });
+
   describe('Tab bar', () => {
-    it('should always render Run Info and Stroke Info tab buttons', () => {
+    it('should always render Run Info, Stroke Info, and Report tab buttons', () => {
       render(
         <SidePanel
           stroke={null}
@@ -55,6 +68,7 @@ describe('SidePanel', () => {
 
       expect(screen.getByText('Run Info')).toBeInTheDocument();
       expect(screen.getByText('Stroke Info')).toBeInTheDocument();
+      expect(screen.getByText('Report')).toBeInTheDocument();
     });
 
     it('should default to Run Info tab when no stroke is selected', () => {
@@ -100,6 +114,28 @@ describe('SidePanel', () => {
 
       expect(screen.getByText('Run Info')).toHaveClass('active');
       expect(screen.getByText('Artist / Style')).toBeInTheDocument();
+    });
+
+    it('should switch to Report tab when clicking Report tab', async () => {
+      const user = userEvent.setup();
+      // Mock fetch for report
+      global.fetch = jest.fn().mockResolvedValueOnce({
+        ok: true,
+        text: () => Promise.resolve('# Test Report'),
+      } as Response);
+
+      render(
+        <SidePanel
+          stroke={null}
+          metadata={mockMetadata}
+          isLocked={false}
+          onClearSelection={jest.fn()}
+        />
+      );
+
+      await user.click(screen.getByText('Report'));
+
+      expect(screen.getByText('Report')).toHaveClass('active');
     });
 
     it('should switch to Stroke Info when clicking Stroke Info tab', async () => {
@@ -735,6 +771,123 @@ describe('SidePanel', () => {
       );
 
       expect(screen.getByText('76%')).toBeInTheDocument();
+    });
+  });
+
+  describe('Report tab', () => {
+    it('should fetch and render markdown when Report tab is clicked', async () => {
+      const user = userEvent.setup();
+      global.fetch = jest.fn().mockResolvedValueOnce({
+        ok: true,
+        text: () => Promise.resolve('# Generation Report\n\nThis is a **test** report.'),
+      } as Response);
+
+      render(
+        <SidePanel
+          stroke={null}
+          metadata={mockMetadata}
+          isLocked={false}
+          onClearSelection={jest.fn()}
+        />
+      );
+
+      await user.click(screen.getByText('Report'));
+
+      // Wait for the markdown to be rendered (marked mock returns raw markdown)
+      const reportContainer = await screen.findByText(/Generation Report/);
+      expect(reportContainer).toBeInTheDocument();
+      expect(screen.getByText(/This is a/)).toBeInTheDocument();
+    });
+
+    it('should show empty message when report fetch fails', async () => {
+      const user = userEvent.setup();
+      global.fetch = jest.fn().mockResolvedValueOnce({
+        ok: false,
+        status: 404,
+        text: () => Promise.resolve(''),
+      } as Response);
+
+      render(
+        <SidePanel
+          stroke={null}
+          metadata={mockMetadata}
+          isLocked={false}
+          onClearSelection={jest.fn()}
+        />
+      );
+
+      await user.click(screen.getByText('Report'));
+
+      const emptyMsg = await screen.findByText('No report available for this artwork.');
+      expect(emptyMsg).toBeInTheDocument();
+    });
+
+    it('should show empty message when fetch rejects', async () => {
+      const user = userEvent.setup();
+      global.fetch = jest.fn().mockRejectedValueOnce(new Error('Network error'));
+
+      render(
+        <SidePanel
+          stroke={null}
+          metadata={mockMetadata}
+          isLocked={false}
+          onClearSelection={jest.fn()}
+        />
+      );
+
+      await user.click(screen.getByText('Report'));
+
+      const emptyMsg = await screen.findByText('No report available for this artwork.');
+      expect(emptyMsg).toBeInTheDocument();
+    });
+
+    it('should construct fetch URL using artwork_id from metadata', async () => {
+      const user = userEvent.setup();
+      const fetchSpy = jest.fn().mockResolvedValueOnce({
+        ok: true,
+        text: () => Promise.resolve('# Report'),
+      } as Response);
+      global.fetch = fetchSpy;
+
+      render(
+        <SidePanel
+          stroke={null}
+          metadata={mockMetadata}
+          isLocked={false}
+          onClearSelection={jest.fn()}
+        />
+      );
+
+      await user.click(screen.getByText('Report'));
+
+      expect(fetchSpy).toHaveBeenCalledWith('/data/test-001/generation_report.md');
+    });
+
+    it('should only fetch report once (cached in state)', async () => {
+      const user = userEvent.setup();
+      const fetchSpy = jest.fn().mockResolvedValue({
+        ok: true,
+        text: () => Promise.resolve('# Report'),
+      } as Response);
+      global.fetch = fetchSpy;
+
+      render(
+        <SidePanel
+          stroke={null}
+          metadata={mockMetadata}
+          isLocked={false}
+          onClearSelection={jest.fn()}
+        />
+      );
+
+      await user.click(screen.getByText('Report'));
+      await screen.findByText('Report');
+
+      // Switch away and back
+      await user.click(screen.getByText('Run Info'));
+      await user.click(screen.getByText('Report'));
+
+      expect(fetchSpy).toHaveBeenCalledTimes(1);
     });
   });
 

@@ -1,8 +1,10 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { marked } from 'marked';
 import { EnrichedStroke, ArtworkMetadata } from '../lib/types';
 import { formatDateUK, getScoreColor } from '../lib/format-utils';
+import { getPublicUrl } from '../lib/basePath';
 
 /**
  * Props for the stroke metadata side panel.
@@ -20,12 +22,23 @@ interface SidePanelProps {
 }
 
 /**
+ * Render a markdown string to HTML using `marked`.
+ *
+ * @param {string} md - Raw markdown content
+ * @returns {string} Parsed HTML string
+ */
+function renderMarkdown(md: string): string {
+  return marked.parse(md, { async: false }) as string;
+}
+
+/**
  * Stroke metadata side panel component.
  *
- * Provides a two-tab interface: "Run Info" shows artwork-level metadata
- * (artist, subject, canvas size, generation stats, final score) and
+ * Provides a three-tab interface: "Run Info" shows artwork-level metadata
+ * (artist, subject, canvas size, generation stats, final score),
  * "Stroke Info" shows per-stroke metadata (identity, appearance, geometry,
- * reasoning, score). Auto-switches to Stroke Info when a stroke is selected
+ * reasoning, score), and "Report" shows the generation report markdown.
+ * Auto-switches to Stroke Info when a stroke is selected
  * and back to Run Info when the selection is cleared.
  *
  * @param {SidePanelProps} props - Component props
@@ -37,7 +50,9 @@ export default function SidePanel({
   isLocked,
   onClearSelection,
 }: SidePanelProps): React.ReactElement {
-  const [activeTab, setActiveTab] = useState<'run' | 'stroke'>('run');
+  const [activeTab, setActiveTab] = useState<'run' | 'stroke' | 'report'>('run');
+  const [reportMarkdown, setReportMarkdown] = useState<string | null>(null);
+  const [reportLoading, setReportLoading] = useState(false);
 
   // Auto-switch tabs when stroke selection changes
   useEffect(() => {
@@ -47,6 +62,21 @@ export default function SidePanel({
       setActiveTab('run');
     }
   }, [stroke]);
+
+  // Fetch generation report when Report tab is activated
+  useEffect(() => {
+    if (activeTab === 'report' && reportMarkdown === null) {
+      setReportLoading(true);
+      fetch(getPublicUrl(`/data/${metadata.artwork_id}/generation_report.md`))
+        .then((res) => {
+          if (!res.ok) throw new Error('Not found');
+          return res.text();
+        })
+        .then((text) => setReportMarkdown(text))
+        .catch(() => setReportMarkdown(''))
+        .finally(() => setReportLoading(false));
+    }
+  }, [activeTab, metadata.artwork_id, reportMarkdown]);
 
   const finalScore = metadata.final_score ?? 0;
   const scoreColor = getScoreColor(finalScore);
@@ -71,6 +101,12 @@ export default function SidePanel({
           onClick={() => setActiveTab('stroke')}
         >
           Stroke Info
+        </button>
+        <button
+          className={`panel-tab ${activeTab === 'report' ? 'active' : ''}`}
+          onClick={() => setActiveTab('report')}
+        >
+          Report
         </button>
       </div>
 
@@ -313,6 +349,22 @@ export default function SidePanel({
       {activeTab === 'stroke' && !stroke && (
         <div className="hover-hint">
           Hover over a stroke to inspect it. Click a stroke to lock its metadata in place.
+        </div>
+      )}
+
+      {/* Report tab content */}
+      {activeTab === 'report' && (
+        <div className="report-content">
+          {reportLoading && <p className="loading-hint">Loading report…</p>}
+          {!reportLoading && reportMarkdown === '' && (
+            <p className="empty-hint">No report available for this artwork.</p>
+          )}
+          {!reportLoading && reportMarkdown && (
+            <div
+              className="report-markdown"
+              dangerouslySetInnerHTML={{ __html: renderMarkdown(reportMarkdown) }}
+            />
+          )}
         </div>
       )}
     </aside>
