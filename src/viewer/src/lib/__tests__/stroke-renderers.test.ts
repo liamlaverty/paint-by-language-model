@@ -337,4 +337,32 @@ describe('renderStroke', () => {
     expect(ctx.save).toHaveBeenCalled();
     expect(ctx.restore).toHaveBeenCalled();
   });
+
+  it('should render chalk stroke correctly', () => {
+    const ctx = createMockContext();
+    const stroke: EnrichedStroke = {
+      index: 12,
+      iteration: 0,
+      batch_position: 0,
+      batch_reasoning: 'test',
+      type: 'chalk',
+      color_hex: '#FFFFFF',
+      thickness: 5,
+      opacity: 0.7,
+      points: [
+        [100, 100],
+        [200, 150],
+        [300, 120],
+      ],
+      chalk_width: 20,
+      grain_density: 4,
+    };
+
+    renderStroke(ctx, stroke, 12, false);
+
+    // Should call fill for dots (grain_density dots per sample point)
+    expect(ctx.fill).toHaveBeenCalled();
+    expect(ctx.save).toHaveBeenCalled();
+    expect(ctx.restore).toHaveBeenCalled();
+  });
 });
