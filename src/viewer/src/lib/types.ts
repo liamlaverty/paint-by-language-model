@@ -65,16 +65,35 @@ export interface PaintingPlan {
 }
 
 /**
+ * Per-iteration evaluation feedback from the VLM evaluator.
+ *
+ * @property {number} iteration - Iteration index (0-based)
+ * @property {number} score - Style similarity score (0-100)
+ * @property {string} feedback - Qualitative assessment from the evaluator
+ * @property {string} strengths - What aspects work well stylistically
+ * @property {string} suggestions - Areas for improvement
+ */
+export interface EvaluationDetail {
+  iteration: number;
+  score: number;
+  feedback: string;
+  strengths: string;
+  suggestions: string;
+}
+
+/**
  * Complete viewer data loaded from viewer_data.json.
  *
  * @property {ArtworkMetadata} metadata - Artwork-level metadata (dimensions, artist, scores, etc.)
  * @property {PaintingPlan | null} [painting_plan] - VLM-generated painting plan, if available
  * @property {EnrichedStroke[]} strokes - Ordered array of enriched strokes with rendering and context data
+ * @property {EvaluationDetail[]} [evaluations] - Per-iteration evaluation feedback from the VLM evaluator
  */
 export interface ViewerData {
   metadata: ArtworkMetadata;
   painting_plan?: PaintingPlan | null;
   strokes: EnrichedStroke[];
+  evaluations?: EvaluationDetail[];
 }
 
 /**

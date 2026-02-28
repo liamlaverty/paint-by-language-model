@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { marked } from 'marked';
-import { EnrichedStroke, ArtworkMetadata } from '../lib/types';
+import { EnrichedStroke, ArtworkMetadata, EvaluationDetail } from '../lib/types';
 import { formatDateUK, getScoreColor } from '../lib/format-utils';
 import { getPublicUrl } from '../lib/basePath';
 
@@ -11,12 +11,14 @@ import { getPublicUrl } from '../lib/basePath';
  *
  * @property {EnrichedStroke | null} stroke - The currently displayed stroke, or null when nothing is selected
  * @property {ArtworkMetadata} metadata - Artwork metadata for header display and score lookup
+ * @property {EvaluationDetail[]} [evaluations] - Per-iteration evaluation feedback objects
  * @property {boolean} isLocked - Whether the current stroke selection is click-locked
  * @property {() => void} onClearSelection - Callback to clear the locked selection
  */
 interface SidePanelProps {
   stroke: EnrichedStroke | null;
   metadata: ArtworkMetadata;
+  evaluations?: EvaluationDetail[];
   isLocked: boolean;
   onClearSelection: () => void;
 }
@@ -47,6 +49,7 @@ function renderMarkdown(md: string): string {
 export default function SidePanel({
   stroke,
   metadata,
+  evaluations = [],
   isLocked,
   onClearSelection,
 }: SidePanelProps): React.ReactElement {
@@ -85,6 +88,10 @@ export default function SidePanel({
   const scoreAtIteration = stroke ? (metadata.score_progression[stroke.iteration] ?? 0) : 0;
   const scoreBarColor =
     scoreAtIteration < 40 ? '#ef4444' : scoreAtIteration < 70 ? '#f59e0b' : '#22c55e';
+
+  const evaluation = stroke
+    ? (evaluations.find((e) => e.iteration === stroke.iteration) ?? null)
+    : null;
 
   return (
     <aside className="side-panel">
@@ -224,6 +231,31 @@ export default function SidePanel({
               }}
             />
           </div>
+
+          {/* Evaluation Feedback Section */}
+          {evaluation && (
+            <>
+              <h3>Evaluation Feedback</h3>
+              {evaluation.feedback && (
+                <>
+                  <span className="meta-label">Feedback</span>
+                  <div className="reasoning-box">{evaluation.feedback}</div>
+                </>
+              )}
+              {evaluation.strengths && (
+                <>
+                  <span className="meta-label">Strengths</span>
+                  <div className="reasoning-box">{evaluation.strengths}</div>
+                </>
+              )}
+              {evaluation.suggestions && (
+                <>
+                  <span className="meta-label">Suggestions</span>
+                  <div className="reasoning-box">{evaluation.suggestions}</div>
+                </>
+              )}
+            </>
+          )}
 
           {/* Appearance Section */}
           <h3>Appearance</h3>

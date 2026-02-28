@@ -601,6 +601,93 @@ class TestViewerDataSkippedStrokes:
                 shutil.rmtree(nextjs_test_dir)
 
 
+class TestViewerDataEvaluations:
+    """Test that evaluations array is included in viewer data output."""
+
+    def test_evaluations_key_exists(self, viewer_data: dict[str, Any]) -> None:
+        """Viewer data must contain an 'evaluations' key."""
+        assert "evaluations" in viewer_data
+
+    def test_evaluations_is_list(self, viewer_data: dict[str, Any]) -> None:
+        """The 'evaluations' value must be a list."""
+        assert isinstance(viewer_data["evaluations"], list)
+
+    def test_evaluations_count_matches_orchestrator(
+        self,
+        orchestrator_with_batches: tuple[GenerationOrchestrator, Path],
+        viewer_data: dict[str, Any],
+    ) -> None:
+        """Evaluation count must match the number of evaluations on the orchestrator."""
+        orch, _ = orchestrator_with_batches
+        assert len(viewer_data["evaluations"]) == len(orch.evaluations)
+
+    def test_each_evaluation_has_required_fields(
+        self, viewer_data: dict[str, Any]
+    ) -> None:
+        """Each evaluation object must have iteration, score, feedback, strengths, suggestions."""
+        required_fields = ["iteration", "score", "feedback", "strengths", "suggestions"]
+        for i, ev in enumerate(viewer_data["evaluations"]):
+            for field in required_fields:
+                assert field in ev, (
+                    f"Evaluation {i} missing field '{field}'"
+                )
+
+    def test_evaluation_scores_match_source(
+        self, viewer_data: dict[str, Any]
+    ) -> None:
+        """Evaluation scores in the array should match the fixture values."""
+        scores = [ev["score"] for ev in viewer_data["evaluations"]]
+        assert scores == [35.0, 55.0]
+
+    def test_evaluation_iterations_match_source(
+        self, viewer_data: dict[str, Any]
+    ) -> None:
+        """Evaluation iteration values should match the fixture values."""
+        iterations = [ev["iteration"] for ev in viewer_data["evaluations"]]
+        assert iterations == [1, 2]
+
+    def test_evaluation_feedback_values(self, viewer_data: dict[str, Any]) -> None:
+        """Evaluation feedback strings should match the fixture values."""
+        feedbacks = [ev["feedback"] for ev in viewer_data["evaluations"]]
+        assert feedbacks == ["ok", "better"]
+
+    def test_evaluations_empty_when_no_evaluations(self) -> None:
+        """Evaluations array should be empty when orchestrator has no evaluations."""
+        tmpdir = Path(tempfile.mkdtemp())
+        nextjs_test_dir = NEXTJS_VIEWER_DATA_DIR / "test-no-evals-001"
+
+        try:
+            orch = GenerationOrchestrator(
+                artist_name="No Eval Artist",
+                subject="No Eval Subject",
+                artwork_id="test-no-evals-001",
+                output_dir=tmpdir,
+            )
+
+            strokes_dir = orch.artwork_dir / OUTPUT_STRUCTURE["strokes"]
+            strokes_dir.mkdir(parents=True, exist_ok=True)
+
+            _make_batch_file(
+                strokes_dir,
+                iteration=1,
+                strokes=[_sample_line_stroke()],
+            )
+
+            orch.evaluations = []
+            orch._save_viewer_data()
+
+            viewer_dir = orch.artwork_dir / OUTPUT_STRUCTURE["viewer"]
+            data_path = viewer_dir / VIEWER_DATA_FILENAME
+            with open(data_path, encoding="utf-8") as f:
+                data = json.load(f)
+
+            assert data["evaluations"] == []
+
+        finally:
+            if nextjs_test_dir.exists():
+                shutil.rmtree(nextjs_test_dir)
+
+
 class TestViewerDataJsonFile:
     """Test the viewer_data.json file itself is valid and well-formed."""
 

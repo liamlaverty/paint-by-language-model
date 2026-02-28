@@ -7,7 +7,7 @@ import React from 'react';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import SidePanel from '@/components/SidePanel';
-import { EnrichedStroke, ArtworkMetadata } from '@/lib/types';
+import { EnrichedStroke, ArtworkMetadata, EvaluationDetail } from '@/lib/types';
 
 // Mock marked to avoid ESM import issues in Jest
 jest.mock('marked', () => ({
@@ -940,6 +940,130 @@ describe('SidePanel', () => {
 
       expect(screen.getByText('Run Info')).toHaveClass('active');
       expect(screen.getByText('Artist / Style')).toBeInTheDocument();
+    });
+  });
+
+  describe('Evaluation Feedback section', () => {
+    const mockEvaluations: EvaluationDetail[] = [
+      {
+        iteration: 2,
+        score: 72,
+        feedback: 'The composition shows good understanding of the style.',
+        strengths: 'Strong use of line weight and tonal variation.',
+        suggestions: 'Consider adding more gestural marks in the background.',
+      },
+    ];
+
+    it('renders "Evaluation Feedback" heading when evaluation exists for stroke iteration', async () => {
+      const user = userEvent.setup();
+      render(
+        <SidePanel
+          stroke={createLineStroke({ iteration: 2 })}
+          metadata={mockMetadata}
+          evaluations={mockEvaluations}
+          isLocked={false}
+          onClearSelection={jest.fn()}
+        />
+      );
+      await user.click(screen.getByText('Stroke Info'));
+      expect(screen.getByText('Evaluation Feedback')).toBeInTheDocument();
+    });
+
+    it('renders feedback, strengths, and suggestions in reasoning-box elements', async () => {
+      const user = userEvent.setup();
+      render(
+        <SidePanel
+          stroke={createLineStroke({ iteration: 2 })}
+          metadata={mockMetadata}
+          evaluations={mockEvaluations}
+          isLocked={false}
+          onClearSelection={jest.fn()}
+        />
+      );
+      await user.click(screen.getByText('Stroke Info'));
+      expect(
+        screen.getByText('The composition shows good understanding of the style.')
+      ).toBeInTheDocument();
+      expect(
+        screen.getByText('Strong use of line weight and tonal variation.')
+      ).toBeInTheDocument();
+      expect(
+        screen.getByText('Consider adding more gestural marks in the background.')
+      ).toBeInTheDocument();
+    });
+
+    it('does not render evaluation section when evaluations prop is empty', async () => {
+      const user = userEvent.setup();
+      render(
+        <SidePanel
+          stroke={createLineStroke({ iteration: 2 })}
+          metadata={mockMetadata}
+          evaluations={[]}
+          isLocked={false}
+          onClearSelection={jest.fn()}
+        />
+      );
+      await user.click(screen.getByText('Stroke Info'));
+      expect(screen.queryByText('Evaluation Feedback')).not.toBeInTheDocument();
+    });
+
+    it('does not render evaluation section when no evaluation matches stroke iteration', async () => {
+      const user = userEvent.setup();
+      render(
+        <SidePanel
+          stroke={createLineStroke({ iteration: 5 })}
+          metadata={mockMetadata}
+          evaluations={mockEvaluations}
+          isLocked={false}
+          onClearSelection={jest.fn()}
+        />
+      );
+      await user.click(screen.getByText('Stroke Info'));
+      expect(screen.queryByText('Evaluation Feedback')).not.toBeInTheDocument();
+    });
+
+    it('hides sub-boxes for empty feedback, strengths, and suggestions', async () => {
+      const user = userEvent.setup();
+      const sparseEvaluations: EvaluationDetail[] = [
+        {
+          iteration: 2,
+          score: 50,
+          feedback: '',
+          strengths: '',
+          suggestions: '',
+        },
+      ];
+      render(
+        <SidePanel
+          stroke={createLineStroke({ iteration: 2 })}
+          metadata={mockMetadata}
+          evaluations={sparseEvaluations}
+          isLocked={false}
+          onClearSelection={jest.fn()}
+        />
+      );
+      await user.click(screen.getByText('Stroke Info'));
+      // heading still renders because the evaluation object exists
+      expect(screen.getByText('Evaluation Feedback')).toBeInTheDocument();
+      // but individual sub-labels are hidden when fields are empty
+      expect(screen.queryByText('Feedback')).not.toBeInTheDocument();
+      expect(screen.queryByText('Strengths')).not.toBeInTheDocument();
+      expect(screen.queryByText('Suggestions')).not.toBeInTheDocument();
+    });
+
+    it('does not render evaluation section when no stroke is selected', async () => {
+      const user = userEvent.setup();
+      render(
+        <SidePanel
+          stroke={null}
+          metadata={mockMetadata}
+          evaluations={mockEvaluations}
+          isLocked={false}
+          onClearSelection={jest.fn()}
+        />
+      );
+      await user.click(screen.getByText('Stroke Info'));
+      expect(screen.queryByText('Evaluation Feedback')).not.toBeInTheDocument();
     });
   });
 });
