@@ -628,13 +628,9 @@ class TestViewerDataEvaluations:
         required_fields = ["iteration", "score", "feedback", "strengths", "suggestions"]
         for i, ev in enumerate(viewer_data["evaluations"]):
             for field in required_fields:
-                assert field in ev, (
-                    f"Evaluation {i} missing field '{field}'"
-                )
+                assert field in ev, f"Evaluation {i} missing field '{field}'"
 
-    def test_evaluation_scores_match_source(
-        self, viewer_data: dict[str, Any]
-    ) -> None:
+    def test_evaluation_scores_match_source(self, viewer_data: dict[str, Any]) -> None:
         """Evaluation scores in the array should match the fixture values."""
         scores = [ev["score"] for ev in viewer_data["evaluations"]]
         assert scores == [35.0, 55.0]
