@@ -309,4 +309,32 @@ describe('renderStroke', () => {
     // Should produce identical rendering calls
     expect(calls1).toEqual(calls2);
   });
+
+  it('should render dry-brush stroke correctly', () => {
+    const ctx = createMockContext();
+    const stroke: EnrichedStroke = {
+      index: 11,
+      iteration: 0,
+      batch_position: 0,
+      batch_reasoning: 'test',
+      type: 'dry-brush',
+      color_hex: '#8B4513',
+      thickness: 10,
+      opacity: 0.8,
+      points: [
+        [100, 100],
+        [200, 150],
+        [300, 120],
+      ],
+      brush_width: 20,
+      bristle_count: 10,
+      gap_probability: 0.3,
+    };
+
+    renderStroke(ctx, stroke, 11, false);
+
+    expect(ctx.beginPath).toHaveBeenCalled();
+    expect(ctx.save).toHaveBeenCalled();
+    expect(ctx.restore).toHaveBeenCalled();
+  });
 });

@@ -3,6 +3,7 @@
 from .arc_renderer import ArcRenderer
 from .base_renderer import StrokeRenderer, StrokeRendererFactory
 from .circle_renderer import CircleRenderer
+from .dry_brush_renderer import DryBrushRenderer
 from .line_renderer import LineRenderer
 from .polyline_renderer import PolylineRenderer
 from .renderer_utils import (
@@ -22,6 +23,7 @@ StrokeRendererFactory.register_renderer("arc", ArcRenderer)
 StrokeRendererFactory.register_renderer("polyline", PolylineRenderer)
 StrokeRendererFactory.register_renderer("circle", CircleRenderer)
 StrokeRendererFactory.register_renderer("splatter", SplatterRenderer)
+StrokeRendererFactory.register_renderer("dry-brush", DryBrushRenderer)
 
 __all__ = [
     "StrokeRenderer",
@@ -31,6 +33,7 @@ __all__ = [
     "PolylineRenderer",
     "CircleRenderer",
     "SplatterRenderer",
+    "DryBrushRenderer",
     "hex_to_rgb",
     "hex_to_rgba",
     "stroke_color_to_rgba",
