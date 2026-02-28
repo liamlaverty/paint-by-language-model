@@ -67,7 +67,7 @@ export interface PaintingPlan {
 /**
  * Per-iteration evaluation feedback from the VLM evaluator.
  *
- * @property {number} iteration - Iteration index (0-based)
+ * @property {number} iteration - Iteration index (1-based)
  * @property {number} score - Style similarity score (0-100)
  * @property {string} feedback - Qualitative assessment from the evaluator
  * @property {string} strengths - What aspects work well stylistically

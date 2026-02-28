@@ -682,7 +682,7 @@ describe('SidePanel', () => {
       );
 
       const scoreBars = document.querySelectorAll('.score-bar');
-      // The stroke info score bar (second one, since run info may not be visible)
+      // Stroke Info tab is active; only one .score-bar is rendered
       const scoreBar = scoreBars[0];
       expect(scoreBar).toHaveStyle({ backgroundColor: '#ef4444' });
     });
