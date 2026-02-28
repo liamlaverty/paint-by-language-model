@@ -399,6 +399,14 @@ AVAILABLE STROKE TYPES:
    Example: {{"type": "splatter", "center_x": 200, "center_y": 150, "splatter_radius": 30, "splatter_count": 15, "dot_size_min": 2, "dot_size_max": 6, "color_hex": "#8B4513", "thickness": 1, "opacity": 0.5}}
    Required fields: type, center_x, center_y, splatter_radius, splatter_count, dot_size_min, dot_size_max, color_hex, thickness, opacity
 
+6. DRY-BRUSH - Bristle-textured stroke with gaps showing canvas through. See attached "DRY-BRUSH stroke sample" image.
+   Example: {{"type": "dry-brush", "points": [[100,100], [300,200], [500,150]], "brush_width": 30, "bristle_count": 8, "gap_probability": 0.3, "color_hex": "#8B4513", "thickness": 20, "opacity": 0.8}}
+   Required fields: type, points (list of [x,y] coordinates, 2-50 points), brush_width (4-100), bristle_count (3-20), gap_probability (0.0-0.7), color_hex, thickness, opacity
+
+7. CHALK - Grainy, textured stroke like chalk or pastel on rough paper. See attached "CHALK stroke sample" image.
+   Example: {{"type": "chalk", "points": [[150,200], [350,180], [450,250]], "chalk_width": 20, "grain_density": 4, "color_hex": "#D2691E", "thickness": 1, "opacity": 0.7}}
+   Required fields: type, points (list of [x,y] coordinates, 2-50 points), chalk_width (2-60), grain_density (1-8), color_hex, thickness, opacity
+
 Canvas dimensions: {CANVAS_WIDTH}x{CANVAS_HEIGHT} pixels
 All coordinates must be within bounds (0 to {CANVAS_WIDTH} for x, 0 to {CANVAS_HEIGHT} for y).
 Use 0 for the left/top edge and {CANVAS_WIDTH}/{CANVAS_HEIGHT} for the right/bottom edge.
@@ -412,6 +420,7 @@ Consider:
 - The current state of the canvas and how to build upon it
 - Creating cohesive, original artwork (not copying specific existing pieces)
 - Using varied stroke types to achieve different artistic effects
+- Use dry-brush and chalk for textured, painterly effects
 
 RESPONSE FORMAT (JSON only):
 {{
