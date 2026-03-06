@@ -97,7 +97,7 @@ def test_init_strips_trailing_slash() -> None:
 
 def test_init_chat_endpoint_constructed() -> None:
     """Chat endpoint is properly constructed from base_url."""
-    client = VLMClient(base_url="https://api.example.com/v1")
+    client = VLMClient(base_url="https://api.example.com/v1", provider="mistral")
     assert client.chat_endpoint == "https://api.example.com/v1/chat/completions"
 
 
@@ -108,7 +108,7 @@ def test_init_chat_endpoint_constructed() -> None:
 
 def test_build_headers_with_api_key() -> None:
     """Headers include Bearer token when API key is set."""
-    client = VLMClient(api_key="sk-test-123")
+    client = VLMClient(api_key="sk-test-123", provider="mistral")
     headers = client._build_headers()
     assert headers["Authorization"] == "Bearer sk-test-123"
     assert headers["Content-Type"] == "application/json"
@@ -132,7 +132,10 @@ def test_query_success(mocker: Any, mock_successful_response: MagicMock) -> None
     mock_post = mocker.patch("requests.post", return_value=mock_successful_response)
 
     client = VLMClient(
-        base_url="https://api.test.com", model="test-model", temperature=0.8
+        base_url="https://api.test.com",
+        model="test-model",
+        temperature=0.8,
+        provider="mistral",
     )
     result = client.query("test prompt", max_tokens=100)
 
@@ -151,7 +154,7 @@ def test_query_sends_headers(mocker: Any, mock_successful_response: MagicMock) -
     """query() includes auth headers in the request."""
     mock_post = mocker.patch("requests.post", return_value=mock_successful_response)
 
-    client = VLMClient(api_key="sk-test-key")
+    client = VLMClient(api_key="sk-test-key", provider="mistral")
     client.query("test prompt")
 
     # Verify headers were passed
@@ -167,7 +170,7 @@ def test_query_custom_temperature(
     """Temperature from constructor is used in request payload."""
     mock_post = mocker.patch("requests.post", return_value=mock_successful_response)
 
-    client = VLMClient(temperature=0.3)
+    client = VLMClient(temperature=0.3, provider="mistral")
     client.query("test")
 
     # Verify temperature matches client.temperature (not hardcoded 0.7)
@@ -182,7 +185,7 @@ def test_query_multimodal_success(
     """query_multimodal() sends image as base64 in correct format."""
     mock_post = mocker.patch("requests.post", return_value=mock_successful_response)
 
-    client = VLMClient()
+    client = VLMClient(provider="mistral")
     test_image = b"fake-image-data"
     result = client.query_multimodal("describe this", test_image)
 
@@ -265,7 +268,7 @@ def test_query_rate_limit_retry_success(
     )
     mock_sleep = mocker.patch("time.sleep")
 
-    client = VLMClient()
+    client = VLMClient(provider="mistral")
     result = client.query("test")
 
     assert result == "Test response"
@@ -321,7 +324,7 @@ def test_query_multimodal_rate_limit_retry(
     )
     mock_sleep = mocker.patch("time.sleep")
 
-    client = VLMClient()
+    client = VLMClient(provider="mistral")
     result = client.query_multimodal("test", b"image-data")
 
     assert result == "Test response"
@@ -340,7 +343,7 @@ def test_is_available_success(mocker: Any) -> None:
     mock_response.status_code = 200
     mock_get = mocker.patch("requests.get", return_value=mock_response)
 
-    client = VLMClient(base_url="https://api.test.com")
+    client = VLMClient(base_url="https://api.test.com", provider="mistral")
     assert client.is_available() is True
 
     # Verify endpoint
@@ -355,7 +358,7 @@ def test_is_available_failure(mocker: Any) -> None:
         "requests.get", side_effect=requests.RequestException("Connection failed")
     )
 
-    client = VLMClient()
+    client = VLMClient(provider="mistral")
     assert client.is_available() is False
 
 
@@ -365,7 +368,7 @@ def test_is_available_non_200_status(mocker: Any) -> None:
     mock_response.status_code = 500
     mocker.patch("requests.get", return_value=mock_response)
 
-    client = VLMClient()
+    client = VLMClient(provider="mistral")
     assert client.is_available() is False
 
 
@@ -375,7 +378,7 @@ def test_is_available_sends_headers(mocker: Any) -> None:
     mock_response.status_code = 200
     mock_get = mocker.patch("requests.get", return_value=mock_response)
 
-    client = VLMClient(api_key="sk-test-key")
+    client = VLMClient(api_key="sk-test-key", provider="mistral")
     client.is_available()
 
     # Verify headers were passed
@@ -425,6 +428,7 @@ def test_full_query_workflow(mocker: Any, mock_successful_response: MagicMock) -
         model="test-model",
         api_key="sk-test",
         temperature=0.5,
+        provider="mistral",
     )
 
     result = client.query("hello world", max_tokens=50)
@@ -453,6 +457,7 @@ def test_full_multimodal_workflow(
         model="vision-model",
         api_key="sk-vision",
         temperature=0.2,
+        provider="mistral",
     )
 
     test_image = b"image-bytes-data"

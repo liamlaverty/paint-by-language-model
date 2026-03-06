@@ -3,7 +3,18 @@
 from typing import Literal, TypedDict
 
 # Define supported stroke types
-StrokeType = Literal["line", "arc", "polyline", "circle", "splatter"]
+StrokeType = Literal[
+    "line",
+    "arc",
+    "polyline",
+    "circle",
+    "splatter",
+    "dry-brush",
+    "chalk",
+    "wet-brush",
+    "burn",
+    "dodge",
+]
 
 
 class Stroke(TypedDict, total=False):
@@ -11,7 +22,8 @@ class Stroke(TypedDict, total=False):
     Represents a single drawing operation on the canvas.
 
     Core Attributes (all stroke types):
-        type (StrokeType): Stroke type - "line", "arc", "polyline", "circle", or "splatter"
+        type (StrokeType): Stroke type - "line", "arc", "polyline", "circle", "splatter",
+            "dry-brush", "chalk", "wet-brush", "burn", or "dodge"
         color_hex (str): Color in hex format "#RRGGBB" or "#RRGGBBAA"
         thickness (int): Line thickness in pixels (1-50)
         opacity (float): Opacity value (0.0 to 1.0)
@@ -44,6 +56,25 @@ class Stroke(TypedDict, total=False):
         splatter_radius (int): Spread radius
         dot_size_min (int): Minimum dot size
         dot_size_max (int): Maximum dot size
+
+    Dry-brush-specific Attributes:
+        brush_width (int): Total width of brush perpendicular to stroke direction (4-100 px)
+        bristle_count (int): Number of parallel bristle lines (3-20)
+        gap_probability (float): Probability of bristle segment being skipped (0.0-0.7)
+
+    Chalk-specific Attributes:
+        chalk_width (int): Width of chalk mark perpendicular to path (2-60 px)
+        grain_density (int): Number of random dots per sample point along path (1-8)
+
+    Wet-brush-specific Attributes:
+        softness (int): Gaussian blur radius for edge bleed (1-30 px)
+        flow (float): Paint density/concentration multiplied with opacity (0.1-1.0)
+
+    Burn/Dodge-specific Attributes:
+        center_x (int): Center X coordinate (shared with circle)
+        center_y (int): Center Y coordinate (shared with circle)
+        radius (int): Radius of affected region (shared with circle, 5-300 px for burn/dodge)
+        intensity (float): Amount of darkening (burn) or lightening (dodge) (0.05-0.8)
     """
 
     # Core fields (all stroke types)
@@ -77,3 +108,20 @@ class Stroke(TypedDict, total=False):
     splatter_radius: int | None
     dot_size_min: int | None
     dot_size_max: int | None
+
+    # Dry-brush-specific fields (optional)
+    brush_width: int | None
+    bristle_count: int | None
+    gap_probability: float | None
+
+    # Chalk-specific fields (optional)
+    chalk_width: int | None
+    grain_density: int | None
+
+    # Wet-brush-specific fields (optional)
+    softness: int | None
+    flow: float | None
+
+    # Burn/Dodge-specific fields (optional)
+    # Note: center_x, center_y, radius are already defined above (shared with circle)
+    intensity: float | None

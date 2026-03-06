@@ -133,8 +133,19 @@ MIN_STROKE_THICKNESS = 1
 MAX_STROKE_OPACITY = 1.0
 MIN_STROKE_OPACITY = 0.1
 
-# Supported stroke types (Phase 3 - all types implemented)
-SUPPORTED_STROKE_TYPES = ["line", "arc", "polyline", "circle", "splatter"]
+# Supported stroke types (Phase 18 - expressive strokes added)
+SUPPORTED_STROKE_TYPES = [
+    "line",
+    "arc",
+    "polyline",
+    "circle",
+    "splatter",
+    "dry-brush",
+    "chalk",
+    "wet-brush",
+    "burn",
+    "dodge",
+]
 
 # Arc constraints
 MAX_ARC_ANGLE = 360
@@ -155,6 +166,32 @@ MAX_SPLATTER_RADIUS = 200
 MIN_SPLATTER_RADIUS = 5
 MAX_DOT_SIZE = 20
 MIN_DOT_SIZE = 1
+
+# Dry-brush constraints
+MIN_BRUSH_WIDTH = 4
+MAX_BRUSH_WIDTH = 100
+MIN_BRISTLE_COUNT = 3
+MAX_BRISTLE_COUNT = 20
+MIN_GAP_PROBABILITY = 0.0
+MAX_GAP_PROBABILITY = 0.7
+
+# Chalk constraints
+MIN_CHALK_WIDTH = 2
+MAX_CHALK_WIDTH = 60
+MIN_GRAIN_DENSITY = 1
+MAX_GRAIN_DENSITY = 8
+
+# Wet-brush constraints
+MIN_SOFTNESS = 1
+MAX_SOFTNESS = 30
+MIN_FLOW = 0.1
+MAX_FLOW = 1.0
+
+# Burn/Dodge constraints
+MIN_BURN_DODGE_RADIUS = 5
+MAX_BURN_DODGE_RADIUS = 300
+MIN_BURN_DODGE_INTENSITY = 0.05
+MAX_BURN_DODGE_INTENSITY = 0.8
 
 
 # ----------------------------------------------------------------------------

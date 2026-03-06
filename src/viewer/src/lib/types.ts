@@ -149,7 +149,7 @@ export interface ArtworkMetadata {
  * @property {number} iteration - Which VLM query iteration produced this stroke
  * @property {number} batch_position - Position within the iteration's batch (0-based)
  * @property {string} batch_reasoning - VLM's reasoning text for the batch that contains this stroke
- * @property {'line' | 'arc' | 'polyline' | 'circle' | 'splatter'} type - Stroke rendering type
+ * @property {'line' | 'arc' | 'polyline' | 'circle' | 'splatter' | 'dry-brush' | 'chalk' | 'wet-brush' | 'burn' | 'dodge'} type - Stroke rendering type
  * @property {string} color_hex - Stroke color as hex string
  * @property {number} thickness - Stroke line thickness in pixels
  * @property {number} opacity - Stroke opacity (0.0 to 1.0)
@@ -169,13 +169,31 @@ export interface ArtworkMetadata {
  * @property {number} [splatter_radius] - Maximum distance from center for splatter dots
  * @property {number} [dot_size_min] - Minimum dot radius in pixels
  * @property {number} [dot_size_max] - Maximum dot radius in pixels
+ * @property {number} [brush_width] - Total width of brush perpendicular to stroke direction (dry-brush)
+ * @property {number} [bristle_count] - Number of parallel bristle lines (dry-brush)
+ * @property {number} [gap_probability] - Probability of bristle segment being skipped (dry-brush)
+ * @property {number} [chalk_width] - Width of chalk mark perpendicular to path (chalk)
+ * @property {number} [grain_density] - Number of random dots per sample point along path (chalk)
+ * @property {number} [softness] - Gaussian blur radius for edge bleed (wet-brush)
+ * @property {number} [flow] - Paint density/concentration multiplied with opacity (wet-brush)
+ * @property {number} [intensity] - Amount of darkening (burn) or lightening (dodge)
  */
 export interface EnrichedStroke {
   index: number;
   iteration: number;
   batch_position: number;
   batch_reasoning: string;
-  type: 'line' | 'arc' | 'polyline' | 'circle' | 'splatter';
+  type:
+    | 'line'
+    | 'arc'
+    | 'polyline'
+    | 'circle'
+    | 'splatter'
+    | 'dry-brush'
+    | 'chalk'
+    | 'wet-brush'
+    | 'burn'
+    | 'dodge';
   color_hex: string;
   thickness: number;
   opacity: number;
@@ -195,6 +213,14 @@ export interface EnrichedStroke {
   splatter_radius?: number;
   dot_size_min?: number;
   dot_size_max?: number;
+  brush_width?: number;
+  bristle_count?: number;
+  gap_probability?: number;
+  chalk_width?: number;
+  grain_density?: number;
+  softness?: number;
+  flow?: number;
+  intensity?: number;
 }
 
 /**

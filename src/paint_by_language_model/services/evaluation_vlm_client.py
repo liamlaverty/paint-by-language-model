@@ -180,29 +180,10 @@ class EvaluationVLMClient:
         Returns:
             str: Formatted prompt
         """
-        # Build layer context section if available
-        layer_section = ""
-        if painting_plan and current_layer:
-            layer_number = current_layer["layer_number"]
-            layer_name = current_layer["name"]
-            total_layers = painting_plan["total_layers"]
-
-            layer_section = f"""
-
-You are also evaluating progress on Layer {layer_number}: "{layer_name}".
-The overall plan has {total_layers} layers.
-
-Layer objectives:
-- {current_layer["description"]}
-- Expected palette: {", ".join(current_layer["colour_palette"])}
-- Expected techniques: {current_layer["techniques"]}
-"""
-
         prompt = f"""You are an art critic evaluating artwork for stylistic similarity to {artist_name}.
 
 Current Canvas: [Image attached]
 Subject: {subject}
-Iteration: {iteration}{layer_section}
 
 Task: Rate how well this image embodies {artist_name}'s artistic style on a scale of 0-100.
 

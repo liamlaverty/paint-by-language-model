@@ -42,13 +42,21 @@ def generator(tmp_path: Path) -> StrokeSampleGenerator:
 def test_generate_all_samples_returns_all_types(
     generator: StrokeSampleGenerator,
 ) -> None:
-    """generate_all_samples() must return a dict with all 5 stroke type keys.
+    """generate_all_samples() must return a dict with all stroke type keys.
 
     Args:
         generator (StrokeSampleGenerator): Fresh generator fixture.
     """
     samples = generator.generate_all_samples()
-    expected_keys = {"line", "arc", "polyline", "circle", "splatter"}
+    expected_keys = {
+        "line",
+        "arc",
+        "polyline",
+        "circle",
+        "splatter",
+        "dry-brush",
+        "chalk",
+    }
     assert set(samples.keys()) == expected_keys
 
 
