@@ -34,6 +34,7 @@ SUPPORTED_STROKE_TYPES: list[str] = [
     "chalk",
     "wet-brush",
     "burn",
+    "dodge",
 ]
 
 
@@ -160,6 +161,7 @@ class StrokeSampleGenerator:
             "chalk": self._generate_chalk_samples,
             "wet-brush": self._generate_wet_brush_samples,
             "burn": self._generate_burn_samples,
+            "dodge": self._generate_dodge_samples,
         }
         return generators[stroke_type]()
 
@@ -778,6 +780,85 @@ class StrokeSampleGenerator:
             Stroke(
                 type="burn",
                 color_hex="#222222",
+                thickness=1,
+                opacity=1.0,
+                center_x=165,
+                center_y=75,
+                radius=high_radius,
+                intensity=high_intensity,
+            ),
+        ]
+
+    def _generate_dodge_samples(self) -> list[Stroke]:
+        """Generate 5 varied dodge strokes for the sample canvas.
+
+        Variations cover different ``radius`` values (``MIN_BURN_DODGE_RADIUS``–
+        ``MAX_BURN_DODGE_RADIUS``) and ``intensity`` values
+        (``MIN_BURN_DODGE_INTENSITY``–``MAX_BURN_DODGE_INTENSITY``) spread
+        across the 200×100 canvas.  ``color_hex`` and ``thickness`` are
+        structurally required by the ``Stroke`` TypedDict but are ignored
+        during dodge rendering.
+
+        Returns:
+            list[Stroke]: List of 5 dodge ``Stroke`` dicts.
+        """
+        low_radius = max(MIN_BURN_DODGE_RADIUS, 10)
+        mid_radius = (MIN_BURN_DODGE_RADIUS + MAX_BURN_DODGE_RADIUS) // 2  # ~152
+        high_radius = min(MAX_BURN_DODGE_RADIUS, 60)
+
+        low_intensity = max(MIN_BURN_DODGE_INTENSITY, 0.1)
+        mid_intensity = (MIN_BURN_DODGE_INTENSITY + MAX_BURN_DODGE_INTENSITY) / 2  # ~0.425
+        high_intensity = min(MAX_BURN_DODGE_INTENSITY, 0.75)
+
+        return [
+            # Small radius, high intensity — top-left highlight
+            Stroke(
+                type="dodge",
+                color_hex="#ffffff",
+                thickness=1,
+                opacity=1.0,
+                center_x=30,
+                center_y=25,
+                radius=high_radius,
+                intensity=high_intensity,
+            ),
+            # Medium radius, medium intensity — centre
+            Stroke(
+                type="dodge",
+                color_hex="#cccccc",
+                thickness=1,
+                opacity=1.0,
+                center_x=100,
+                center_y=50,
+                radius=mid_radius,
+                intensity=mid_intensity,
+            ),
+            # Small radius, low intensity — top-right
+            Stroke(
+                type="dodge",
+                color_hex="#999999",
+                thickness=1,
+                opacity=1.0,
+                center_x=170,
+                center_y=20,
+                radius=low_radius,
+                intensity=low_intensity,
+            ),
+            # Large radius, high intensity — bright spot bottom
+            Stroke(
+                type="dodge",
+                color_hex="#ffffff",
+                thickness=1,
+                opacity=1.0,
+                center_x=100,
+                center_y=90,
+                radius=min(MAX_BURN_DODGE_RADIUS, 80),
+                intensity=high_intensity,
+            ),
+            # Medium radius, high intensity — bottom-right highlight
+            Stroke(
+                type="dodge",
+                color_hex="#dddddd",
                 thickness=1,
                 opacity=1.0,
                 center_x=165,

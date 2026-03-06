@@ -415,6 +415,11 @@ AVAILABLE STROKE TYPES:
    Example: {{"type": "burn", "center_x": 400, "center_y": 300, "radius": 80, "intensity": 0.6, "color_hex": "#000000", "thickness": 1, "opacity": 1.0}}
    Required fields: type, center_x, center_y, radius (5–300), intensity (0.05–0.8), color_hex, thickness, opacity
 
+10. DODGE - Lightens existing pixels in a soft circular region (highlights, light sources, brightening effects). See attached "DODGE stroke sample" image.
+   Example: {{"type": "dodge", "center_x": 400, "center_y": 300, "radius": 80, "intensity": 0.6, "color_hex": "#ffffff", "thickness": 1, "opacity": 1.0}}
+   Required fields: type, center_x, center_y, radius (5–300), intensity (0.05–0.8), color_hex, thickness, opacity
+   Tip: Use dodge on dark areas to add highlights, simulate rim-lighting, or brighten under-exposed regions.
+
 Canvas dimensions: {CANVAS_WIDTH}x{CANVAS_HEIGHT} pixels
 All coordinates must be within bounds (0 to {CANVAS_WIDTH} for x, 0 to {CANVAS_HEIGHT} for y).
 Use 0 for the left/top edge and {CANVAS_WIDTH}/{CANVAS_HEIGHT} for the right/bottom edge.
@@ -620,7 +625,7 @@ IMPORTANT: Respond ONLY with valid JSON. Do not include any markdown formatting,
                 }
             )
 
-        elif stroke_type == "burn":
+        elif stroke_type in ("burn", "dodge"):
             parsed.update(
                 {
                     "center_x": int(stroke["center_x"]),

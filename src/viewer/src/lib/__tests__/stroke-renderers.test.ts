@@ -490,4 +490,72 @@ describe('renderStroke', () => {
     expect(() => renderStroke(ctx, stroke, 17, true)).not.toThrow();
     expect(ctx.fill).toHaveBeenCalled();
   });
+
+  it('should render dodge stroke without throwing', () => {
+    const ctx = createMockContext();
+    const stroke: EnrichedStroke = {
+      index: 18,
+      iteration: 0,
+      batch_position: 0,
+      batch_reasoning: 'test',
+      type: 'dodge',
+      color_hex: '#ffffff',
+      thickness: 1,
+      opacity: 1.0,
+      center_x: 200,
+      center_y: 150,
+      radius: 60,
+      intensity: 0.5,
+    };
+
+    expect(() => renderStroke(ctx, stroke, 18, false)).not.toThrow();
+
+    // fill should be called (gradient circle)
+    expect(ctx.fill).toHaveBeenCalled();
+    expect(ctx.save).toHaveBeenCalled();
+    expect(ctx.restore).toHaveBeenCalled();
+  });
+
+  it('should set screen compositing for dodge stroke visual rendering', () => {
+    const ctx = createMockContext();
+    const stroke: EnrichedStroke = {
+      index: 19,
+      iteration: 0,
+      batch_position: 0,
+      batch_reasoning: 'test',
+      type: 'dodge',
+      color_hex: '#ffffff',
+      thickness: 1,
+      opacity: 1.0,
+      center_x: 100,
+      center_y: 100,
+      radius: 40,
+      intensity: 0.6,
+    };
+
+    renderStroke(ctx, stroke, 19, false);
+
+    expect(ctx.globalCompositeOperation).toBe('screen');
+  });
+
+  it('should render dodge stroke in hit mode without throwing', () => {
+    const ctx = createMockContext();
+    const stroke: EnrichedStroke = {
+      index: 20,
+      iteration: 0,
+      batch_position: 0,
+      batch_reasoning: 'test',
+      type: 'dodge',
+      color_hex: '#ffffff',
+      thickness: 1,
+      opacity: 1.0,
+      center_x: 150,
+      center_y: 120,
+      radius: 50,
+      intensity: 0.4,
+    };
+
+    expect(() => renderStroke(ctx, stroke, 20, true)).not.toThrow();
+    expect(ctx.fill).toHaveBeenCalled();
+  });
 });
