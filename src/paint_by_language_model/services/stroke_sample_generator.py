@@ -16,7 +16,15 @@ from services.canvas_manager import CanvasManager
 logger = logging.getLogger(__name__)
 
 # Supported stroke types
-SUPPORTED_STROKE_TYPES: list[str] = ["line", "arc", "polyline", "circle", "splatter"]
+SUPPORTED_STROKE_TYPES: list[str] = [
+    "line",
+    "arc",
+    "polyline",
+    "circle",
+    "splatter",
+    "dry-brush",
+    "chalk",
+]
 
 
 class StrokeSampleGenerator:
@@ -138,6 +146,8 @@ class StrokeSampleGenerator:
             "polyline": self._generate_polyline_samples,
             "circle": self._generate_circle_samples,
             "splatter": self._generate_splatter_samples,
+            "dry-brush": self._generate_dry_brush_samples,
+            "chalk": self._generate_chalk_samples,
         }
         return generators[stroke_type]()
 
@@ -480,5 +490,136 @@ class StrokeSampleGenerator:
                 splatter_count=15,
                 dot_size_min=3,
                 dot_size_max=8,
+            ),
+        ]
+
+    def _generate_dry_brush_samples(self) -> list[Stroke]:
+        """Generate 5 varied dry-brush strokes for the sample canvas.
+
+        Variations cover different brush_width values (10–60), bristle_count
+        values (5–15), gap_probability values (0.1–0.5), and polyline paths
+        with varying lengths and shapes spread across the 200×100 canvas.
+
+        Returns:
+            list[Stroke]: List of 5 dry-brush Stroke dicts.
+        """
+        return [
+            # Wide, dense bristles, low gaps — red
+            Stroke(
+                type="dry-brush",
+                color_hex="#CC0000",
+                thickness=15,
+                opacity=0.9,
+                points=[[10, 20], [80, 30], [150, 15]],
+                brush_width=50,
+                bristle_count=15,
+                gap_probability=0.15,
+            ),
+            # Medium width, medium bristles — blue
+            Stroke(
+                type="dry-brush",
+                color_hex="#0044CC",
+                thickness=10,
+                opacity=0.8,
+                points=[[20, 50], [100, 60], [180, 55]],
+                brush_width=30,
+                bristle_count=10,
+                gap_probability=0.3,
+            ),
+            # Narrow, sparse bristles, high gaps — green
+            Stroke(
+                type="dry-brush",
+                color_hex="#226622",
+                thickness=8,
+                opacity=0.7,
+                points=[[190, 80], [120, 75], [30, 85]],
+                brush_width=15,
+                bristle_count=6,
+                gap_probability=0.5,
+            ),
+            # Wide, few bristles — orange
+            Stroke(
+                type="dry-brush",
+                color_hex="#FF8800",
+                thickness=12,
+                opacity=0.85,
+                points=[[40, 10], [40, 40], [90, 50], [140, 45]],
+                brush_width=40,
+                bristle_count=5,
+                gap_probability=0.25,
+            ),
+            # Medium, many bristles, moderate gaps — purple
+            Stroke(
+                type="dry-brush",
+                color_hex="#7700AA",
+                thickness=10,
+                opacity=0.75,
+                points=[[60, 90], [120, 85], [170, 90]],
+                brush_width=25,
+                bristle_count=12,
+                gap_probability=0.35,
+            ),
+        ]
+
+    def _generate_chalk_samples(self) -> list[Stroke]:
+        """Generate 5 varied chalk strokes for the sample canvas.
+
+        Variations cover different chalk_width values (5–30), grain_density
+        values (2–6), and polyline paths with varying lengths and shapes
+        spread across the 200×100 canvas.
+
+        Returns:
+            list[Stroke]: List of 5 chalk Stroke dicts.
+        """
+        return [
+            # Wide chalk, dense grain — red
+            Stroke(
+                type="chalk",
+                color_hex="#CC0000",
+                thickness=1,
+                opacity=0.85,
+                points=[[10, 15], [60, 20], [110, 18]],
+                chalk_width=28,
+                grain_density=6,
+            ),
+            # Medium chalk, medium grain — blue
+            Stroke(
+                type="chalk",
+                color_hex="#0044CC",
+                thickness=1,
+                opacity=0.75,
+                points=[[20, 45], [90, 50], [160, 48]],
+                chalk_width=18,
+                grain_density=4,
+            ),
+            # Narrow chalk, light grain — green
+            Stroke(
+                type="chalk",
+                color_hex="#226622",
+                thickness=1,
+                opacity=0.9,
+                points=[[180, 75], [120, 78], [50, 72]],
+                chalk_width=8,
+                grain_density=2,
+            ),
+            # Wide chalk, light grain — orange
+            Stroke(
+                type="chalk",
+                color_hex="#FF8800",
+                thickness=1,
+                opacity=0.8,
+                points=[[30, 25], [80, 35], [130, 30], [175, 35]],
+                chalk_width=22,
+                grain_density=3,
+            ),
+            # Medium chalk, very dense grain — purple
+            Stroke(
+                type="chalk",
+                color_hex="#7700AA",
+                thickness=1,
+                opacity=0.7,
+                points=[[70, 85], [130, 88], [180, 85]],
+                chalk_width=15,
+                grain_density=5,
             ),
         ]

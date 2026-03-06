@@ -374,6 +374,44 @@ export default function SidePanel({
               </div>
             </>
           )}
+
+          {stroke.type === 'dry-brush' && (
+            <>
+              <div className="meta-row">
+                <span className="meta-label">Brush Width</span>
+                <span className="meta-value">{stroke.brush_width}px</span>
+              </div>
+              <div className="meta-row">
+                <span className="meta-label">Bristle Count</span>
+                <span className="meta-value">{stroke.bristle_count}</span>
+              </div>
+              <div className="meta-row">
+                <span className="meta-label">Gap Probability</span>
+                <span className="meta-value">{stroke.gap_probability}</span>
+              </div>
+              <div className="meta-row">
+                <span className="meta-label">Point Count</span>
+                <span className="meta-value">{stroke.points?.length}</span>
+              </div>
+            </>
+          )}
+
+          {stroke.type === 'chalk' && (
+            <>
+              <div className="meta-row">
+                <span className="meta-label">Chalk Width</span>
+                <span className="meta-value">{stroke.chalk_width}px</span>
+              </div>
+              <div className="meta-row">
+                <span className="meta-label">Grain Density</span>
+                <span className="meta-value">{stroke.grain_density}</span>
+              </div>
+              <div className="meta-row">
+                <span className="meta-label">Point Count</span>
+                <span className="meta-value">{stroke.points?.length}</span>
+              </div>
+            </>
+          )}
         </>
       )}
 

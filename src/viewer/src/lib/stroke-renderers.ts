@@ -49,6 +49,12 @@ export function renderStroke(
     case 'splatter':
       renderSplatter(ctx, stroke, index, isHit);
       break;
+    case 'dry-brush':
+      renderDryBrush(ctx, stroke, index, isHit);
+      break;
+    case 'chalk':
+      renderChalk(ctx, stroke, index, isHit);
+      break;
   }
   ctx.restore();
 }
@@ -187,5 +193,218 @@ function renderSplatter(
     ctx.arc(dotX, dotY, dotRadius, 0, Math.PI * 2);
     ctx.fillStyle = color;
     ctx.fill();
+  }
+}
+
+/**
+ * Render a dry-brush stroke with visible bristle gaps.
+ *
+ * Creates textured brush strokes by drawing multiple parallel bristle lines
+ * with seeded-random gaps and jitter. Uses the same PRNG-based algorithm as
+ * the Python backend for identical visual output.
+ *
+ * @param {CanvasRenderingContext2D} ctx - Canvas rendering context
+ * @param {EnrichedStroke} stroke - Stroke data with dry-brush parameters
+ * @param {number} globalIndex - Stroke index (unused, using first point as seed)
+ * @param {boolean} isHit - Hit detection mode flag
+ */
+function renderDryBrush(
+  ctx: CanvasRenderingContext2D,
+  stroke: EnrichedStroke,
+  globalIndex: number,
+  isHit: boolean
+): void {
+  if (!stroke.points || stroke.points.length < 2) return;
+
+  const color = isHit
+    ? strokeIndexToColor(stroke.index)
+    : hexToRGBA(stroke.color_hex, stroke.opacity);
+
+  const brushWidth = stroke.brush_width!;
+  const bristleCount = stroke.bristle_count!;
+  const gapProbability = stroke.gap_probability!;
+
+  // Calculate bristle thickness (distribute total thickness across bristles)
+  const bristleThickness = Math.max(1, Math.floor(stroke.thickness / bristleCount));
+
+  // Create seed from first point coordinates for deterministic randomness
+  // Use same hash as Python: hash(tuple(points[0]))
+  const seed = stroke.points[0][0] * 31 + stroke.points[0][1];
+
+  // Render each bristle
+  for (let bristleIdx = 0; bristleIdx < bristleCount; bristleIdx++) {
+    // Create PRNG for this bristle (same seed derivation as Python)
+    const rng = mulberry32(seed + bristleIdx);
+
+    // Calculate offset for this bristle (evenly spaced across brush_width)
+    let offset = 0;
+    if (bristleCount > 1) {
+      offset = (bristleIdx / (bristleCount - 1) - 0.5) * brushWidth;
+    }
+
+    // Walk the polyline path segment by segment
+    for (let segIdx = 0; segIdx < stroke.points.length - 1; segIdx++) {
+      const p0 = stroke.points[segIdx];
+      const p1 = stroke.points[segIdx + 1];
+
+      // Compute segment direction and length
+      const dx = p1[0] - p0[0];
+      const dy = p1[1] - p0[1];
+      const length = Math.sqrt(dx * dx + dy * dy);
+
+      if (length < 0.001) continue; // Skip degenerate segments
+
+      // Normalize direction vector
+      const dirX = dx / length;
+      const dirY = dy / length;
+
+      // Perpendicular direction (rotated 90 degrees)
+      const perpX = -dirY;
+      const perpY = dirX;
+
+      // Add small random jitter to perpendicular offset (±10% of brush_width)
+      const jitter = (rng() - 0.5) * brushWidth * 0.2;
+      const actualOffset = offset + jitter;
+
+      // Calculate bristle segment endpoints
+      const bristleP0X = p0[0] + perpX * actualOffset;
+      const bristleP0Y = p0[1] + perpY * actualOffset;
+      const bristleP1X = p1[0] + perpX * actualOffset;
+      const bristleP1Y = p1[1] + perpY * actualOffset;
+
+      // For hit detection, draw all segments solid (no gaps)
+      if (!isHit) {
+        // Decide whether to skip this segment (create gap)
+        if (rng() < gapProbability) {
+          continue; // Skip this segment
+        }
+      }
+
+      // Draw this bristle segment
+      ctx.beginPath();
+      ctx.moveTo(bristleP0X, bristleP0Y);
+      ctx.lineTo(bristleP1X, bristleP1Y);
+      ctx.strokeStyle = color;
+      ctx.lineWidth = isHit ? Math.max(bristleThickness, 1) : bristleThickness;
+      ctx.lineCap = 'butt';
+      ctx.stroke();
+    }
+  }
+}
+
+/**
+ * Render a chalk stroke with grainy texture.
+ *
+ * Creates grainy, textured strokes along a polyline path by generating many
+ * small random dots clustered within a perpendicular band. Mimics chalk or
+ * pastel on rough paper. Uses seeded PRNG for deterministic dot placement.
+ *
+ * @param {CanvasRenderingContext2D} ctx - Canvas rendering context
+ * @param {EnrichedStroke} stroke - Stroke data with chalk parameters
+ * @param {number} globalIndex - Stroke index (unused, using sample point as seed)
+ * @param {boolean} isHit - Hit detection mode flag
+ */
+function renderChalk(
+  ctx: CanvasRenderingContext2D,
+  stroke: EnrichedStroke,
+  globalIndex: number,
+  isHit: boolean
+): void {
+  if (!stroke.points || stroke.points.length < 2) return;
+
+  const color = isHit
+    ? strokeIndexToColor(stroke.index)
+    : hexToRGBA(stroke.color_hex, stroke.opacity);
+
+  const chalkWidth = stroke.chalk_width!;
+  const grainDensity = stroke.grain_density!;
+
+  // Get canvas dimensions
+  const canvasW = ctx.canvas.width || 800;
+  const canvasH = ctx.canvas.height || 600;
+
+  // Walk the polyline path and generate sample points
+  const sampleSpacing = 2.0; // pixels between sample points
+
+  for (let segIdx = 0; segIdx < stroke.points.length - 1; segIdx++) {
+    const p0 = stroke.points[segIdx];
+    const p1 = stroke.points[segIdx + 1];
+
+    // Compute segment direction and length
+    const dx = p1[0] - p0[0];
+    const dy = p1[1] - p0[1];
+    const length = Math.sqrt(dx * dx + dy * dy);
+
+    if (length < 0.001) continue; // Skip degenerate segments
+
+    // Normalize direction vector
+    const dirX = dx / length;
+    const dirY = dy / length;
+
+    // Perpendicular direction (rotated 90 degrees)
+    const perpX = -dirY;
+    const perpY = dirX;
+
+    // Generate evenly-spaced sample points along this segment
+    const numSamples = Math.max(1, Math.floor(length / sampleSpacing));
+
+    for (let sampleIdx = 0; sampleIdx < numSamples; sampleIdx++) {
+      // Calculate position along segment
+      const t = numSamples > 1 ? sampleIdx / (numSamples - 1) : 0.5;
+      const sampleX = p0[0] + t * dx;
+      const sampleY = p0[1] + t * dy;
+
+      // Create seed from sample point coordinates for deterministic randomness
+      // Match Python: hash((seg_idx, sample_idx, int(sample_x), int(sample_y)))
+      const seed =
+        segIdx * 1000000 + sampleIdx * 1000 + Math.floor(sampleX) * 31 + Math.floor(sampleY);
+
+      // For hit detection, draw solid polyline band instead of grainy dots
+      if (isHit) {
+        // Draw a filled band for reliable hit detection
+        // Simply draw the path thick enough to cover the chalk_width
+        ctx.beginPath();
+        ctx.moveTo(sampleX, sampleY);
+        const nextT = numSamples > 1 ? (sampleIdx + 1) / (numSamples - 1) : 1.0;
+        const nextX = p0[0] + nextT * dx;
+        const nextY = p0[1] + nextT * dy;
+        ctx.lineTo(nextX, nextY);
+        ctx.strokeStyle = color;
+        ctx.lineWidth = chalkWidth;
+        ctx.lineCap = 'round';
+        ctx.stroke();
+      } else {
+        // Generate grain_density random dots at this sample point
+        const rng = mulberry32(seed);
+
+        for (let dotIdx = 0; dotIdx < grainDensity; dotIdx++) {
+          // Random perpendicular offset within ±chalk_width/2
+          const perpOffset = (rng() - 0.5) * chalkWidth;
+
+          // Random radius between 1 and 3 pixels
+          const dotRadius = 1 + rng() * 2;
+
+          // Calculate dot position
+          const dotX = sampleX + perpX * perpOffset;
+          const dotY = sampleY + perpY * perpOffset;
+
+          // Skip dots that fall entirely outside canvas bounds
+          if (
+            dotX + dotRadius < 0 ||
+            dotY + dotRadius < 0 ||
+            dotX - dotRadius >= canvasW ||
+            dotY - dotRadius >= canvasH
+          ) {
+            continue;
+          }
+
+          // Draw dot as small circle
+          ctx.beginPath();
+          ctx.arc(dotX, dotY, dotRadius, 0, Math.PI * 2);
+          ctx.fillStyle = color;
+          ctx.fill();
+        }
+      }
+    }
   }
 }
