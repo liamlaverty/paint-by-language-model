@@ -69,7 +69,12 @@ class CanvasManager:
         renderer.validate(stroke, (self.width, self.height))
 
         # Render stroke using renderer
-        renderer.render(stroke, self.draw)
+        if renderer.needs_image_access:
+            self.image = renderer.render_to_image(stroke, self.image)
+            # Re-create ImageDraw since the underlying image may have changed
+            self.draw = ImageDraw.Draw(self.image, "RGBA")
+        else:
+            renderer.render(stroke, self.draw)
 
         self.stroke_count += 1
         logger.info(f"Applied stroke {self.stroke_count}: type={stroke['type']}")

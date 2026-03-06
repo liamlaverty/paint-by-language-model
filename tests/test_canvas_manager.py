@@ -590,6 +590,85 @@ class TestCanvasManager(unittest.TestCase):
         result = hex_to_rgb("FF5733")
         self.assertEqual(result, (255, 87, 51))
 
+    # ========================================================================
+    # Image-Access Dispatch Tests
+    # ========================================================================
+
+    def test_apply_stroke_delegates_to_render_to_image(self):
+        """Test that apply_stroke calls render_to_image() for image-access renderers.
+
+        Verifies that when a renderer has needs_image_access=True, CanvasManager
+        calls render_to_image() (not render()), updates self.image with the
+        returned image, and re-creates self.draw bound to that new image.
+        """
+        from unittest.mock import MagicMock, patch
+
+        new_image = Image.new("RGB", (400, 300), "#FF0000")
+
+        mock_renderer = MagicMock()
+        mock_renderer.needs_image_access = True
+        mock_renderer.render_to_image.return_value = new_image
+
+        stroke: Stroke = {
+            "type": "line",
+            "start_x": 10,
+            "start_y": 10,
+            "end_x": 50,
+            "end_y": 50,
+            "color": "#000000",
+            "thickness": 2,
+            "opacity": 1.0,
+        }
+
+        original_image = self.canvas.image
+
+        with patch(
+            "services.canvas_manager.StrokeRendererFactory.get_renderer",
+            return_value=mock_renderer,
+        ):
+            self.canvas.apply_stroke(stroke)
+
+        mock_renderer.render_to_image.assert_called_once_with(stroke, original_image)
+        mock_renderer.render.assert_not_called()
+        self.assertIs(self.canvas.image, new_image)
+        # Verify draw is re-bound to the new image
+        self.assertIsNotNone(self.canvas.draw)
+
+    def test_apply_stroke_delegates_to_render_for_normal_strokes(self):
+        """Regression test: normal renderers (needs_image_access=False) use render().
+
+        Ensures backward compatibility — existing renderers that do not override
+        needs_image_access continue to have render(stroke, draw) called and
+        self.image is not reassigned.
+        """
+        from unittest.mock import MagicMock, patch
+
+        original_image = self.canvas.image
+
+        mock_renderer = MagicMock()
+        mock_renderer.needs_image_access = False
+
+        stroke: Stroke = {
+            "type": "line",
+            "start_x": 10,
+            "start_y": 10,
+            "end_x": 50,
+            "end_y": 50,
+            "color": "#000000",
+            "thickness": 2,
+            "opacity": 1.0,
+        }
+
+        with patch(
+            "services.canvas_manager.StrokeRendererFactory.get_renderer",
+            return_value=mock_renderer,
+        ):
+            self.canvas.apply_stroke(stroke)
+
+        mock_renderer.render.assert_called_once_with(stroke, self.canvas.draw)
+        mock_renderer.render_to_image.assert_not_called()
+        self.assertIs(self.canvas.image, original_image)
+
 
 if __name__ == "__main__":
     unittest.main()
