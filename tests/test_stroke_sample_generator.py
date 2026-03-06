@@ -56,6 +56,7 @@ def test_generate_all_samples_returns_all_types(
         "splatter",
         "dry-brush",
         "chalk",
+        "wet-brush",
     }
     assert set(samples.keys()) == expected_keys
 

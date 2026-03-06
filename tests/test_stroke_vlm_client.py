@@ -42,6 +42,7 @@ _EXPECTED_SAMPLE_LABELS = {
     "SPLATTER stroke sample",
     "DRY-BRUSH stroke sample",
     "CHALK stroke sample",
+    "WET-BRUSH stroke sample",
 }
 
 # ============================================================================
@@ -58,17 +59,17 @@ def test_sample_generator_initialized_at_init() -> None:
     client = StrokeVLMClient()
 
     assert isinstance(client._stroke_samples, dict), "_stroke_samples should be a dict"
-    assert len(client._stroke_samples) == 7, (
-        f"Expected 7 stroke samples, got {len(client._stroke_samples)}"
+    assert len(client._stroke_samples) == 8, (
+        f"Expected 8 stroke samples, got {len(client._stroke_samples)}"
     )
 
 
 def test_suggest_strokes_sends_sample_images() -> None:
-    """suggest_strokes() calls query_multimodal_multi_image with canvas + 7 sample images.
+    """suggest_strokes() calls query_multimodal_multi_image with canvas + 8 sample images.
 
     Verifies:
     - ``query_multimodal_multi_image`` is called (not ``query_multimodal``)
-    - The ``images`` argument contains exactly 8 entries (1 canvas + 7 samples)
+        - The ``images`` argument contains exactly 9 entries (1 canvas + 8 samples)
     - The first image label is ``"Current canvas""
     - The remaining 5 labels match the expected stroke sample names
     """
@@ -102,8 +103,8 @@ def test_suggest_strokes_sends_sample_images() -> None:
         call_kwargs.kwargs.get("images") or call_kwargs.args[1]
     )
 
-    assert len(images) == 8, (
-        f"Expected 8 images (1 canvas + 7 samples), got {len(images)}"
+    assert len(images) == 9, (
+        f"Expected 9 images (1 canvas + 8 samples), got {len(images)}"
     )
 
     # First entry must be the current canvas

@@ -17,6 +17,7 @@ from .renderer_utils import (
     validate_thickness,
 )
 from .splatter_renderer import SplatterRenderer
+from .wet_brush_renderer import WetBrushRenderer
 
 # Register renderers with factory on module import
 StrokeRendererFactory.register_renderer("line", LineRenderer)
@@ -26,6 +27,7 @@ StrokeRendererFactory.register_renderer("circle", CircleRenderer)
 StrokeRendererFactory.register_renderer("splatter", SplatterRenderer)
 StrokeRendererFactory.register_renderer("dry-brush", DryBrushRenderer)
 StrokeRendererFactory.register_renderer("chalk", ChalkRenderer)
+StrokeRendererFactory.register_renderer("wet-brush", WetBrushRenderer)
 
 __all__ = [
     "StrokeRenderer",
@@ -37,6 +39,7 @@ __all__ = [
     "SplatterRenderer",
     "DryBrushRenderer",
     "ChalkRenderer",
+    "WetBrushRenderer",
     "hex_to_rgb",
     "hex_to_rgba",
     "stroke_color_to_rgba",

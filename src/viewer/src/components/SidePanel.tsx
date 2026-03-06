@@ -412,6 +412,23 @@ export default function SidePanel({
               </div>
             </>
           )}
+
+          {stroke.type === 'wet-brush' && (
+            <>
+              <div className="meta-row">
+                <span className="meta-label">Softness</span>
+                <span className="meta-value">{stroke.softness}</span>
+              </div>
+              <div className="meta-row">
+                <span className="meta-label">Flow</span>
+                <span className="meta-value">{stroke.flow}</span>
+              </div>
+              <div className="meta-row">
+                <span className="meta-label">Point Count</span>
+                <span className="meta-value">{stroke.points?.length}</span>
+              </div>
+            </>
+          )}
         </>
       )}
 

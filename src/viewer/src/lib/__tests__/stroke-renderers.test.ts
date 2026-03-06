@@ -365,4 +365,56 @@ describe('renderStroke', () => {
     expect(ctx.save).toHaveBeenCalled();
     expect(ctx.restore).toHaveBeenCalled();
   });
+
+  it('should render wet-brush stroke without throwing', () => {
+    const ctx = createMockContext();
+    const stroke: EnrichedStroke = {
+      index: 13,
+      iteration: 0,
+      batch_position: 0,
+      batch_reasoning: 'test',
+      type: 'wet-brush',
+      color_hex: '#4477AA',
+      thickness: 10,
+      opacity: 0.7,
+      softness: 5,
+      flow: 0.8,
+      points: [
+        [100, 100],
+        [200, 200],
+        [300, 150],
+      ],
+    };
+
+    // Should not throw
+    expect(() => renderStroke(ctx, stroke, 13, false)).not.toThrow();
+
+    // beginPath should be called (polyline path)
+    expect(ctx.beginPath).toHaveBeenCalled();
+    expect(ctx.save).toHaveBeenCalled();
+    expect(ctx.restore).toHaveBeenCalled();
+  });
+
+  it('should render wet-brush in hit mode without throwing', () => {
+    const ctx = createMockContext();
+    const stroke: EnrichedStroke = {
+      index: 14,
+      iteration: 0,
+      batch_position: 0,
+      batch_reasoning: 'test',
+      type: 'wet-brush',
+      color_hex: '#AA4477',
+      thickness: 8,
+      opacity: 0.9,
+      softness: 4,
+      flow: 1.0,
+      points: [
+        [50, 50],
+        [150, 100],
+      ],
+    };
+
+    expect(() => renderStroke(ctx, stroke, 14, true)).not.toThrow();
+    expect(ctx.beginPath).toHaveBeenCalled();
+  });
 });

@@ -4,6 +4,10 @@ import logging
 from pathlib import Path
 
 from config import (
+    MAX_FLOW,
+    MAX_SOFTNESS,
+    MIN_FLOW,
+    MIN_SOFTNESS,
     STROKE_SAMPLE_BACKGROUND,
     STROKE_SAMPLE_DIR,
     STROKE_SAMPLE_HEIGHT,
@@ -24,6 +28,7 @@ SUPPORTED_STROKE_TYPES: list[str] = [
     "splatter",
     "dry-brush",
     "chalk",
+    "wet-brush",
 ]
 
 
@@ -148,6 +153,7 @@ class StrokeSampleGenerator:
             "splatter": self._generate_splatter_samples,
             "dry-brush": self._generate_dry_brush_samples,
             "chalk": self._generate_chalk_samples,
+            "wet-brush": self._generate_wet_brush_samples,
         }
         return generators[stroke_type]()
 
@@ -558,6 +564,78 @@ class StrokeSampleGenerator:
                 brush_width=25,
                 bristle_count=12,
                 gap_probability=0.35,
+            ),
+        ]
+
+    def _generate_wet_brush_samples(self) -> list[Stroke]:
+        """Generate 5 varied wet-brush strokes for the sample canvas.
+
+        Variations cover different softness values (``MIN_SOFTNESS``–
+        ``MAX_SOFTNESS``), flow values (``MIN_FLOW``–``MAX_FLOW``), and
+        polyline paths with varying lengths and shapes spread across the
+        200×100 canvas. The resulting images demonstrate the soft, bleeding
+        edge characteristic of this stroke type.
+
+        Returns:
+            list[Stroke]: List of 5 wet-brush Stroke dicts.
+        """
+        # Clamp convenience values to configured limits.
+        low_softness = max(MIN_SOFTNESS, 2)
+        mid_softness = (MIN_SOFTNESS + MAX_SOFTNESS) // 2  # ~15
+        high_softness = min(MAX_SOFTNESS, 25)
+        low_flow = max(MIN_FLOW, 0.3)
+        high_flow = min(MAX_FLOW, 0.95)
+
+        return [
+            # Soft, high-flow — red horizontal sweep
+            Stroke(
+                type="wet-brush",
+                color_hex="#CC0000",
+                thickness=12,
+                opacity=0.8,
+                points=[[10, 20], [80, 25], [150, 18]],
+                softness=high_softness,
+                flow=high_flow,
+            ),
+            # Medium softness, medium flow — blue diagonal
+            Stroke(
+                type="wet-brush",
+                color_hex="#0044CC",
+                thickness=10,
+                opacity=0.7,
+                points=[[20, 50], [90, 40], [170, 60]],
+                softness=mid_softness,
+                flow=0.6,
+            ),
+            # Low softness, low flow — green (sharper edge)
+            Stroke(
+                type="wet-brush",
+                color_hex="#226622",
+                thickness=8,
+                opacity=0.9,
+                points=[[180, 80], [120, 72], [40, 82]],
+                softness=low_softness,
+                flow=low_flow,
+            ),
+            # High softness, low flow — orange (wide bleed, translucent)
+            Stroke(
+                type="wet-brush",
+                color_hex="#FF8800",
+                thickness=15,
+                opacity=0.6,
+                points=[[30, 10], [70, 35], [130, 28], [175, 40]],
+                softness=high_softness,
+                flow=low_flow,
+            ),
+            # Medium softness, high flow — purple
+            Stroke(
+                type="wet-brush",
+                color_hex="#7700AA",
+                thickness=10,
+                opacity=0.75,
+                points=[[60, 88], [120, 82], [175, 90]],
+                softness=mid_softness,
+                flow=high_flow,
             ),
         ]
 

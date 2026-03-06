@@ -82,10 +82,10 @@ def sample_plan() -> PaintingPlan:
 class TestLayerContextInPrompt:
     """Tests for layer context inclusion in evaluation prompt."""
 
-    def test_prompt_includes_layer_evaluation_criteria(
+    def test_prompt_does_not_include_layer_number_or_name(
         self, eval_client: EvaluationVLMClient, sample_plan: PaintingPlan
     ) -> None:
-        """Test that prompt includes layer evaluation criteria when current_layer is provided."""
+        """Layer number and name are no longer injected into the evaluation prompt."""
         current_layer = sample_plan["layers"][1]
 
         prompt = eval_client._build_evaluation_prompt(
@@ -96,13 +96,13 @@ class TestLayerContextInPrompt:
             current_layer=current_layer,
         )
 
-        assert f"Layer {current_layer['layer_number']}" in prompt
-        assert current_layer["name"] in prompt
+        assert f"Layer {current_layer['layer_number']}" not in prompt
+        assert current_layer["name"] not in prompt
 
-    def test_prompt_includes_total_layers_count(
+    def test_prompt_does_not_include_total_layers_count(
         self, eval_client: EvaluationVLMClient, sample_plan: PaintingPlan
     ) -> None:
-        """Test that prompt includes total layer count."""
+        """Total layer count is no longer injected into the evaluation prompt."""
         current_layer = sample_plan["layers"][1]
 
         prompt = eval_client._build_evaluation_prompt(
@@ -113,12 +113,12 @@ class TestLayerContextInPrompt:
             current_layer=current_layer,
         )
 
-        assert f"{sample_plan['total_layers']} layers" in prompt
+        assert f"{sample_plan['total_layers']} layers" not in prompt
 
-    def test_prompt_includes_layer_description(
+    def test_prompt_does_not_include_layer_description(
         self, eval_client: EvaluationVLMClient, sample_plan: PaintingPlan
     ) -> None:
-        """Test that prompt includes layer description."""
+        """Layer description is no longer injected into the evaluation prompt."""
         current_layer = sample_plan["layers"][1]
 
         prompt = eval_client._build_evaluation_prompt(
@@ -129,12 +129,12 @@ class TestLayerContextInPrompt:
             current_layer=current_layer,
         )
 
-        assert current_layer["description"] in prompt
+        assert current_layer["description"] not in prompt
 
-    def test_prompt_includes_expected_palette(
+    def test_prompt_does_not_include_expected_palette(
         self, eval_client: EvaluationVLMClient, sample_plan: PaintingPlan
     ) -> None:
-        """Test that prompt includes expected palette."""
+        """Expected palette is no longer injected into the evaluation prompt."""
         current_layer = sample_plan["layers"][1]
 
         prompt = eval_client._build_evaluation_prompt(
@@ -145,14 +145,14 @@ class TestLayerContextInPrompt:
             current_layer=current_layer,
         )
 
-        assert "Expected palette:" in prompt
+        assert "Expected palette:" not in prompt
         for color in current_layer["colour_palette"]:
-            assert color in prompt
+            assert color not in prompt
 
-    def test_prompt_includes_expected_techniques(
+    def test_prompt_does_not_include_expected_techniques(
         self, eval_client: EvaluationVLMClient, sample_plan: PaintingPlan
     ) -> None:
-        """Test that prompt includes expected techniques."""
+        """Expected techniques are no longer injected into the evaluation prompt."""
         current_layer = sample_plan["layers"][1]
 
         prompt = eval_client._build_evaluation_prompt(
@@ -163,8 +163,8 @@ class TestLayerContextInPrompt:
             current_layer=current_layer,
         )
 
-        assert "Expected techniques:" in prompt
-        assert current_layer["techniques"] in prompt
+        assert "Expected techniques:" not in prompt
+        assert current_layer["techniques"] not in prompt
 
     def test_prompt_does_not_request_layer_complete_field(
         self, eval_client: EvaluationVLMClient, sample_plan: PaintingPlan
