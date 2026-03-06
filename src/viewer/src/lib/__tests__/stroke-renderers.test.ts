@@ -9,6 +9,10 @@ import type { EnrichedStroke } from '@/lib/types';
 const createMockContext = () => {
   const calls: Array<{ method: string; args: unknown[] }> = [];
 
+  const mockGradient = {
+    addColorStop: jest.fn(),
+  };
+
   const ctx = {
     canvas: { width: 800, height: 600 },
     save: jest.fn(() => calls.push({ method: 'save', args: [] })),
@@ -20,6 +24,7 @@ const createMockContext = () => {
     fill: jest.fn(() => calls.push({ method: 'fill', args: [] })),
     arc: jest.fn((...args) => calls.push({ method: 'arc', args })),
     ellipse: jest.fn((...args) => calls.push({ method: 'ellipse', args })),
+    createRadialGradient: jest.fn(() => mockGradient),
     strokeStyle: '',
     fillStyle: '',
     lineWidth: 1,
@@ -416,5 +421,73 @@ describe('renderStroke', () => {
 
     expect(() => renderStroke(ctx, stroke, 14, true)).not.toThrow();
     expect(ctx.beginPath).toHaveBeenCalled();
+  });
+
+  it('should render burn stroke without throwing', () => {
+    const ctx = createMockContext();
+    const stroke: EnrichedStroke = {
+      index: 15,
+      iteration: 0,
+      batch_position: 0,
+      batch_reasoning: 'test',
+      type: 'burn',
+      color_hex: '#000000',
+      thickness: 1,
+      opacity: 1.0,
+      center_x: 200,
+      center_y: 150,
+      radius: 60,
+      intensity: 0.5,
+    };
+
+    expect(() => renderStroke(ctx, stroke, 15, false)).not.toThrow();
+
+    // fill should be called (gradient circle)
+    expect(ctx.fill).toHaveBeenCalled();
+    expect(ctx.save).toHaveBeenCalled();
+    expect(ctx.restore).toHaveBeenCalled();
+  });
+
+  it('should set multiply compositing for burn stroke visual rendering', () => {
+    const ctx = createMockContext();
+    const stroke: EnrichedStroke = {
+      index: 16,
+      iteration: 0,
+      batch_position: 0,
+      batch_reasoning: 'test',
+      type: 'burn',
+      color_hex: '#000000',
+      thickness: 1,
+      opacity: 1.0,
+      center_x: 100,
+      center_y: 100,
+      radius: 40,
+      intensity: 0.6,
+    };
+
+    renderStroke(ctx, stroke, 16, false);
+
+    expect(ctx.globalCompositeOperation).toBe('multiply');
+  });
+
+  it('should render burn stroke in hit mode without throwing', () => {
+    const ctx = createMockContext();
+    const stroke: EnrichedStroke = {
+      index: 17,
+      iteration: 0,
+      batch_position: 0,
+      batch_reasoning: 'test',
+      type: 'burn',
+      color_hex: '#000000',
+      thickness: 1,
+      opacity: 1.0,
+      center_x: 150,
+      center_y: 120,
+      radius: 50,
+      intensity: 0.4,
+    };
+
+    expect(() => renderStroke(ctx, stroke, 17, true)).not.toThrow();
+    expect(ctx.fill).toHaveBeenCalled();
   });
 });

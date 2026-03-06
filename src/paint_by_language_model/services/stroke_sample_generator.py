@@ -4,8 +4,12 @@ import logging
 from pathlib import Path
 
 from config import (
+    MAX_BURN_DODGE_INTENSITY,
+    MAX_BURN_DODGE_RADIUS,
     MAX_FLOW,
     MAX_SOFTNESS,
+    MIN_BURN_DODGE_INTENSITY,
+    MIN_BURN_DODGE_RADIUS,
     MIN_FLOW,
     MIN_SOFTNESS,
     STROKE_SAMPLE_BACKGROUND,
@@ -29,6 +33,7 @@ SUPPORTED_STROKE_TYPES: list[str] = [
     "dry-brush",
     "chalk",
     "wet-brush",
+    "burn",
 ]
 
 
@@ -154,6 +159,7 @@ class StrokeSampleGenerator:
             "dry-brush": self._generate_dry_brush_samples,
             "chalk": self._generate_chalk_samples,
             "wet-brush": self._generate_wet_brush_samples,
+            "burn": self._generate_burn_samples,
         }
         return generators[stroke_type]()
 
@@ -699,5 +705,84 @@ class StrokeSampleGenerator:
                 points=[[70, 85], [130, 88], [180, 85]],
                 chalk_width=15,
                 grain_density=5,
+            ),
+        ]
+
+    def _generate_burn_samples(self) -> list[Stroke]:
+        """Generate 5 varied burn strokes for the sample canvas.
+
+        Variations cover different ``radius`` values (``MIN_BURN_DODGE_RADIUS``–
+        ``MAX_BURN_DODGE_RADIUS``) and ``intensity`` values
+        (``MIN_BURN_DODGE_INTENSITY``–``MAX_BURN_DODGE_INTENSITY``) spread
+        across the 200×100 canvas.  ``color_hex`` and ``thickness`` are
+        structurally required by the ``Stroke`` TypedDict but are ignored
+        during burn rendering.
+
+        Returns:
+            list[Stroke]: List of 5 burn ``Stroke`` dicts.
+        """
+        low_radius = max(MIN_BURN_DODGE_RADIUS, 10)
+        mid_radius = (MIN_BURN_DODGE_RADIUS + MAX_BURN_DODGE_RADIUS) // 2  # ~152
+        high_radius = min(MAX_BURN_DODGE_RADIUS, 60)
+
+        low_intensity = max(MIN_BURN_DODGE_INTENSITY, 0.1)
+        mid_intensity = (MIN_BURN_DODGE_INTENSITY + MAX_BURN_DODGE_INTENSITY) / 2  # ~0.425
+        high_intensity = min(MAX_BURN_DODGE_INTENSITY, 0.75)
+
+        return [
+            # Small radius, high intensity — top-left corner shadow
+            Stroke(
+                type="burn",
+                color_hex="#000000",
+                thickness=1,
+                opacity=1.0,
+                center_x=30,
+                center_y=25,
+                radius=high_radius,
+                intensity=high_intensity,
+            ),
+            # Medium radius, medium intensity — centre
+            Stroke(
+                type="burn",
+                color_hex="#333333",
+                thickness=1,
+                opacity=1.0,
+                center_x=100,
+                center_y=50,
+                radius=mid_radius,
+                intensity=mid_intensity,
+            ),
+            # Small radius, low intensity — top-right
+            Stroke(
+                type="burn",
+                color_hex="#666666",
+                thickness=1,
+                opacity=1.0,
+                center_x=170,
+                center_y=20,
+                radius=low_radius,
+                intensity=low_intensity,
+            ),
+            # Large radius, high intensity — vignette-style bottom
+            Stroke(
+                type="burn",
+                color_hex="#000000",
+                thickness=1,
+                opacity=1.0,
+                center_x=100,
+                center_y=90,
+                radius=min(MAX_BURN_DODGE_RADIUS, 80),
+                intensity=high_intensity,
+            ),
+            # Medium radius, high intensity — bottom-right
+            Stroke(
+                type="burn",
+                color_hex="#222222",
+                thickness=1,
+                opacity=1.0,
+                center_x=165,
+                center_y=75,
+                radius=high_radius,
+                intensity=high_intensity,
             ),
         ]

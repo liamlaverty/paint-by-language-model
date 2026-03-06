@@ -2,6 +2,7 @@
 
 from .arc_renderer import ArcRenderer
 from .base_renderer import StrokeRenderer, StrokeRendererFactory
+from .burn_renderer import BurnRenderer
 from .chalk_renderer import ChalkRenderer
 from .circle_renderer import CircleRenderer
 from .dry_brush_renderer import DryBrushRenderer
@@ -28,6 +29,7 @@ StrokeRendererFactory.register_renderer("splatter", SplatterRenderer)
 StrokeRendererFactory.register_renderer("dry-brush", DryBrushRenderer)
 StrokeRendererFactory.register_renderer("chalk", ChalkRenderer)
 StrokeRendererFactory.register_renderer("wet-brush", WetBrushRenderer)
+StrokeRendererFactory.register_renderer("burn", BurnRenderer)
 
 __all__ = [
     "StrokeRenderer",
@@ -40,6 +42,7 @@ __all__ = [
     "DryBrushRenderer",
     "ChalkRenderer",
     "WetBrushRenderer",
+    "BurnRenderer",
     "hex_to_rgb",
     "hex_to_rgba",
     "stroke_color_to_rgba",

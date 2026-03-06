@@ -429,6 +429,25 @@ export default function SidePanel({
               </div>
             </>
           )}
+
+          {stroke.type === 'burn' && (
+            <>
+              <div className="meta-row">
+                <span className="meta-label">Center</span>
+                <span className="meta-value">
+                  ({stroke.center_x}, {stroke.center_y})
+                </span>
+              </div>
+              <div className="meta-row">
+                <span className="meta-label">Radius</span>
+                <span className="meta-value">{stroke.radius}px</span>
+              </div>
+              <div className="meta-row">
+                <span className="meta-label">Intensity</span>
+                <span className="meta-value">{stroke.intensity}</span>
+              </div>
+            </>
+          )}
         </>
       )}
 
