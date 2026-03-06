@@ -155,13 +155,65 @@ a newline",
 
 
 def test_clean_json_invalid_json_raises_error() -> None:
-    """Test that truly invalid JSON raises an error."""
+    """Test that truly invalid JSON (bad value syntax) raises an error."""
+    response = """{"key": }"""
+    with pytest.raises(json.JSONDecodeError):
+        clean_and_parse_json(response)
+
+
+def test_clean_json_missing_comma_between_properties() -> None:
+    """Test that missing commas between JSON properties are auto-corrected."""
     response = """{
   "test": "value"
   "missing": "comma"
 }"""
-    with pytest.raises(json.JSONDecodeError):
-        clean_and_parse_json(response)
+    result = clean_and_parse_json(response)
+    assert result == {"test": "value", "missing": "comma"}
+
+
+def test_clean_json_missing_comma_after_number() -> None:
+    """Test that missing commas after numeric values are auto-corrected."""
+    response = """{
+  "score": 42
+  "name": "Vincent"
+}"""
+    result = clean_and_parse_json(response)
+    assert result == {"score": 42, "name": "Vincent"}
+
+
+def test_clean_json_missing_comma_after_nested_object() -> None:
+    """Test missing comma after a nested object is auto-corrected."""
+    response = """{
+  "outer": {"inner": 1}
+  "sibling": "value"
+}"""
+    result = clean_and_parse_json(response)
+    assert result["outer"] == {"inner": 1}
+    assert result["sibling"] == "value"
+
+
+def test_clean_json_missing_comma_real_world_lmstudio() -> None:
+    """Reproduce the exact LMStudio error pattern (line 7, col 11, char 108).
+
+    A local model omitting commas between properties in a stroke JSON block.
+    """
+    response = """{\n  \"strokes\": [\n    {\n      \"type\": \"line\"\n      \"start_x\": 100\n      \"start_y\": 200\n      \"end_x\": 300\n      \"end_y\": 400\n      \"color_hex\": \"#FF5733\"\n      \"thickness\": 5\n      \"opacity\": 0.8\n    }\n  ]\n  \"batch_reasoning\": \"Test\"\n}"""
+    result = clean_and_parse_json(response)
+    assert len(result["strokes"]) == 1
+    stroke = result["strokes"][0]
+    assert stroke["type"] == "line"
+    assert stroke["start_x"] == 100
+    assert result["batch_reasoning"] == "Test"
+
+
+def test_clean_json_does_not_double_add_commas() -> None:
+    """Test that existing commas are not duplicated by the repair step."""
+    response = """{
+  "test": "value",
+  "other": "data"
+}"""
+    result = clean_and_parse_json(response)
+    assert result == {"test": "value", "other": "data"}
 
 
 def test_clean_json_empty_string() -> None:

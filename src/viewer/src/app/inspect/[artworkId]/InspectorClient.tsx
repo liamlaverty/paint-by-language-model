@@ -410,6 +410,7 @@ export default function InspectorClient({ artworkId }: InspectorClientProps): Re
             <SidePanel
               stroke={displayedStroke}
               metadata={viewerData.metadata}
+              evaluations={viewerData.evaluations ?? []}
               isLocked={lockedIndex >= 0}
               onClearSelection={clearSelection}
             />

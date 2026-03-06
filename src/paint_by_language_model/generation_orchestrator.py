@@ -30,6 +30,7 @@ from config import (
 from models import EvaluationResult, PaintingPlan, PlanLayer, Stroke
 from services import CanvasManager, EvaluationVLMClient, PlannerLLMClient, StrokeVLMClient
 from services.gif_generator import GifGenerator
+from services.prompt_logger import PromptLogger
 from strategy_manager import StrategyManager
 from utils.json_utils import minify_json_file
 
@@ -73,9 +74,10 @@ class GenerationOrchestrator:
         # Initialize components
         logger.info(f"Initializing generation for '{subject}' in style of {artist_name}")
 
+        self.prompt_logger = PromptLogger(artwork_dir=self.artwork_dir)
         self.canvas_manager = CanvasManager()
-        self.stroke_vlm = StrokeVLMClient()
-        self.eval_vlm = EvaluationVLMClient()
+        self.stroke_vlm = StrokeVLMClient(prompt_logger=self.prompt_logger)
+        self.eval_vlm = EvaluationVLMClient(prompt_logger=self.prompt_logger)
         self.strategy_manager = StrategyManager(artwork_id=artwork_id, output_dir=output_dir)
 
         # Log provider information
@@ -218,7 +220,12 @@ class GenerationOrchestrator:
             except (ValueError, RuntimeError) as e:
                 # Stroke VLM failed - log and skip this iteration
                 logger.error(f"Stroke generation failed in iteration {iteration}: {e}")
-                self._log_exception(iteration, e, "stroke_generation")
+                self._log_exception(
+                    iteration,
+                    e,
+                    "stroke_generation",
+                    raw_response=self.stroke_vlm.last_raw_response,
+                )
                 logger.warning("Skipping this iteration and continuing...")
                 return False  # Continue to next iteration
 
@@ -278,7 +285,12 @@ class GenerationOrchestrator:
 
             # Step 4b: Save batch metadata
             self._save_stroke_batch(
-                strokes_batch, iteration, batch_reasoning, results, current_layer
+                strokes_batch,
+                iteration,
+                batch_reasoning,
+                results,
+                current_layer,
+                layer_complete=stroke_response.get("layer_complete"),
             )
 
             # Update current stroke file with last successful stroke
@@ -311,6 +323,20 @@ class GenerationOrchestrator:
                 self.strategy_manager.save_strategy(iteration=iteration, strategy=strategy_text)
                 self.strategy_manager.save_current_strategy_link()
                 logger.info("Updated strategy")
+
+            # Check for layer advancement (from stroke VLM)
+            if (
+                stroke_response.get("layer_complete", False)
+                and self.painting_plan is not None
+                and self.current_layer_index < len(self.painting_plan["layers"]) - 1
+            ):
+                self.current_layer_index += 1
+                next_layer = self.painting_plan["layers"][self.current_layer_index]
+                logger.info(
+                    f"Advancing to Layer {next_layer['layer_number']}: {next_layer['name']}"
+                )
+                # Update current_layer so evaluation uses the new layer
+                current_layer = next_layer
 
             # Step 7: Get updated canvas bytes for evaluation
             canvas_bytes = self.canvas_manager.get_image_bytes()
@@ -346,25 +372,18 @@ class GenerationOrchestrator:
                     layer_num = current_layer["layer_number"]
                     self.layer_iterations[layer_num] = self.layer_iterations.get(layer_num, 0) + 1
 
-                # Check for layer advancement
-                if (
-                    evaluation.get("layer_complete", False)
-                    and self.painting_plan is not None
-                    and self.current_layer_index < len(self.painting_plan["layers"]) - 1
-                ):
-                    self.current_layer_index += 1
-                    next_layer = self.painting_plan["layers"][self.current_layer_index]
-                    logger.info(
-                        f"Advancing to Layer {next_layer['layer_number']}: {next_layer['name']}"
-                    )
-
                 # Step 10: Check stopping conditions
                 should_stop = self._check_stopping_conditions(iteration, evaluation)
 
             except (ValueError, RuntimeError) as e:
                 # VLM evaluation failed - log and continue
                 logger.error(f"Evaluation failed in iteration {iteration}: {e}")
-                self._log_exception(iteration, e, "evaluation")
+                self._log_exception(
+                    iteration,
+                    e,
+                    "evaluation",
+                    raw_response=self.eval_vlm.last_raw_response,
+                )
                 logger.warning("Skipping evaluation for this iteration and continuing...")
                 should_stop = False  # Continue despite evaluation failure
 
@@ -432,7 +451,7 @@ class GenerationOrchestrator:
 
         # Generate new plan
         logger.info("Generating new painting plan...")
-        planner = PlannerLLMClient()
+        planner = PlannerLLMClient(prompt_logger=self.prompt_logger)
         plan = planner.generate_plan(
             self.artist_name, self.subject, self.expanded_subject, SUPPORTED_STROKE_TYPES
         )
@@ -466,7 +485,7 @@ class GenerationOrchestrator:
                 "report",
                 "final_artwork",
                 "painting_plan",
-            ]:  # These are files
+            ]:  # These are files, not directories
                 dir_path = self.artwork_dir / dirname
                 dir_path.mkdir(parents=True, exist_ok=True)
 
@@ -609,7 +628,13 @@ class GenerationOrchestrator:
 
         logger.info(f"Will resume from iteration {self.starting_iteration}")
 
-    def _log_exception(self, iteration: int, exception: Exception, error_type: str) -> None:
+    def _log_exception(
+        self,
+        iteration: int,
+        exception: Exception,
+        error_type: str,
+        raw_response: str | None = None,
+    ) -> None:
         """
         Log exception details to file for debugging.
 
@@ -617,6 +642,7 @@ class GenerationOrchestrator:
             iteration (int): Iteration number where error occurred
             exception (Exception): The exception that was raised
             error_type (str): Type of error (e.g., "evaluation", "stroke")
+            raw_response (str | None): Raw VLM response text, if available
         """
         # Create exception log directory
         exception_log_dir = self.output_dir / "exception_logs" / self.artwork_id
@@ -640,6 +666,12 @@ class GenerationOrchestrator:
             f.write("-" * 80 + "\n")
             f.write(traceback.format_exc())
             f.write("-" * 80 + "\n")
+
+            if raw_response is not None:
+                f.write("\nRaw VLM Response:\n")
+                f.write("-" * 80 + "\n")
+                f.write(raw_response)
+                f.write("\n" + "-" * 80 + "\n")
 
         logger.info(f"Exception logged to: {log_filepath}")
 
@@ -683,6 +715,7 @@ class GenerationOrchestrator:
         batch_reasoning: str,
         results: list[dict[str, Any]],
         current_layer: PlanLayer | None = None,
+        layer_complete: bool | None = None,
     ) -> None:
         """
         Save batch of strokes with metadata to JSON file.
@@ -693,6 +726,7 @@ class GenerationOrchestrator:
             batch_reasoning (str): VLM reasoning for this batch
             results (list[dict[str, Any]]): Application results for each stroke
             current_layer (PlanLayer | None): Current painting layer information
+            layer_complete (bool | None): Whether the stroke VLM signalled layer completion
         """
         strokes_dir = self.artwork_dir / OUTPUT_STRUCTURE["strokes"]
         filename = f"iteration-{iteration:03d}_batch.json"
@@ -711,6 +745,7 @@ class GenerationOrchestrator:
             "timestamp": datetime.now().isoformat(),
             "layer_number": current_layer["layer_number"] if current_layer else None,
             "layer_name": current_layer["name"] if current_layer else None,
+            "layer_complete": layer_complete,
             "results": [
                 {
                     "stroke_index": i,
@@ -864,6 +899,16 @@ class GenerationOrchestrator:
             },
             "painting_plan": self.painting_plan,
             "strokes": enriched_strokes,
+            "evaluations": [
+                {
+                    "iteration": e["iteration"],
+                    "score": e["score"],
+                    "feedback": e["feedback"],
+                    "strengths": e["strengths"],
+                    "suggestions": e["suggestions"],
+                }
+                for e in self.evaluations
+            ],
         }
 
         # Write to artwork's own viewer/ directory (backward compat)

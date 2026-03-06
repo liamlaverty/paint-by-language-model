@@ -196,13 +196,13 @@ MIN_STROKES_PER_QUERY = 1  # Minimum strokes (1 for backward compatibility)
 # ----------------------------------------------------------------------------
 
 # Maximum iterations before stopping (safety limit)
-MAX_ITERATIONS = 10000
+MAX_ITERATIONS = 150
 
 # Minimum iterations before considering early stopping
-MIN_ITERATIONS = 20
+MIN_ITERATIONS = 10
 
 # Target style score to stop generation (0-100 scale)
-TARGET_STYLE_SCORE = 75.0
+TARGET_STYLE_SCORE = 70.0
 
 # Minimum expected score improvement per iteration
 MIN_STYLE_SCORE_IMPROVEMENT = 2.0
@@ -237,6 +237,7 @@ OUTPUT_STRUCTURE = {
     "report": "generation_report.md",  # Human-readable report
     "viewer": "viewer",  # HTML Canvas viewer
     "painting_plan": "painting_plan.json",  # Painting plan from planner VLM
+    "prompt_log": "prompt-log",  # Full LLM prompt/response pairs
 }
 
 # Supported image export formats

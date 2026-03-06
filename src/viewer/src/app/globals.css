@@ -397,6 +397,58 @@ body {
   padding-bottom: var(--space-xs);
 }
 
+/* ── Panel Tabs ───────────────────────────────────────────────────────── */
+.panel-tabs {
+  display: flex;
+  border-bottom: 1px solid var(--color-border);
+  margin-bottom: var(--space-s);
+}
+
+.panel-tab {
+  flex: 1;
+  padding: var(--space-xs) var(--space-s);
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--color-text);
+  opacity: 0.6;
+  font-size: var(--size-step-00);
+  font-weight: var(--font-medium);
+  cursor: pointer;
+  transition:
+    opacity var(--transition-base),
+    border-color var(--transition-base);
+  text-align: center;
+}
+
+.panel-tab:hover {
+  opacity: 0.9;
+}
+
+.panel-tab.active {
+  opacity: 1;
+  border-bottom-color: var(--color-highlight);
+  color: var(--color-highlight);
+}
+
+/* ── Run Info ─────────────────────────────────────────────────────────── */
+.run-info .meta-value {
+  white-space: normal;
+  word-break: break-word;
+}
+
+.meta-row-stacked {
+  display: flex;
+  flex-direction: column;
+  padding: 3px 0;
+}
+
+.meta-label-bold {
+  color: var(--color-text);
+  font-weight: var(--font-bold);
+  margin-bottom: 2px;
+}
+
 /* ── Stroke Metadata ──────────────────────────────────────────────────── */
 .meta-row {
   display: flex;
@@ -510,6 +562,50 @@ body {
   padding: 40px var(--space-s);
   font-size: var(--size-step-00);
   line-height: var(--leading-standard);
+}
+
+/* ── Report Tab ─────────────────────────────────────────── */
+.report-content {
+  overflow-y: auto;
+}
+
+.report-markdown {
+  font-size: var(--size-step-000);
+  line-height: 1.5;
+}
+
+.report-markdown h1 {
+  font-size: var(--size-step-1);
+  margin: var(--space-s) 0 var(--space-2xs);
+}
+.report-markdown h2 {
+  font-size: var(--size-step-0);
+  margin: var(--space-s) 0 var(--space-2xs);
+}
+.report-markdown h3 {
+  font-size: var(--size-step-00);
+  margin: var(--space-xs) 0 var(--space-2xs);
+}
+.report-markdown h4 {
+  font-size: var(--size-step-000);
+  margin: var(--space-xs) 0 var(--space-2xs);
+}
+.report-markdown ul {
+  padding-left: var(--space-m);
+}
+.report-markdown li {
+  margin-bottom: var(--space-2xs);
+}
+.report-markdown strong {
+  color: var(--color-highlight);
+}
+
+.loading-hint,
+.empty-hint {
+  opacity: 0.6;
+  font-size: var(--size-step-00);
+  text-align: center;
+  padding: var(--space-m);
 }
 
 /* ── Selection Controls ───────────────────────────────────────────────── */

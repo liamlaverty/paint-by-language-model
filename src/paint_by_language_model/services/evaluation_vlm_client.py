@@ -1,5 +1,7 @@
 """Evaluation VLM Client for assessing artistic style similarity."""
 
+from __future__ import annotations
+
 import json
 import logging
 from datetime import datetime
@@ -10,6 +12,7 @@ if TYPE_CHECKING:
 
 from config import API_BASE_URL, API_KEY, EVALUATION_PROMPT_TEMPERATURE, VLM_MODEL, VLM_TIMEOUT
 from models.evaluation_result import EvaluationResult
+from services.prompt_logger import PromptLogger
 from utils.json_utils import clean_and_parse_json
 from vlm_client import VLMClient
 
@@ -26,6 +29,7 @@ class EvaluationVLMClient:
         timeout: int = VLM_TIMEOUT,
         api_key: str = API_KEY,
         temperature: float = EVALUATION_PROMPT_TEMPERATURE,
+        prompt_logger: PromptLogger | None = None,
     ):
         """
         Initialize Evaluation VLM Client.
@@ -36,6 +40,8 @@ class EvaluationVLMClient:
             timeout (int): Request timeout in seconds
             api_key (str): API key for authentication
             temperature (float): Sampling temperature for evaluation (lower = more consistent)
+            prompt_logger (PromptLogger | None): Optional logger for persisting
+                full prompt/response pairs to disk
         """
         self.client = VLMClient(
             base_url=base_url,
@@ -46,6 +52,7 @@ class EvaluationVLMClient:
         )
         self.model = model
         self.timeout = timeout
+        self.prompt_logger = prompt_logger
 
         # Storage for interaction history (for debugging and tracing)
         self.interaction_history: list[dict[str, Any]] = []
@@ -60,8 +67,8 @@ class EvaluationVLMClient:
         artist_name: str,
         subject: str,
         iteration: int,
-        painting_plan: "PaintingPlan | None" = None,
-        current_layer: "PlanLayer | None" = None,
+        painting_plan: PaintingPlan | None = None,
+        current_layer: PlanLayer | None = None,
     ) -> EvaluationResult:
         """
         Evaluate canvas style similarity to target artist.
@@ -97,6 +104,9 @@ class EvaluationVLMClient:
         try:
             response_text = self.client.query_multimodal(prompt=prompt, image_bytes=canvas_image)
 
+            # Store raw response immediately so it is available even if parsing fails
+            self.last_raw_response = response_text
+
             # Parse response
             evaluation = self._parse_evaluation_response(
                 response_text=response_text,
@@ -104,8 +114,7 @@ class EvaluationVLMClient:
                 current_layer=current_layer,
             )
 
-            # Store raw and parsed responses
-            self.last_raw_response = response_text
+            # Store parsed response
             self.last_parsed_response = evaluation
 
             # Store in interaction history
@@ -117,6 +126,24 @@ class EvaluationVLMClient:
                 raw_response=response_text,
                 parsed_response=evaluation,
             )
+
+            if self.prompt_logger:
+                self.prompt_logger.log_interaction(
+                    prompt_type="evaluation",
+                    prompt=prompt,
+                    raw_response=response_text,
+                    model=self.model,
+                    provider=self.client.provider,
+                    temperature=self.client.temperature,
+                    images=[{"label": "Current canvas", "size_bytes": len(canvas_image)}],
+                    context={
+                        "iteration": iteration,
+                        "artist_name": artist_name,
+                        "subject": subject,
+                        "score": evaluation["score"],
+                        "layer_number": evaluation.get("layer_number"),
+                    },
+                )
 
             logger.info(f"Evaluation score: {evaluation['score']:.1f}/100")
             return evaluation
@@ -137,8 +164,8 @@ class EvaluationVLMClient:
         artist_name: str,
         subject: str,
         iteration: int,
-        painting_plan: "PaintingPlan | None" = None,
-        current_layer: "PlanLayer | None" = None,
+        painting_plan: PaintingPlan | None = None,
+        current_layer: PlanLayer | None = None,
     ) -> str:
         """
         Build prompt for style evaluation.
@@ -155,7 +182,6 @@ class EvaluationVLMClient:
         """
         # Build layer context section if available
         layer_section = ""
-        response_format_addition = ""
         if painting_plan and current_layer:
             layer_number = current_layer["layer_number"]
             layer_name = current_layer["name"]
@@ -166,12 +192,11 @@ class EvaluationVLMClient:
 You are also evaluating progress on Layer {layer_number}: "{layer_name}".
 The overall plan has {total_layers} layers.
 
-Consider whether this layer's objectives have been adequately achieved:
+Layer objectives:
 - {current_layer["description"]}
 - Expected palette: {", ".join(current_layer["colour_palette"])}
 - Expected techniques: {current_layer["techniques"]}
 """
-            response_format_addition = ',\n  "layer_complete": <boolean - true if this layer\'s objectives are sufficiently met>'
 
         prompt = f"""You are an art critic evaluating artwork for stylistic similarity to {artist_name}.
 
@@ -196,7 +221,7 @@ Respond in JSON format:
   "score": <float 0-100>,
   "feedback": "<detailed qualitative assessment>",
   "strengths": "<what's working well stylistically>",
-  "suggestions": "<areas that could be improved>"{response_format_addition}
+  "suggestions": "<areas that could be improved>"
 }}
 
 IMPORTANT: Respond ONLY with valid JSON. Do not include any text before or after the JSON object."""
@@ -207,7 +232,7 @@ IMPORTANT: Respond ONLY with valid JSON. Do not include any text before or after
         self,
         response_text: str,
         iteration: int,
-        current_layer: "PlanLayer | None" = None,
+        current_layer: PlanLayer | None = None,
     ) -> EvaluationResult:
         """
         Parse VLM evaluation response into EvaluationResult.
@@ -255,7 +280,6 @@ IMPORTANT: Respond ONLY with valid JSON. Do not include any text before or after
 
         # Add layer-specific fields if layer context was provided
         if current_layer:
-            result["layer_complete"] = data.get("layer_complete", False)
             result["layer_number"] = current_layer["layer_number"]
 
         return result

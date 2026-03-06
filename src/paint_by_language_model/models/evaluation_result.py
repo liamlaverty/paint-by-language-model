@@ -25,9 +25,7 @@ class EvaluationResult(_EvaluationResultRequired, total=False):
         suggestions (str): Areas for improvement
         timestamp (str): ISO format timestamp of evaluation
         iteration (int): Iteration number when evaluated
-        layer_complete (bool): Whether the current layer is complete
         layer_number (int): The layer number being evaluated
     """
 
-    layer_complete: bool
     layer_number: int
