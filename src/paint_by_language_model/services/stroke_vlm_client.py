@@ -494,7 +494,7 @@ IMPORTANT: Respond ONLY with valid JSON. Do not include any markdown formatting,
                 parsed_stroke = self._parse_single_stroke(stroke)
                 parsed_strokes.append(parsed_stroke)
             except (ValueError, KeyError, TypeError) as e:
-                logger.warning(f"Skipping stroke {idx}: parsing error - {e}")
+                logger.error(f"Skipping stroke {idx}: parsing error - {e}")
                 continue
 
         # If no strokes were successfully parsed, log warning
@@ -580,6 +580,25 @@ IMPORTANT: Respond ONLY with valid JSON. Do not include any markdown formatting,
                     "splatter_count": int(stroke["splatter_count"]),
                     "dot_size_min": int(stroke["dot_size_min"]),
                     "dot_size_max": int(stroke["dot_size_max"]),
+                }
+            )
+
+        elif stroke_type == "dry-brush":
+            parsed.update(
+                {
+                    "points": stroke["points"],  # Expected as list of [x, y] pairs
+                    "brush_width": int(stroke["brush_width"]),
+                    "bristle_count": int(stroke["bristle_count"]),
+                    "gap_probability": float(stroke["gap_probability"]),
+                }
+            )
+
+        elif stroke_type == "chalk":
+            parsed.update(
+                {
+                    "points": stroke["points"],  # Expected as list of [x, y] pairs
+                    "chalk_width": int(stroke["chalk_width"]),
+                    "grain_density": int(stroke["grain_density"]),
                 }
             )
 
