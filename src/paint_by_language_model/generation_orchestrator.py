@@ -899,6 +899,16 @@ class GenerationOrchestrator:
             },
             "painting_plan": self.painting_plan,
             "strokes": enriched_strokes,
+            "evaluations": [
+                {
+                    "iteration": e["iteration"],
+                    "score": e["score"],
+                    "feedback": e["feedback"],
+                    "strengths": e["strengths"],
+                    "suggestions": e["suggestions"],
+                }
+                for e in self.evaluations
+            ],
         }
 
         # Write to artwork's own viewer/ directory (backward compat)

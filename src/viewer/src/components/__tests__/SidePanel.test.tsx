@@ -7,7 +7,14 @@ import React from 'react';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import SidePanel from '@/components/SidePanel';
-import { EnrichedStroke, ArtworkMetadata } from '@/lib/types';
+import { EnrichedStroke, ArtworkMetadata, EvaluationDetail } from '@/lib/types';
+
+// Mock marked to avoid ESM import issues in Jest
+jest.mock('marked', () => ({
+  marked: {
+    parse: (md: string) => md,
+  },
+}));
 
 describe('SidePanel', () => {
   const mockMetadata: ArtworkMetadata = {
@@ -38,12 +45,18 @@ describe('SidePanel', () => {
     ...overrides,
   });
 
+  const originalFetch = global.fetch;
+
   beforeEach(() => {
     jest.clearAllMocks();
   });
 
-  describe('Empty state (no stroke selected)', () => {
-    it('should render artwork header when no stroke is selected', () => {
+  afterEach(() => {
+    global.fetch = originalFetch;
+  });
+
+  describe('Tab bar', () => {
+    it('should always render Run Info, Stroke Info, and Report tab buttons', () => {
       render(
         <SidePanel
           stroke={null}
@@ -53,11 +66,112 @@ describe('SidePanel', () => {
         />
       );
 
-      expect(screen.getByText(/Test Artist.*test-001/)).toBeInTheDocument();
+      expect(screen.getByText('Run Info')).toBeInTheDocument();
+      expect(screen.getByText('Stroke Info')).toBeInTheDocument();
+      expect(screen.getByText('Report')).toBeInTheDocument();
+    });
+
+    it('should default to Run Info tab when no stroke is selected', () => {
+      render(
+        <SidePanel
+          stroke={null}
+          metadata={mockMetadata}
+          isLocked={false}
+          onClearSelection={jest.fn()}
+        />
+      );
+
+      const runTab = screen.getByText('Run Info');
+      expect(runTab).toHaveClass('active');
+    });
+
+    it('should auto-switch to Stroke Info tab when stroke is provided', () => {
+      render(
+        <SidePanel
+          stroke={createLineStroke()}
+          metadata={mockMetadata}
+          isLocked={false}
+          onClearSelection={jest.fn()}
+        />
+      );
+
+      const strokeTab = screen.getByText('Stroke Info');
+      expect(strokeTab).toHaveClass('active');
+    });
+
+    it('should switch to Run Info when clicking Run Info tab', async () => {
+      const user = userEvent.setup();
+      render(
+        <SidePanel
+          stroke={createLineStroke()}
+          metadata={mockMetadata}
+          isLocked={false}
+          onClearSelection={jest.fn()}
+        />
+      );
+
+      await user.click(screen.getByText('Run Info'));
+
+      expect(screen.getByText('Run Info')).toHaveClass('active');
+      expect(screen.getByText('Artist / Style')).toBeInTheDocument();
+    });
+
+    it('should switch to Report tab when clicking Report tab', async () => {
+      const user = userEvent.setup();
+      // Mock fetch for report
+      global.fetch = jest.fn().mockResolvedValueOnce({
+        ok: true,
+        text: () => Promise.resolve('# Test Report'),
+      } as Response);
+
+      render(
+        <SidePanel
+          stroke={null}
+          metadata={mockMetadata}
+          isLocked={false}
+          onClearSelection={jest.fn()}
+        />
+      );
+
+      await user.click(screen.getByText('Report'));
+
+      expect(screen.getByText('Report')).toHaveClass('active');
+    });
+
+    it('should switch to Stroke Info when clicking Stroke Info tab', async () => {
+      const user = userEvent.setup();
+      render(
+        <SidePanel
+          stroke={null}
+          metadata={mockMetadata}
+          isLocked={false}
+          onClearSelection={jest.fn()}
+        />
+      );
+
+      await user.click(screen.getByText('Stroke Info'));
+
+      expect(screen.getByText('Stroke Info')).toHaveClass('active');
+      expect(screen.getByText(/Hover over a stroke to inspect it/i)).toBeInTheDocument();
+    });
+  });
+
+  describe('Run Info tab content', () => {
+    it('should show artist name and subject', () => {
+      render(
+        <SidePanel
+          stroke={null}
+          metadata={mockMetadata}
+          isLocked={false}
+          onClearSelection={jest.fn()}
+        />
+      );
+
+      expect(screen.getByText('Test Artist')).toBeInTheDocument();
       expect(screen.getByText('Test Subject')).toBeInTheDocument();
     });
 
-    it('should render hover hint when no stroke is selected', () => {
+    it('should show canvas size', () => {
       render(
         <SidePanel
           stroke={null}
@@ -66,36 +180,141 @@ describe('SidePanel', () => {
           onClearSelection={jest.fn()}
         />
       );
+
+      expect(screen.getByText('Canvas Size')).toBeInTheDocument();
+      expect(screen.getByText('800 × 600')).toBeInTheDocument();
+    });
+
+    it('should show total iterations and strokes', () => {
+      render(
+        <SidePanel
+          stroke={null}
+          metadata={mockMetadata}
+          isLocked={false}
+          onClearSelection={jest.fn()}
+        />
+      );
+
+      expect(screen.getByText('Total Iterations')).toBeInTheDocument();
+      expect(screen.getByText('10')).toBeInTheDocument();
+      expect(screen.getByText('Total Strokes')).toBeInTheDocument();
+      expect(screen.getByText('100')).toBeInTheDocument();
+    });
+
+    it('should show final score with bar', () => {
+      render(
+        <SidePanel
+          stroke={null}
+          metadata={{ ...mockMetadata, final_score: 75 }}
+          isLocked={false}
+          onClearSelection={jest.fn()}
+        />
+      );
+
+      expect(screen.getByText('Final Score')).toBeInTheDocument();
+      expect(screen.getByText('75/100')).toBeInTheDocument();
+      const scoreBar = document.querySelector('.run-info .score-bar');
+      expect(scoreBar).toHaveStyle({ width: '75%', backgroundColor: '#22c55e' });
+    });
+
+    it('should show 0/100 when final_score is not set', () => {
+      render(
+        <SidePanel
+          stroke={null}
+          metadata={mockMetadata}
+          isLocked={false}
+          onClearSelection={jest.fn()}
+        />
+      );
+
+      expect(screen.getByText('0/100')).toBeInTheDocument();
+    });
+
+    it('should show expanded subject when available', () => {
+      render(
+        <SidePanel
+          stroke={null}
+          metadata={{ ...mockMetadata, expanded_subject: 'A detailed expanded subject' }}
+          isLocked={false}
+          onClearSelection={jest.fn()}
+        />
+      );
+
+      expect(screen.getByText('Expanded Subject')).toBeInTheDocument();
+      expect(screen.getByText('A detailed expanded subject')).toBeInTheDocument();
+    });
+
+    it('should not show expanded subject when not available', () => {
+      render(
+        <SidePanel
+          stroke={null}
+          metadata={mockMetadata}
+          isLocked={false}
+          onClearSelection={jest.fn()}
+        />
+      );
+
+      expect(screen.queryByText('Expanded Subject')).not.toBeInTheDocument();
+    });
+
+    it('should show formatted generation date when available', () => {
+      render(
+        <SidePanel
+          stroke={null}
+          metadata={{ ...mockMetadata, generation_date: '2025-06-15T12:00:00Z' }}
+          isLocked={false}
+          onClearSelection={jest.fn()}
+        />
+      );
+
+      expect(screen.getByText('Date')).toBeInTheDocument();
+      expect(screen.getByText('15/06/2025')).toBeInTheDocument();
+    });
+
+    it('should not show date row when generation_date is not set', () => {
+      render(
+        <SidePanel
+          stroke={null}
+          metadata={mockMetadata}
+          isLocked={false}
+          onClearSelection={jest.fn()}
+        />
+      );
+
+      expect(screen.queryByText('Date')).not.toBeInTheDocument();
+    });
+
+    it('should not render stroke metadata when Run Info tab is active', () => {
+      render(
+        <SidePanel
+          stroke={null}
+          metadata={mockMetadata}
+          isLocked={false}
+          onClearSelection={jest.fn()}
+        />
+      );
+
+      expect(screen.queryByText('Identity')).not.toBeInTheDocument();
+      expect(screen.queryByText('Appearance')).not.toBeInTheDocument();
+    });
+  });
+
+  describe('Stroke Info tab — hover hint (no stroke)', () => {
+    it('should render hover hint on Stroke Info tab when no stroke selected', async () => {
+      const user = userEvent.setup();
+      render(
+        <SidePanel
+          stroke={null}
+          metadata={mockMetadata}
+          isLocked={false}
+          onClearSelection={jest.fn()}
+        />
+      );
+
+      await user.click(screen.getByText('Stroke Info'));
 
       expect(screen.getByText(/Hover over a stroke to inspect it/i)).toBeInTheDocument();
       expect(screen.getByText(/Click a stroke to lock its metadata/i)).toBeInTheDocument();
-    });
-
-    it('should not render stroke metadata when no stroke is selected', () => {
-      render(
-        <SidePanel
-          stroke={null}
-          metadata={mockMetadata}
-          isLocked={false}
-          onClearSelection={jest.fn()}
-        />
-      );
-
-      expect(screen.queryByText(/Identity/i)).not.toBeInTheDocument();
-      expect(screen.queryByText(/Appearance/i)).not.toBeInTheDocument();
-    });
-
-    it('should not render Clear Selection button when no stroke is selected', () => {
-      render(
-        <SidePanel
-          stroke={null}
-          metadata={mockMetadata}
-          isLocked={true}
-          onClearSelection={jest.fn()}
-        />
-      );
-
-      expect(screen.queryByText(/Clear Selection/i)).not.toBeInTheDocument();
     });
   });
 
@@ -207,7 +426,7 @@ describe('SidePanel', () => {
       expect(screen.queryByText('Locked')).not.toBeInTheDocument();
     });
 
-    it('should show Clear Selection button when locked', () => {
+    it('should show Clear Selection button when locked with stroke', () => {
       render(
         <SidePanel
           stroke={createLineStroke()}
@@ -226,6 +445,19 @@ describe('SidePanel', () => {
           stroke={createLineStroke()}
           metadata={mockMetadata}
           isLocked={false}
+          onClearSelection={jest.fn()}
+        />
+      );
+
+      expect(screen.queryByText('Clear Selection')).not.toBeInTheDocument();
+    });
+
+    it('should not show Clear Selection button when locked but no stroke', () => {
+      render(
+        <SidePanel
+          stroke={null}
+          metadata={mockMetadata}
+          isLocked={true}
           onClearSelection={jest.fn()}
         />
       );
@@ -449,7 +681,9 @@ describe('SidePanel', () => {
         />
       );
 
-      const scoreBar = document.querySelector('.score-bar');
+      const scoreBars = document.querySelectorAll('.score-bar');
+      // Stroke Info tab is active; only one .score-bar is rendered
+      const scoreBar = scoreBars[0];
       expect(scoreBar).toHaveStyle({ backgroundColor: '#ef4444' });
     });
 
@@ -537,6 +771,299 @@ describe('SidePanel', () => {
       );
 
       expect(screen.getByText('76%')).toBeInTheDocument();
+    });
+  });
+
+  describe('Report tab', () => {
+    it('should fetch and render markdown when Report tab is clicked', async () => {
+      const user = userEvent.setup();
+      global.fetch = jest.fn().mockResolvedValueOnce({
+        ok: true,
+        text: () => Promise.resolve('# Generation Report\n\nThis is a **test** report.'),
+      } as Response);
+
+      render(
+        <SidePanel
+          stroke={null}
+          metadata={mockMetadata}
+          isLocked={false}
+          onClearSelection={jest.fn()}
+        />
+      );
+
+      await user.click(screen.getByText('Report'));
+
+      // Wait for the markdown to be rendered (marked mock returns raw markdown)
+      const reportContainer = await screen.findByText(/Generation Report/);
+      expect(reportContainer).toBeInTheDocument();
+      expect(screen.getByText(/This is a/)).toBeInTheDocument();
+    });
+
+    it('should show empty message when report fetch fails', async () => {
+      const user = userEvent.setup();
+      global.fetch = jest.fn().mockResolvedValueOnce({
+        ok: false,
+        status: 404,
+        text: () => Promise.resolve(''),
+      } as Response);
+
+      render(
+        <SidePanel
+          stroke={null}
+          metadata={mockMetadata}
+          isLocked={false}
+          onClearSelection={jest.fn()}
+        />
+      );
+
+      await user.click(screen.getByText('Report'));
+
+      const emptyMsg = await screen.findByText('No report available for this artwork.');
+      expect(emptyMsg).toBeInTheDocument();
+    });
+
+    it('should show empty message when fetch rejects', async () => {
+      const user = userEvent.setup();
+      global.fetch = jest.fn().mockRejectedValueOnce(new Error('Network error'));
+
+      render(
+        <SidePanel
+          stroke={null}
+          metadata={mockMetadata}
+          isLocked={false}
+          onClearSelection={jest.fn()}
+        />
+      );
+
+      await user.click(screen.getByText('Report'));
+
+      const emptyMsg = await screen.findByText('No report available for this artwork.');
+      expect(emptyMsg).toBeInTheDocument();
+    });
+
+    it('should construct fetch URL using artwork_id from metadata', async () => {
+      const user = userEvent.setup();
+      const fetchSpy = jest.fn().mockResolvedValueOnce({
+        ok: true,
+        text: () => Promise.resolve('# Report'),
+      } as Response);
+      global.fetch = fetchSpy;
+
+      render(
+        <SidePanel
+          stroke={null}
+          metadata={mockMetadata}
+          isLocked={false}
+          onClearSelection={jest.fn()}
+        />
+      );
+
+      await user.click(screen.getByText('Report'));
+
+      expect(fetchSpy).toHaveBeenCalledWith('/data/test-001/generation_report.md');
+    });
+
+    it('should only fetch report once (cached in state)', async () => {
+      const user = userEvent.setup();
+      const fetchSpy = jest.fn().mockResolvedValue({
+        ok: true,
+        text: () => Promise.resolve('# Report'),
+      } as Response);
+      global.fetch = fetchSpy;
+
+      render(
+        <SidePanel
+          stroke={null}
+          metadata={mockMetadata}
+          isLocked={false}
+          onClearSelection={jest.fn()}
+        />
+      );
+
+      await user.click(screen.getByText('Report'));
+      await screen.findByText('Report');
+
+      // Switch away and back
+      await user.click(screen.getByText('Run Info'));
+      await user.click(screen.getByText('Report'));
+
+      expect(fetchSpy).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('Auto-switch behavior', () => {
+    it('should auto-switch to Stroke Info when stroke transitions from null to non-null', () => {
+      const { rerender } = render(
+        <SidePanel
+          stroke={null}
+          metadata={mockMetadata}
+          isLocked={false}
+          onClearSelection={jest.fn()}
+        />
+      );
+
+      expect(screen.getByText('Run Info')).toHaveClass('active');
+
+      rerender(
+        <SidePanel
+          stroke={createLineStroke()}
+          metadata={mockMetadata}
+          isLocked={false}
+          onClearSelection={jest.fn()}
+        />
+      );
+
+      expect(screen.getByText('Stroke Info')).toHaveClass('active');
+      expect(screen.getByText('Identity')).toBeInTheDocument();
+    });
+
+    it('should auto-switch to Run Info when stroke transitions from non-null to null', () => {
+      const { rerender } = render(
+        <SidePanel
+          stroke={createLineStroke()}
+          metadata={mockMetadata}
+          isLocked={false}
+          onClearSelection={jest.fn()}
+        />
+      );
+
+      expect(screen.getByText('Stroke Info')).toHaveClass('active');
+
+      rerender(
+        <SidePanel
+          stroke={null}
+          metadata={mockMetadata}
+          isLocked={false}
+          onClearSelection={jest.fn()}
+        />
+      );
+
+      expect(screen.getByText('Run Info')).toHaveClass('active');
+      expect(screen.getByText('Artist / Style')).toBeInTheDocument();
+    });
+  });
+
+  describe('Evaluation Feedback section', () => {
+    const mockEvaluations: EvaluationDetail[] = [
+      {
+        iteration: 2,
+        score: 72,
+        feedback: 'The composition shows good understanding of the style.',
+        strengths: 'Strong use of line weight and tonal variation.',
+        suggestions: 'Consider adding more gestural marks in the background.',
+      },
+    ];
+
+    it('renders "Evaluation Feedback" heading when evaluation exists for stroke iteration', async () => {
+      const user = userEvent.setup();
+      render(
+        <SidePanel
+          stroke={createLineStroke({ iteration: 2 })}
+          metadata={mockMetadata}
+          evaluations={mockEvaluations}
+          isLocked={false}
+          onClearSelection={jest.fn()}
+        />
+      );
+      await user.click(screen.getByText('Stroke Info'));
+      expect(screen.getByText('Evaluation Feedback')).toBeInTheDocument();
+    });
+
+    it('renders feedback, strengths, and suggestions in reasoning-box elements', async () => {
+      const user = userEvent.setup();
+      render(
+        <SidePanel
+          stroke={createLineStroke({ iteration: 2 })}
+          metadata={mockMetadata}
+          evaluations={mockEvaluations}
+          isLocked={false}
+          onClearSelection={jest.fn()}
+        />
+      );
+      await user.click(screen.getByText('Stroke Info'));
+      expect(
+        screen.getByText('The composition shows good understanding of the style.')
+      ).toBeInTheDocument();
+      expect(
+        screen.getByText('Strong use of line weight and tonal variation.')
+      ).toBeInTheDocument();
+      expect(
+        screen.getByText('Consider adding more gestural marks in the background.')
+      ).toBeInTheDocument();
+    });
+
+    it('does not render evaluation section when evaluations prop is empty', async () => {
+      const user = userEvent.setup();
+      render(
+        <SidePanel
+          stroke={createLineStroke({ iteration: 2 })}
+          metadata={mockMetadata}
+          evaluations={[]}
+          isLocked={false}
+          onClearSelection={jest.fn()}
+        />
+      );
+      await user.click(screen.getByText('Stroke Info'));
+      expect(screen.queryByText('Evaluation Feedback')).not.toBeInTheDocument();
+    });
+
+    it('does not render evaluation section when no evaluation matches stroke iteration', async () => {
+      const user = userEvent.setup();
+      render(
+        <SidePanel
+          stroke={createLineStroke({ iteration: 5 })}
+          metadata={mockMetadata}
+          evaluations={mockEvaluations}
+          isLocked={false}
+          onClearSelection={jest.fn()}
+        />
+      );
+      await user.click(screen.getByText('Stroke Info'));
+      expect(screen.queryByText('Evaluation Feedback')).not.toBeInTheDocument();
+    });
+
+    it('hides sub-boxes for empty feedback, strengths, and suggestions', async () => {
+      const user = userEvent.setup();
+      const sparseEvaluations: EvaluationDetail[] = [
+        {
+          iteration: 2,
+          score: 50,
+          feedback: '',
+          strengths: '',
+          suggestions: '',
+        },
+      ];
+      render(
+        <SidePanel
+          stroke={createLineStroke({ iteration: 2 })}
+          metadata={mockMetadata}
+          evaluations={sparseEvaluations}
+          isLocked={false}
+          onClearSelection={jest.fn()}
+        />
+      );
+      await user.click(screen.getByText('Stroke Info'));
+      // heading still renders because the evaluation object exists
+      expect(screen.getByText('Evaluation Feedback')).toBeInTheDocument();
+      // but individual sub-labels are hidden when fields are empty
+      expect(screen.queryByText('Feedback')).not.toBeInTheDocument();
+      expect(screen.queryByText('Strengths')).not.toBeInTheDocument();
+      expect(screen.queryByText('Suggestions')).not.toBeInTheDocument();
+    });
+
+    it('does not render evaluation section when no stroke is selected', async () => {
+      const user = userEvent.setup();
+      render(
+        <SidePanel
+          stroke={null}
+          metadata={mockMetadata}
+          evaluations={mockEvaluations}
+          isLocked={false}
+          onClearSelection={jest.fn()}
+        />
+      );
+      await user.click(screen.getByText('Stroke Info'));
+      expect(screen.queryByText('Evaluation Feedback')).not.toBeInTheDocument();
     });
   });
 });
