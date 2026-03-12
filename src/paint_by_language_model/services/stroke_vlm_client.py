@@ -44,6 +44,7 @@ class StrokeVLMClient:
         api_key: str = API_KEY,
         temperature: float = STROKE_PROMPT_TEMPERATURE,
         prompt_logger: PromptLogger | None = None,
+        allowed_stroke_types: list[str] | None = None,
     ):
         """
         Initialize Stroke VLM Client.
@@ -56,6 +57,10 @@ class StrokeVLMClient:
             temperature (float): Sampling temperature for stroke generation
             prompt_logger (PromptLogger | None): Optional logger for persisting
                 full prompt/response pairs to disk
+            allowed_stroke_types (list[str] | None): Restrict which stroke types
+                appear in the AVAILABLE STROKE TYPES prompt block.  When ``None``
+                or an empty list, all ten stroke types are included (existing
+                behaviour preserved).
         """
         self.client = VLMClient(
             base_url=base_url,
@@ -67,6 +72,7 @@ class StrokeVLMClient:
         self.model = model
         self.timeout = timeout
         self.prompt_logger = prompt_logger
+        self.allowed_stroke_types = allowed_stroke_types
 
         # Storage for interaction history (for debugging and tracing)
         self.interaction_history: list[dict[str, Any]] = []
@@ -145,8 +151,18 @@ class StrokeVLMClient:
             images: list[tuple[bytes, str]] = [
                 (canvas_image, "Current canvas"),
             ]
+            allowed_lower = (
+                [t.lower() for t in self.allowed_stroke_types]
+                if self.allowed_stroke_types
+                else None
+            )
             for stroke_type, sample_bytes in self._stroke_samples.items():
-                images.append((sample_bytes, f"{stroke_type.upper()} stroke sample"))
+                if allowed_lower is None or stroke_type.lower() in allowed_lower:
+                    images.append((sample_bytes, f"{stroke_type.upper()} stroke sample"))
+            logger.debug(
+                f"Attaching {len(images) - 1} stroke sample image(s) "
+                f"(allowed: {self.allowed_stroke_types or 'all'})"
+            )
 
             response_text = self.client.query_multimodal_multi_image(
                 prompt=prompt,
@@ -180,12 +196,13 @@ class StrokeVLMClient:
                     {"label": "Current canvas", "size_bytes": len(canvas_image)}
                 ]
                 for stroke_type, sample_bytes in self._stroke_samples.items():
-                    image_metadata.append(
-                        {
-                            "label": f"{stroke_type.upper()} stroke sample",
-                            "size_bytes": len(sample_bytes),
-                        }
-                    )
+                    if allowed_lower is None or stroke_type.lower() in allowed_lower:
+                        image_metadata.append(
+                            {
+                                "label": f"{stroke_type.upper()} stroke sample",
+                                "size_bytes": len(sample_bytes),
+                            }
+                        )
                 self.prompt_logger.log_interaction(
                     prompt_type="stroke",
                     prompt=prompt,
@@ -369,6 +386,21 @@ have been adequately addressed on the canvas.
         if painting_plan and current_layer:
             layer_complete_field = ',\n  "layer_complete": <boolean - true if this layer\'s objectives are sufficiently met, false otherwise>'
 
+        stroke_types_section = self._build_stroke_types_section()
+
+        # Build conditional Consider lines for specific stroke types
+        allowed_lower = (
+            [t.lower() for t in self.allowed_stroke_types] if self.allowed_stroke_types else None
+        )
+        dry_chalk_consider = ""
+        if allowed_lower is None or "dry-brush" in allowed_lower or "chalk" in allowed_lower:
+            dry_chalk_consider = "\n- Use dry-brush and chalk for textured, painterly effects"
+        wet_brush_consider = ""
+        if allowed_lower is None or "wet-brush" in allowed_lower:
+            wet_brush_consider = (
+                "\n- Use wet-brush for soft watercolour bleeds and ink-wash effects"
+            )
+
         prompt = f"""You are an expert artist creating a piece in the style of {artist_name}.
 
 Current Canvas: [Image attached]
@@ -377,48 +409,7 @@ Iteration: {iteration}{strategy_section}{plan_section}
 
 Task: Suggest {num_strokes} stroke(s) to add to this canvas that evoke {artist_name}'s artistic style.
 
-AVAILABLE STROKE TYPES:
-
-1. LINE - Straight line between two points. See attached "LINE stroke sample" image showing 5 examples with varying thickness, colour, opacity, and angle.
-   Example: {{"type": "line", "start_x": 100, "start_y": 200, "end_x": 300, "end_y": 400, "color_hex": "#FF5733", "thickness": 5, "opacity": 0.8}}
-   Required fields: type, start_x, start_y, end_x, end_y, color_hex, thickness, opacity
-
-2. ARC - Curved arc within a bounding box. See attached "ARC stroke sample" image showing 5 examples with varying bbox sizes, angle sweeps, and thickness.
-   Example: {{"type": "arc", "arc_bbox": [50, 50, 250, 250], "arc_start_angle": 0, "arc_end_angle": 180, "color_hex": "#3366CC", "thickness": 3, "opacity": 0.9}}
-   Required fields: type, arc_bbox (list [x0,y0,x1,y1]), arc_start_angle (degrees), arc_end_angle (degrees), color_hex, thickness, opacity
-
-3. POLYLINE - Connected series of line segments. See attached "POLYLINE stroke sample" image showing 5 examples with varying point counts, path shapes, and thickness.
-   Example: {{"type": "polyline", "points": [[100,100], [150,200], [200,150], [250,250]], "color_hex": "#22AA44", "thickness": 4, "opacity": 0.7}}
-   Required fields: type, points (list of [x,y] coordinates), color_hex, thickness, opacity
-
-4. CIRCLE - Circle (outline or filled). See attached "CIRCLE stroke sample" image showing 5 examples with varying radii, fill modes, and opacity.
-   Example: {{"type": "circle", "center_x": 400, "center_y": 300, "radius": 50, "fill": true, "color_hex": "#FFAA00", "thickness": 2, "opacity": 0.6}}
-   Required fields: type, center_x, center_y, radius, fill (true/false), color_hex, thickness, opacity
-
-5. SPLATTER - Random dots within a radius (texture effect). See attached "SPLATTER stroke sample" image showing 5 examples with varying radius, dot count, and dot sizes.
-   Example: {{"type": "splatter", "center_x": 200, "center_y": 150, "splatter_radius": 30, "splatter_count": 15, "dot_size_min": 2, "dot_size_max": 6, "color_hex": "#8B4513", "thickness": 1, "opacity": 0.5}}
-   Required fields: type, center_x, center_y, splatter_radius, splatter_count, dot_size_min, dot_size_max, color_hex, thickness, opacity
-
-6. DRY-BRUSH - Bristle-textured stroke with gaps showing canvas through. See attached "DRY-BRUSH stroke sample" image.
-   Example: {{"type": "dry-brush", "points": [[100,100], [300,200], [500,150]], "brush_width": 30, "bristle_count": 8, "gap_probability": 0.3, "color_hex": "#8B4513", "thickness": 20, "opacity": 0.8}}
-   Required fields: type, points (list of [x,y] coordinates, 2-50 points), brush_width (4-100), bristle_count (3-20), gap_probability (0.0-0.7), color_hex, thickness, opacity
-
-7. CHALK - Grainy, textured stroke like chalk or pastel on rough paper. See attached "CHALK stroke sample" image.
-   Example: {{"type": "chalk", "points": [[150,200], [350,180], [450,250]], "chalk_width": 20, "grain_density": 4, "color_hex": "#D2691E", "thickness": 1, "opacity": 0.7}}
-   Required fields: type, points (list of [x,y] coordinates, 2-50 points), chalk_width (2-60), grain_density (1-8), color_hex, thickness, opacity
-
-8. WET-BRUSH - Soft-edged stroke that bleeds and spreads at its margins, characteristic of watercolour or ink-wash painting. See attached "WET-BRUSH stroke sample" image.
-   Example: {{"type": "wet-brush", "points": [[100,200], [300,180], [500,220]], "softness": 12, "flow": 0.7, "color_hex": "#4477AA", "thickness": 14, "opacity": 0.75}}
-   Required fields: type, points (list of [x,y] coordinates, 2-50 points), softness (1-30, controls blur radius), flow (0.1-1.0, controls paint density), color_hex, thickness, opacity
-
-9. BURN - Darkens existing pixels in a soft circular region (shadow modelling, depth, vignetting). See attached "BURN stroke sample" image.
-   Example: {{"type": "burn", "center_x": 400, "center_y": 300, "radius": 80, "intensity": 0.6, "color_hex": "#000000", "thickness": 1, "opacity": 1.0}}
-   Required fields: type, center_x, center_y, radius (5–300), intensity (0.05–0.8), color_hex, thickness, opacity
-
-10. DODGE - Lightens existing pixels in a soft circular region (highlights, light sources, brightening effects). See attached "DODGE stroke sample" image.
-   Example: {{"type": "dodge", "center_x": 400, "center_y": 300, "radius": 80, "intensity": 0.6, "color_hex": "#ffffff", "thickness": 1, "opacity": 1.0}}
-   Required fields: type, center_x, center_y, radius (5–300), intensity (0.05–0.8), color_hex, thickness, opacity
-   Tip: Use dodge on dark areas to add highlights, simulate rim-lighting, or brighten under-exposed regions.
+{stroke_types_section}
 
 Canvas dimensions: {CANVAS_WIDTH}x{CANVAS_HEIGHT} pixels
 All coordinates must be within bounds (0 to {CANVAS_WIDTH} for x, 0 to {CANVAS_HEIGHT} for y).
@@ -432,9 +423,7 @@ Consider:
 - {artist_name}'s characteristic techniques, color palette, and composition style
 - The current state of the canvas and how to build upon it
 - Creating cohesive, original artwork (not copying specific existing pieces)
-- Using varied stroke types to achieve different artistic effects
-- Use dry-brush and chalk for textured, painterly effects
-- Use wet-brush for soft watercolour bleeds and ink-wash effects
+- Using varied stroke types to achieve different artistic effects{dry_chalk_consider}{wet_brush_consider}
 
 RESPONSE FORMAT (JSON only):
 {{
@@ -448,6 +437,139 @@ RESPONSE FORMAT (JSON only):
 IMPORTANT: Respond ONLY with valid JSON. Do not include any markdown formatting, code blocks, or text before/after the JSON."""
 
         return prompt
+
+    def _build_stroke_types_section(self) -> str:
+        """
+        Build the ``AVAILABLE STROKE TYPES`` block, filtered to allowed types.
+
+        Uses ``self.allowed_stroke_types`` to restrict which entries appear.
+        When ``self.allowed_stroke_types`` is ``None`` or an empty list all ten
+        stroke type entries are included (existing behaviour preserved).  The
+        remaining entries are re-numbered sequentially starting from 1 so that
+        the prompt contains no gaps.
+
+        Returns:
+            str: The fully assembled ``AVAILABLE STROKE TYPES`` section string,
+                including the section heading.
+        """
+        all_entries: list[tuple[str, str]] = [
+            (
+                "line",
+                'LINE - Straight line between two points. See attached "LINE stroke sample"'
+                " image showing 5 examples with varying thickness, colour, opacity, and angle.\n"
+                '   Example: {"type": "line", "start_x": 100, "start_y": 200,'
+                ' "end_x": 300, "end_y": 400, "color_hex": "#FF5733", "thickness": 5, "opacity": 0.8}\n'
+                "   Required fields: type, start_x, start_y, end_x, end_y, color_hex, thickness, opacity",
+            ),
+            (
+                "arc",
+                'ARC - Curved arc within a bounding box. See attached "ARC stroke sample"'
+                " image showing 5 examples with varying bbox sizes, angle sweeps, and thickness.\n"
+                '   Example: {"type": "arc", "arc_bbox": [50, 50, 250, 250],'
+                ' "arc_start_angle": 0, "arc_end_angle": 180, "color_hex": "#3366CC",'
+                ' "thickness": 3, "opacity": 0.9}\n'
+                "   Required fields: type, arc_bbox (list [x0,y0,x1,y1]),"
+                " arc_start_angle (degrees), arc_end_angle (degrees), color_hex, thickness, opacity",
+            ),
+            (
+                "polyline",
+                'POLYLINE - Connected series of line segments. See attached "POLYLINE stroke sample"'
+                " image showing 5 examples with varying point counts, path shapes, and thickness.\n"
+                '   Example: {"type": "polyline", "points": [[100,100], [150,200], [200,150], [250,250]],'
+                ' "color_hex": "#22AA44", "thickness": 4, "opacity": 0.7}\n'
+                "   Required fields: type, points (list of [x,y] coordinates), color_hex, thickness, opacity",
+            ),
+            (
+                "circle",
+                'CIRCLE - Circle (outline or filled). See attached "CIRCLE stroke sample"'
+                " image showing 5 examples with varying radii, fill modes, and opacity.\n"
+                '   Example: {"type": "circle", "center_x": 400, "center_y": 300,'
+                ' "radius": 50, "fill": true, "color_hex": "#FFAA00", "thickness": 2, "opacity": 0.6}\n'
+                "   Required fields: type, center_x, center_y, radius, fill (true/false),"
+                " color_hex, thickness, opacity",
+            ),
+            (
+                "splatter",
+                'SPLATTER - Random dots within a radius (texture effect). See attached "SPLATTER stroke sample"'
+                " image showing 5 examples with varying radius, dot count, and dot sizes.\n"
+                '   Example: {"type": "splatter", "center_x": 200, "center_y": 150,'
+                ' "splatter_radius": 30, "splatter_count": 15, "dot_size_min": 2, "dot_size_max": 6,'
+                ' "color_hex": "#8B4513", "thickness": 1, "opacity": 0.5}\n'
+                "   Required fields: type, center_x, center_y, splatter_radius, splatter_count,"
+                " dot_size_min, dot_size_max, color_hex, thickness, opacity",
+            ),
+            (
+                "dry-brush",
+                "DRY-BRUSH - Bristle-textured stroke with gaps showing canvas through."
+                ' See attached "DRY-BRUSH stroke sample" image.\n'
+                '   Example: {"type": "dry-brush", "points": [[100,100], [300,200], [500,150]],'
+                ' "brush_width": 30, "bristle_count": 8, "gap_probability": 0.3,'
+                ' "color_hex": "#8B4513", "thickness": 20, "opacity": 0.8}\n'
+                "   Required fields: type, points (list of [x,y] coordinates, 2-50 points),"
+                " brush_width (4-100), bristle_count (3-20), gap_probability (0.0-0.7),"
+                " color_hex, thickness, opacity",
+            ),
+            (
+                "chalk",
+                "CHALK - Grainy, textured stroke like chalk or pastel on rough paper."
+                ' See attached "CHALK stroke sample" image.\n'
+                '   Example: {"type": "chalk", "points": [[150,200], [350,180], [450,250]],'
+                ' "chalk_width": 20, "grain_density": 4, "color_hex": "#D2691E",'
+                ' "thickness": 1, "opacity": 0.7}\n'
+                "   Required fields: type, points (list of [x,y] coordinates, 2-50 points),"
+                " chalk_width (2-60), grain_density (1-8), color_hex, thickness, opacity",
+            ),
+            (
+                "wet-brush",
+                "WET-BRUSH - Soft-edged stroke that bleeds and spreads at its margins,"
+                " characteristic of watercolour or ink-wash painting."
+                ' See attached "WET-BRUSH stroke sample" image.\n'
+                '   Example: {"type": "wet-brush", "points": [[100,200], [300,180], [500,220]],'
+                ' "softness": 12, "flow": 0.7, "color_hex": "#4477AA",'
+                ' "thickness": 14, "opacity": 0.75}\n'
+                "   Required fields: type, points (list of [x,y] coordinates, 2-50 points),"
+                " softness (1-30, controls blur radius), flow (0.1-1.0, controls paint density),"
+                " color_hex, thickness, opacity",
+            ),
+            (
+                "burn",
+                "BURN - Darkens existing pixels in a soft circular region"
+                " (shadow modelling, depth, vignetting)."
+                ' See attached "BURN stroke sample" image.\n'
+                '   Example: {"type": "burn", "center_x": 400, "center_y": 300,'
+                ' "radius": 80, "intensity": 0.6, "color_hex": "#000000",'
+                ' "thickness": 1, "opacity": 1.0}\n'
+                "   Required fields: type, center_x, center_y, radius (5\u2013300),"
+                " intensity (0.05\u20130.8), color_hex, thickness, opacity",
+            ),
+            (
+                "dodge",
+                "DODGE - Lightens existing pixels in a soft circular region"
+                " (highlights, light sources, brightening effects)."
+                ' See attached "DODGE stroke sample" image.\n'
+                '   Example: {"type": "dodge", "center_x": 400, "center_y": 300,'
+                ' "radius": 80, "intensity": 0.6, "color_hex": "#ffffff",'
+                ' "thickness": 1, "opacity": 1.0}\n'
+                "   Required fields: type, center_x, center_y, radius (5\u2013300),"
+                " intensity (0.05\u20130.8), color_hex, thickness, opacity\n"
+                "   Tip: Use dodge on dark areas to add highlights, simulate rim-lighting,"
+                " or brighten under-exposed regions.",
+            ),
+        ]
+
+        allowed_lower: list[str] | None = (
+            [t.lower() for t in self.allowed_stroke_types] if self.allowed_stroke_types else None
+        )
+
+        filtered = [
+            (key, desc)
+            for key, desc in all_entries
+            if allowed_lower is None or key in allowed_lower
+        ]
+
+        numbered_entries = [f"{i}. {desc}" for i, (_, desc) in enumerate(filtered, start=1)]
+
+        return "AVAILABLE STROKE TYPES:\n\n" + "\n\n".join(numbered_entries)
 
     def _record_interaction(
         self,
