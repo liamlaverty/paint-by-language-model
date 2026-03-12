@@ -253,7 +253,7 @@ def test_canvas_manager_applies_wet_brush() -> None:
 
 
 def test_parse_wet_brush_stroke_fields() -> None:
-    """_parse_single_stroke correctly extracts wet-brush fields."""
+    """StrokeParser._parse_single_stroke correctly extracts wet-brush fields."""
     import sys as _sys
     from pathlib import Path as _Path
 
@@ -261,22 +261,7 @@ def test_parse_wet_brush_stroke_fields() -> None:
         0, str(_Path(__file__).parent.parent / "src" / "paint_by_language_model")
     )
 
-    from unittest.mock import MagicMock
-
-    from services.stroke_vlm_client import StrokeVLMClient
-
-    # Build a minimal client without hitting actual VLM init code
-    client_mock = MagicMock()
-    client_mock.provider = "lmstudio"
-    client_mock.temperature = 0.7
-
-    vlm = StrokeVLMClient.__new__(StrokeVLMClient)
-    vlm.client = client_mock
-    vlm.model = "test-model"
-    vlm.prompt_logger = None
-    vlm.interaction_history = []
-    vlm.last_raw_response = None
-    vlm.last_parsed_response = None
+    from services.stroke_parser import StrokeParser
 
     raw = {
         "type": "wet-brush",
@@ -288,7 +273,7 @@ def test_parse_wet_brush_stroke_fields() -> None:
         "opacity": 0.9,
     }
 
-    parsed = vlm._parse_single_stroke(raw)
+    parsed = StrokeParser()._parse_single_stroke(raw)
 
     assert parsed["type"] == "wet-brush"
     assert parsed["points"] == [[100, 100], [200, 200]]
