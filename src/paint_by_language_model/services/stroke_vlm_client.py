@@ -24,11 +24,10 @@ from config import (
     VLM_MODEL,
     VLM_TIMEOUT,
 )
-from models.stroke import Stroke
 from models.stroke_vlm_response import StrokeVLMResponse
 from services.prompt_logger import PromptLogger
+from services.stroke_parser import StrokeParser
 from services.stroke_sample_generator import StrokeSampleGenerator
-from utils.json_utils import clean_and_parse_json
 from vlm_client import VLMClient
 
 logger = logging.getLogger(__name__)
@@ -76,6 +75,7 @@ class StrokeVLMClient:
 
         logger.info(f"Initialized StrokeVLMClient with model: {model}")
 
+        self.parser = StrokeParser()
         self.sample_generator = StrokeSampleGenerator()
         self._stroke_samples = self.sample_generator.generate_all_samples()
         logger.info(f"Generated {len(self._stroke_samples)} stroke sample images")
@@ -158,7 +158,7 @@ class StrokeVLMClient:
             self.last_raw_response = response_text
 
             # Parse response
-            stroke_response = self._parse_stroke_response(response_text)
+            stroke_response = self.parser.parse(response_text)
 
             # Store parsed response
             self.last_parsed_response = stroke_response
@@ -448,197 +448,6 @@ RESPONSE FORMAT (JSON only):
 IMPORTANT: Respond ONLY with valid JSON. Do not include any markdown formatting, code blocks, or text before/after the JSON."""
 
         return prompt
-
-    def _parse_stroke_response(self, response_text: str) -> StrokeVLMResponse:
-        """
-        Parse VLM response into StrokeVLMResponse with multiple strokes.
-
-        Args:
-            response_text (str): Raw VLM response
-
-        Returns:
-            StrokeVLMResponse: Parsed stroke response with list of strokes
-
-        Raises:
-            ValueError: If JSON invalid or missing critical fields
-            json.JSONDecodeError: If not valid JSON
-        """
-        # Use shared robust JSON parsing utility
-        data = clean_and_parse_json(response_text)
-
-        # Handle both old format (single stroke) and new format (strokes array) for backward compatibility
-        strokes_list: list[dict[str, Any]] = []
-        batch_reasoning = ""
-
-        if "strokes" in data:
-            # New format: array of strokes with batch_reasoning
-            if not isinstance(data["strokes"], list):
-                logger.warning("Response 'strokes' field is not a list, treating as empty")
-                strokes_list = []
-            else:
-                strokes_list = data["strokes"]
-
-            batch_reasoning = data.get("batch_reasoning", "")
-            if not batch_reasoning:
-                logger.warning("Response missing 'batch_reasoning' field")
-                batch_reasoning = "No reasoning provided"
-
-        elif "stroke" in data:
-            # Old format: single stroke with reasoning - convert to new format
-            logger.info("Detected old single-stroke format, converting to multi-stroke format")
-            strokes_list = [data["stroke"]]
-            batch_reasoning = data["stroke"].get("reasoning", "Legacy single stroke")
-
-        else:
-            raise ValueError("Response missing both 'strokes' and 'stroke' fields")
-
-        # Parse and validate each stroke
-        parsed_strokes = []
-        for idx, stroke in enumerate(strokes_list):
-            if not isinstance(stroke, dict):
-                logger.warning(f"Skipping stroke {idx}: not a dictionary")
-                continue
-
-            if "type" not in stroke:
-                logger.warning(f"Skipping stroke {idx}: missing 'type' field")
-                continue
-
-            try:
-                # Parse stroke fields with type conversion
-                parsed_stroke = self._parse_single_stroke(stroke)
-                parsed_strokes.append(parsed_stroke)
-            except (ValueError, KeyError, TypeError) as e:
-                logger.error(f"Skipping stroke {idx}: parsing error - {e}")
-                continue
-
-        # If no strokes were successfully parsed, log warning
-        if not parsed_strokes:
-            logger.warning("No valid strokes parsed from VLM response")
-
-        # Build response
-        response: StrokeVLMResponse = {
-            "strokes": parsed_strokes,
-            "updated_strategy": data.get("updated_strategy"),
-            "batch_reasoning": batch_reasoning,
-        }
-
-        # Forward layer_complete if present in VLM response
-        if "layer_complete" in data:
-            response["layer_complete"] = bool(data["layer_complete"])
-
-        return response
-
-    def _parse_single_stroke(self, stroke: dict[str, Any]) -> Stroke:
-        """
-        Parse a single stroke dictionary with type-specific field handling.
-
-        Args:
-            stroke (dict[str, Any]): Raw stroke data from VLM
-
-        Returns:
-            Stroke: Parsed stroke with proper types
-
-        Raises:
-            ValueError: If required fields are missing or invalid
-            KeyError: If critical field is missing
-        """
-        stroke_type = stroke["type"]
-
-        # Core fields (all stroke types)
-        parsed: Stroke = {
-            "type": stroke_type,
-            "color_hex": str(stroke["color_hex"]),
-            "thickness": int(stroke.get("thickness", 1)),
-            "opacity": float(stroke["opacity"]),
-        }
-
-        # Type-specific fields with validation
-        if stroke_type == "line":
-            parsed.update(
-                {
-                    "start_x": int(stroke["start_x"]),
-                    "start_y": int(stroke["start_y"]),
-                    "end_x": int(stroke["end_x"]),
-                    "end_y": int(stroke["end_y"]),
-                }
-            )
-
-        elif stroke_type == "arc":
-            parsed.update(
-                {
-                    "arc_bbox": stroke["arc_bbox"],  # Expected as list [x0, y0, x1, y1]
-                    "arc_start_angle": int(stroke["arc_start_angle"]),
-                    "arc_end_angle": int(stroke["arc_end_angle"]),
-                }
-            )
-
-        elif stroke_type == "polyline":
-            parsed["points"] = stroke["points"]  # Expected as list of [x, y] pairs
-
-        elif stroke_type == "circle":
-            parsed.update(
-                {
-                    "center_x": int(stroke["center_x"]),
-                    "center_y": int(stroke["center_y"]),
-                    "radius": int(stroke["radius"]),
-                    "fill": bool(stroke.get("fill", False)),
-                }
-            )
-
-        elif stroke_type == "splatter":
-            parsed.update(
-                {
-                    "center_x": int(stroke["center_x"]),
-                    "center_y": int(stroke["center_y"]),
-                    "splatter_radius": int(stroke["splatter_radius"]),
-                    "splatter_count": int(stroke["splatter_count"]),
-                    "dot_size_min": int(stroke["dot_size_min"]),
-                    "dot_size_max": int(stroke["dot_size_max"]),
-                }
-            )
-
-        elif stroke_type == "dry-brush":
-            parsed.update(
-                {
-                    "points": stroke["points"],  # Expected as list of [x, y] pairs
-                    "brush_width": int(stroke["brush_width"]),
-                    "bristle_count": int(stroke["bristle_count"]),
-                    "gap_probability": float(stroke["gap_probability"]),
-                }
-            )
-
-        elif stroke_type == "chalk":
-            parsed.update(
-                {
-                    "points": stroke["points"],  # Expected as list of [x, y] pairs
-                    "chalk_width": int(stroke["chalk_width"]),
-                    "grain_density": int(stroke["grain_density"]),
-                }
-            )
-
-        elif stroke_type == "wet-brush":
-            parsed.update(
-                {
-                    "points": stroke["points"],  # list of [x, y] pairs
-                    "softness": int(stroke["softness"]),
-                    "flow": float(stroke["flow"]),
-                }
-            )
-
-        elif stroke_type in ("burn", "dodge"):
-            parsed.update(
-                {
-                    "center_x": int(stroke["center_x"]),
-                    "center_y": int(stroke["center_y"]),
-                    "radius": int(stroke["radius"]),
-                    "intensity": float(stroke["intensity"]),
-                }
-            )
-
-        else:
-            raise ValueError(f"Unknown stroke type: {stroke_type}")
-
-        return parsed
 
     def _record_interaction(
         self,
