@@ -411,9 +411,9 @@ def test_consider_lines_absent_when_only_line_allowed() -> None:
     assert "Use dry-brush and chalk for textured, painterly effects" not in prompt, (
         "dry-brush/chalk Consider line should not appear when neither is allowed"
     )
-    assert "Use wet-brush for soft watercolour bleeds and ink-wash effects" not in prompt, (
-        "wet-brush Consider line should not appear when wet-brush is not allowed"
-    )
+    assert (
+        "Use wet-brush for soft watercolour bleeds and ink-wash effects" not in prompt
+    ), "wet-brush Consider line should not appear when wet-brush is not allowed"
 
 
 def test_consider_lines_both_present_when_allowed_stroke_types_is_none() -> None:
@@ -430,3 +430,58 @@ def test_consider_lines_both_present_when_allowed_stroke_types_is_none() -> None
     assert "Use wet-brush for soft watercolour bleeds and ink-wash effects" in prompt, (
         "wet-brush Consider line should appear when all types are allowed"
     )
+
+
+# ============================================================================
+# Tests added for Task 3b — template extraction
+# ============================================================================
+
+
+def test_build_stroke_prompt_contains_expected_substrings() -> None:
+    """_build_stroke_prompt returns a string containing required content substrings.
+
+    Calls ``_build_stroke_prompt`` with ``allowed_stroke_types=None`` (all types
+    included) and a representative set of inputs, then asserts that the returned
+    string contains a representative set of known substrings:
+    - the artist name
+    - canvas dimension numbers
+    - the ``AVAILABLE STROKE TYPES:`` heading
+    - the respond-only instruction
+    """
+    client = StrokeVLMClient(allowed_stroke_types=None)
+    prompt = client._build_stroke_prompt(
+        artist_name="Vincent van Gogh",
+        subject="Starry Night",
+        iteration=3,
+        strategy_context="",
+        num_strokes=4,
+    )
+
+    assert "Vincent van Gogh" in prompt, "Artist name must appear in the prompt"
+    assert "800" in prompt, "Canvas width (800) must appear in the prompt"
+    assert "600" in prompt, "Canvas height (600) must appear in the prompt"
+    assert "AVAILABLE STROKE TYPES:" in prompt, (
+        "Stroke types heading must appear in the prompt"
+    )
+    assert "IMPORTANT: Respond ONLY with valid JSON" in prompt, (
+        "JSON-only instruction must appear in the prompt"
+    )
+
+
+def test_missing_template_file_raises_file_not_found_error() -> None:
+    """Instantiating StrokeVLMClient with a missing template file raises FileNotFoundError.
+
+    Patches ``_STROKE_PROMPT_TEMPLATE_PATH`` to point at a non-existent path so
+    that ``__init__`` triggers ``Path.read_text`` on a file that does not exist.
+    This guards against missing template deployments.
+    """
+    missing_path = Path("/nonexistent/path/stroke_prompt.txt")
+
+    with patch("services.stroke_vlm_client._STROKE_PROMPT_TEMPLATE_PATH", missing_path):
+        with pytest.raises(FileNotFoundError):
+            StrokeVLMClient(
+                base_url="http://test.com",
+                model="test-model",
+                timeout=60,
+                api_key="test_key",
+            )
