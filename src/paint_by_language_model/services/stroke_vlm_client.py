@@ -151,8 +151,18 @@ class StrokeVLMClient:
             images: list[tuple[bytes, str]] = [
                 (canvas_image, "Current canvas"),
             ]
+            allowed_lower = (
+                [t.lower() for t in self.allowed_stroke_types]
+                if self.allowed_stroke_types
+                else None
+            )
             for stroke_type, sample_bytes in self._stroke_samples.items():
-                images.append((sample_bytes, f"{stroke_type.upper()} stroke sample"))
+                if allowed_lower is None or stroke_type.lower() in allowed_lower:
+                    images.append((sample_bytes, f"{stroke_type.upper()} stroke sample"))
+            logger.debug(
+                f"Attaching {len(images) - 1} stroke sample image(s) "
+                f"(allowed: {self.allowed_stroke_types or 'all'})"
+            )
 
             response_text = self.client.query_multimodal_multi_image(
                 prompt=prompt,
@@ -186,12 +196,13 @@ class StrokeVLMClient:
                     {"label": "Current canvas", "size_bytes": len(canvas_image)}
                 ]
                 for stroke_type, sample_bytes in self._stroke_samples.items():
-                    image_metadata.append(
-                        {
-                            "label": f"{stroke_type.upper()} stroke sample",
-                            "size_bytes": len(sample_bytes),
-                        }
-                    )
+                    if allowed_lower is None or stroke_type.lower() in allowed_lower:
+                        image_metadata.append(
+                            {
+                                "label": f"{stroke_type.upper()} stroke sample",
+                                "size_bytes": len(sample_bytes),
+                            }
+                        )
                 self.prompt_logger.log_interaction(
                     prompt_type="stroke",
                     prompt=prompt,

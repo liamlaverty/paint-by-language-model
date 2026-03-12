@@ -173,7 +173,9 @@ class PlannerLLMClient:
             self.last_raw_response = response_text
 
             # Parse response
-            painting_plan = self._parse_plan_response(response_text)
+            painting_plan = self._parse_plan_response(
+                response_text, allowed_stroke_types=stroke_types
+            )
 
             # Store parsed response
             self.last_parsed_response = painting_plan
@@ -315,12 +317,21 @@ IMPORTANT: Respond ONLY with valid JSON. Do not include markdown formatting."""
 
         return prompt
 
-    def _parse_plan_response(self, response_text: str) -> PaintingPlan:
+    def _parse_plan_response(
+        self, response_text: str, allowed_stroke_types: list[str] | None = None
+    ) -> PaintingPlan:
         """
         Parse LLM response into PaintingPlan.
 
         Args:
             response_text (str): Raw LLM response
+            allowed_stroke_types (list[str] | None): Active allowed stroke types used to
+                validate and filter each layer's ``stroke_types`` list.  Types that are
+                in ``SUPPORTED_STROKE_TYPES`` but not in ``allowed_stroke_types`` are
+                silently removed with a warning rather than raising.  Types that are not
+                in ``SUPPORTED_STROKE_TYPES`` at all (genuinely unknown) still raise a
+                ``ValueError``.  Defaults to ``None`` which treats all supported types as
+                allowed.
 
         Returns:
             PaintingPlan: Parsed painting plan
@@ -389,12 +400,30 @@ IMPORTANT: Respond ONLY with valid JSON. Do not include markdown formatting."""
             if not isinstance(layer["stroke_types"], list):
                 raise ValueError(f"Layer {idx} stroke_types must be a list")
 
+            effective_allowed = allowed_stroke_types or SUPPORTED_STROKE_TYPES
+            filtered_stroke_types: list[str] = []
             for stroke_type in layer["stroke_types"]:
                 if stroke_type not in SUPPORTED_STROKE_TYPES:
                     raise ValueError(
                         f"Layer {idx} has unsupported stroke type: {stroke_type} "
                         f"(supported: {', '.join(SUPPORTED_STROKE_TYPES)})"
                     )
+                if stroke_type not in effective_allowed:
+                    logger.warning(
+                        f"Layer {idx} requested stroke type '{stroke_type}' which is not in the "
+                        f"allowed list {effective_allowed}; removing from layer stroke_types"
+                    )
+                else:
+                    filtered_stroke_types.append(stroke_type)
+
+            if not filtered_stroke_types:
+                logger.warning(
+                    f"Layer {idx} had no valid stroke types after filtering; "
+                    f"falling back to all allowed types: {effective_allowed}"
+                )
+                filtered_stroke_types = list(effective_allowed)
+
+            layer["stroke_types"] = filtered_stroke_types
 
             # Build validated layer
             validated_layer: PlanLayer = {

@@ -460,8 +460,9 @@ class GenerationOrchestrator:
         # Generate new plan
         logger.info("Generating new painting plan...")
         planner = PlannerLLMClient(prompt_logger=self.prompt_logger)
+        effective_stroke_types = self.allowed_stroke_types or SUPPORTED_STROKE_TYPES
         plan = planner.generate_plan(
-            self.artist_name, self.subject, self.expanded_subject, SUPPORTED_STROKE_TYPES
+            self.artist_name, self.subject, self.expanded_subject, effective_stroke_types
         )
 
         # Log plan summary
