@@ -102,8 +102,8 @@ class DodgeRenderer(StrokeRenderer):
 
         # Validate intensity
         intensity = stroke["intensity"]
-        if not isinstance(intensity, float):
-            raise ValueError(f"intensity must be a float, got {type(intensity).__name__}")
+        if not isinstance(intensity, (int, float)):
+            raise ValueError(f"intensity must be a number, got {type(intensity).__name__}")
         if not (MIN_BURN_DODGE_INTENSITY <= intensity <= MAX_BURN_DODGE_INTENSITY):
             raise ValueError(
                 f"intensity {intensity} out of range "

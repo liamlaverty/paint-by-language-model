@@ -302,21 +302,6 @@ function renderDryBrush(
 }
 
 /**
- * Render a wet-brush stroke with soft, bleeding edges.
- *
- * For visual rendering, applies a CSS blur filter to simulate Gaussian paint
- * bleed (matching the PIL GaussianBlur used in the Python renderer). Effective
- * opacity is stroke.opacity multiplied by stroke.flow, matching the Python
- * alpha = opacity * flow * 255 formula.
- *
- * For hit detection, draws the polyline without blur using a wider line to
- * account for the blur spread.
- *
- * @param {CanvasRenderingContext2D} ctx - Canvas rendering context
- * @param {EnrichedStroke} stroke - Stroke data with wet-brush parameters
- * @param {boolean} isHit - Hit detection mode flag
- */
-/**
  * Render a burn stroke that darkens existing pixels in a soft circular region.
  *
  * Uses {@link CanvasRenderingContext2D.globalCompositeOperation} set to
@@ -402,6 +387,21 @@ function renderDodge(ctx: CanvasRenderingContext2D, stroke: EnrichedStroke, isHi
   ctx.fill();
 }
 
+/**
+ * Render a wet-brush stroke with soft, bleeding edges.
+ *
+ * For visual rendering, applies a CSS blur filter to simulate Gaussian paint
+ * bleed (matching the PIL GaussianBlur used in the Python renderer). Effective
+ * opacity is stroke.opacity multiplied by stroke.flow, matching the Python
+ * alpha = opacity * flow * 255 formula.
+ *
+ * For hit detection, draws the polyline without blur using a wider line to
+ * account for the blur spread.
+ *
+ * @param {CanvasRenderingContext2D} ctx - Canvas rendering context
+ * @param {EnrichedStroke} stroke - Stroke data with wet-brush parameters
+ * @param {boolean} isHit - Hit detection mode flag
+ */
 function renderWetBrush(
   ctx: CanvasRenderingContext2D,
   stroke: EnrichedStroke,
