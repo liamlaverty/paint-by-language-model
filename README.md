@@ -2,8 +2,9 @@
 
 A Python application that uses Vision Language Models (VLMs) to iteratively create original artwork in the style of famous artists. The system starts with a blank canvas and progressively adds strokes suggested by VLMs, building unique images that embody specific artistic styles.
 
-The project includes a Next.js viewer application for interactively exploring generated artworks, viewing stroke-by-stroke creation timelines, and examining metadata and evaluation scores.
+The project includes a Next.js viewer application for interactively exploring generated artworks, viewing stroke-by-stroke creation timelines, and examining metadata and evaluation scores. See output here: https://www.liamlaverty.com/paint-by-language-model/
 
+<img width="1620" height="1225" alt="image" src="https://github.com/user-attachments/assets/706bb419-43ef-4fdb-a0e0-4325599bdbf7" />
 
 ## Prerequisites
 
@@ -253,7 +254,7 @@ The application will:
 3. Query the VLM for stroke suggestions guided by the current layer's plan
 4. Apply suggested strokes to the canvas
 5. Evaluate the current canvas against the artist's style and layer objectives
-6. Advance to the next layer when evaluator indicates layer completion
+6. Advance to the next layer when the stroke-applying VLM indicates layer completion
 7. Update strategy based on evaluation feedback
 8. Repeat until target score is reached or max iterations exceeded
 9. Generate a final report with metrics and layer breakdown
