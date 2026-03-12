@@ -2,12 +2,16 @@
  * Unit tests for stroke-renderers.ts - Canvas rendering functions
  */
 
-import { renderStroke } from '@/lib/stroke-renderers';
+import { renderStroke } from '@/lib/renderers';
 import type { EnrichedStroke } from '@/lib/types';
 
 // Mock canvas context
 const createMockContext = () => {
   const calls: Array<{ method: string; args: unknown[] }> = [];
+
+  const mockGradient = {
+    addColorStop: jest.fn(),
+  };
 
   const ctx = {
     canvas: { width: 800, height: 600 },
@@ -20,6 +24,7 @@ const createMockContext = () => {
     fill: jest.fn(() => calls.push({ method: 'fill', args: [] })),
     arc: jest.fn((...args) => calls.push({ method: 'arc', args })),
     ellipse: jest.fn((...args) => calls.push({ method: 'ellipse', args })),
+    createRadialGradient: jest.fn(() => mockGradient),
     strokeStyle: '',
     fillStyle: '',
     lineWidth: 1,
@@ -364,5 +369,193 @@ describe('renderStroke', () => {
     expect(ctx.fill).toHaveBeenCalled();
     expect(ctx.save).toHaveBeenCalled();
     expect(ctx.restore).toHaveBeenCalled();
+  });
+
+  it('should render wet-brush stroke without throwing', () => {
+    const ctx = createMockContext();
+    const stroke: EnrichedStroke = {
+      index: 13,
+      iteration: 0,
+      batch_position: 0,
+      batch_reasoning: 'test',
+      type: 'wet-brush',
+      color_hex: '#4477AA',
+      thickness: 10,
+      opacity: 0.7,
+      softness: 5,
+      flow: 0.8,
+      points: [
+        [100, 100],
+        [200, 200],
+        [300, 150],
+      ],
+    };
+
+    // Should not throw
+    expect(() => renderStroke(ctx, stroke, 13, false)).not.toThrow();
+
+    // beginPath should be called (polyline path)
+    expect(ctx.beginPath).toHaveBeenCalled();
+    expect(ctx.save).toHaveBeenCalled();
+    expect(ctx.restore).toHaveBeenCalled();
+  });
+
+  it('should render wet-brush in hit mode without throwing', () => {
+    const ctx = createMockContext();
+    const stroke: EnrichedStroke = {
+      index: 14,
+      iteration: 0,
+      batch_position: 0,
+      batch_reasoning: 'test',
+      type: 'wet-brush',
+      color_hex: '#AA4477',
+      thickness: 8,
+      opacity: 0.9,
+      softness: 4,
+      flow: 1.0,
+      points: [
+        [50, 50],
+        [150, 100],
+      ],
+    };
+
+    expect(() => renderStroke(ctx, stroke, 14, true)).not.toThrow();
+    expect(ctx.beginPath).toHaveBeenCalled();
+  });
+
+  it('should render burn stroke without throwing', () => {
+    const ctx = createMockContext();
+    const stroke: EnrichedStroke = {
+      index: 15,
+      iteration: 0,
+      batch_position: 0,
+      batch_reasoning: 'test',
+      type: 'burn',
+      color_hex: '#000000',
+      thickness: 1,
+      opacity: 1.0,
+      center_x: 200,
+      center_y: 150,
+      radius: 60,
+      intensity: 0.5,
+    };
+
+    expect(() => renderStroke(ctx, stroke, 15, false)).not.toThrow();
+
+    // fill should be called (gradient circle)
+    expect(ctx.fill).toHaveBeenCalled();
+    expect(ctx.save).toHaveBeenCalled();
+    expect(ctx.restore).toHaveBeenCalled();
+  });
+
+  it('should set multiply compositing for burn stroke visual rendering', () => {
+    const ctx = createMockContext();
+    const stroke: EnrichedStroke = {
+      index: 16,
+      iteration: 0,
+      batch_position: 0,
+      batch_reasoning: 'test',
+      type: 'burn',
+      color_hex: '#000000',
+      thickness: 1,
+      opacity: 1.0,
+      center_x: 100,
+      center_y: 100,
+      radius: 40,
+      intensity: 0.6,
+    };
+
+    renderStroke(ctx, stroke, 16, false);
+
+    expect(ctx.globalCompositeOperation).toBe('multiply');
+  });
+
+  it('should render burn stroke in hit mode without throwing', () => {
+    const ctx = createMockContext();
+    const stroke: EnrichedStroke = {
+      index: 17,
+      iteration: 0,
+      batch_position: 0,
+      batch_reasoning: 'test',
+      type: 'burn',
+      color_hex: '#000000',
+      thickness: 1,
+      opacity: 1.0,
+      center_x: 150,
+      center_y: 120,
+      radius: 50,
+      intensity: 0.4,
+    };
+
+    expect(() => renderStroke(ctx, stroke, 17, true)).not.toThrow();
+    expect(ctx.fill).toHaveBeenCalled();
+  });
+
+  it('should render dodge stroke without throwing', () => {
+    const ctx = createMockContext();
+    const stroke: EnrichedStroke = {
+      index: 18,
+      iteration: 0,
+      batch_position: 0,
+      batch_reasoning: 'test',
+      type: 'dodge',
+      color_hex: '#ffffff',
+      thickness: 1,
+      opacity: 1.0,
+      center_x: 200,
+      center_y: 150,
+      radius: 60,
+      intensity: 0.5,
+    };
+
+    expect(() => renderStroke(ctx, stroke, 18, false)).not.toThrow();
+
+    // fill should be called (gradient circle)
+    expect(ctx.fill).toHaveBeenCalled();
+    expect(ctx.save).toHaveBeenCalled();
+    expect(ctx.restore).toHaveBeenCalled();
+  });
+
+  it('should set screen compositing for dodge stroke visual rendering', () => {
+    const ctx = createMockContext();
+    const stroke: EnrichedStroke = {
+      index: 19,
+      iteration: 0,
+      batch_position: 0,
+      batch_reasoning: 'test',
+      type: 'dodge',
+      color_hex: '#ffffff',
+      thickness: 1,
+      opacity: 1.0,
+      center_x: 100,
+      center_y: 100,
+      radius: 40,
+      intensity: 0.6,
+    };
+
+    renderStroke(ctx, stroke, 19, false);
+
+    expect(ctx.globalCompositeOperation).toBe('screen');
+  });
+
+  it('should render dodge stroke in hit mode without throwing', () => {
+    const ctx = createMockContext();
+    const stroke: EnrichedStroke = {
+      index: 20,
+      iteration: 0,
+      batch_position: 0,
+      batch_reasoning: 'test',
+      type: 'dodge',
+      color_hex: '#ffffff',
+      thickness: 1,
+      opacity: 1.0,
+      center_x: 150,
+      center_y: 120,
+      radius: 50,
+      intensity: 0.4,
+    };
+
+    expect(() => renderStroke(ctx, stroke, 20, true)).not.toThrow();
+    expect(ctx.fill).toHaveBeenCalled();
   });
 });

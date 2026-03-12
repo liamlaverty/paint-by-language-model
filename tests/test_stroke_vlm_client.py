@@ -42,6 +42,9 @@ _EXPECTED_SAMPLE_LABELS = {
     "SPLATTER stroke sample",
     "DRY-BRUSH stroke sample",
     "CHALK stroke sample",
+    "WET-BRUSH stroke sample",
+    "BURN stroke sample",
+    "DODGE stroke sample",
 }
 
 # ============================================================================
@@ -52,25 +55,25 @@ _EXPECTED_SAMPLE_LABELS = {
 def test_sample_generator_initialized_at_init() -> None:
     """StrokeVLMClient eagerly generates all stroke samples on construction.
 
-    Verifies that ``_stroke_samples`` is populated with exactly 7 keys
+    Verifies that ``_stroke_samples`` is populated with exactly 10 keys
     (one per supported stroke type) when the client is constructed.
     """
     client = StrokeVLMClient()
 
     assert isinstance(client._stroke_samples, dict), "_stroke_samples should be a dict"
-    assert len(client._stroke_samples) == 7, (
-        f"Expected 7 stroke samples, got {len(client._stroke_samples)}"
+    assert len(client._stroke_samples) == 10, (
+        f"Expected 10 stroke samples, got {len(client._stroke_samples)}"
     )
 
 
 def test_suggest_strokes_sends_sample_images() -> None:
-    """suggest_strokes() calls query_multimodal_multi_image with canvas + 7 sample images.
+    """suggest_strokes() calls query_multimodal_multi_image with canvas + 9 sample images.
 
     Verifies:
     - ``query_multimodal_multi_image`` is called (not ``query_multimodal``)
-    - The ``images`` argument contains exactly 8 entries (1 canvas + 7 samples)
+        - The ``images`` argument contains exactly 11 entries (1 canvas + 10 samples)
     - The first image label is ``"Current canvas""
-    - The remaining 5 labels match the expected stroke sample names
+    - The remaining labels match the expected stroke sample names
     """
     client = StrokeVLMClient()
 
@@ -102,8 +105,8 @@ def test_suggest_strokes_sends_sample_images() -> None:
         call_kwargs.kwargs.get("images") or call_kwargs.args[1]
     )
 
-    assert len(images) == 8, (
-        f"Expected 8 images (1 canvas + 7 samples), got {len(images)}"
+    assert len(images) == 11, (
+        f"Expected 11 images (1 canvas + 10 samples), got {len(images)}"
     )
 
     # First entry must be the current canvas

@@ -412,6 +412,61 @@ export default function SidePanel({
               </div>
             </>
           )}
+
+          {stroke.type === 'wet-brush' && (
+            <>
+              <div className="meta-row">
+                <span className="meta-label">Softness</span>
+                <span className="meta-value">{stroke.softness}</span>
+              </div>
+              <div className="meta-row">
+                <span className="meta-label">Flow</span>
+                <span className="meta-value">{stroke.flow}</span>
+              </div>
+              <div className="meta-row">
+                <span className="meta-label">Point Count</span>
+                <span className="meta-value">{stroke.points?.length}</span>
+              </div>
+            </>
+          )}
+
+          {stroke.type === 'burn' && (
+            <>
+              <div className="meta-row">
+                <span className="meta-label">Center</span>
+                <span className="meta-value">
+                  ({stroke.center_x}, {stroke.center_y})
+                </span>
+              </div>
+              <div className="meta-row">
+                <span className="meta-label">Radius</span>
+                <span className="meta-value">{stroke.radius}px</span>
+              </div>
+              <div className="meta-row">
+                <span className="meta-label">Intensity</span>
+                <span className="meta-value">{stroke.intensity}</span>
+              </div>
+            </>
+          )}
+
+          {stroke.type === 'dodge' && (
+            <>
+              <div className="meta-row">
+                <span className="meta-label">Center</span>
+                <span className="meta-value">
+                  ({stroke.center_x}, {stroke.center_y})
+                </span>
+              </div>
+              <div className="meta-row">
+                <span className="meta-label">Radius</span>
+                <span className="meta-value">{stroke.radius}px</span>
+              </div>
+              <div className="meta-row">
+                <span className="meta-label">Intensity</span>
+                <span className="meta-value">{stroke.intensity}</span>
+              </div>
+            </>
+          )}
         </>
       )}
 

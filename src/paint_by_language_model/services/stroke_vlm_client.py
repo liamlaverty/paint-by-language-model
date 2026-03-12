@@ -407,6 +407,19 @@ AVAILABLE STROKE TYPES:
    Example: {{"type": "chalk", "points": [[150,200], [350,180], [450,250]], "chalk_width": 20, "grain_density": 4, "color_hex": "#D2691E", "thickness": 1, "opacity": 0.7}}
    Required fields: type, points (list of [x,y] coordinates, 2-50 points), chalk_width (2-60), grain_density (1-8), color_hex, thickness, opacity
 
+8. WET-BRUSH - Soft-edged stroke that bleeds and spreads at its margins, characteristic of watercolour or ink-wash painting. See attached "WET-BRUSH stroke sample" image.
+   Example: {{"type": "wet-brush", "points": [[100,200], [300,180], [500,220]], "softness": 12, "flow": 0.7, "color_hex": "#4477AA", "thickness": 14, "opacity": 0.75}}
+   Required fields: type, points (list of [x,y] coordinates, 2-50 points), softness (1-30, controls blur radius), flow (0.1-1.0, controls paint density), color_hex, thickness, opacity
+
+9. BURN - Darkens existing pixels in a soft circular region (shadow modelling, depth, vignetting). See attached "BURN stroke sample" image.
+   Example: {{"type": "burn", "center_x": 400, "center_y": 300, "radius": 80, "intensity": 0.6, "color_hex": "#000000", "thickness": 1, "opacity": 1.0}}
+   Required fields: type, center_x, center_y, radius (5–300), intensity (0.05–0.8), color_hex, thickness, opacity
+
+10. DODGE - Lightens existing pixels in a soft circular region (highlights, light sources, brightening effects). See attached "DODGE stroke sample" image.
+   Example: {{"type": "dodge", "center_x": 400, "center_y": 300, "radius": 80, "intensity": 0.6, "color_hex": "#ffffff", "thickness": 1, "opacity": 1.0}}
+   Required fields: type, center_x, center_y, radius (5–300), intensity (0.05–0.8), color_hex, thickness, opacity
+   Tip: Use dodge on dark areas to add highlights, simulate rim-lighting, or brighten under-exposed regions.
+
 Canvas dimensions: {CANVAS_WIDTH}x{CANVAS_HEIGHT} pixels
 All coordinates must be within bounds (0 to {CANVAS_WIDTH} for x, 0 to {CANVAS_HEIGHT} for y).
 Use 0 for the left/top edge and {CANVAS_WIDTH}/{CANVAS_HEIGHT} for the right/bottom edge.
@@ -421,6 +434,7 @@ Consider:
 - Creating cohesive, original artwork (not copying specific existing pieces)
 - Using varied stroke types to achieve different artistic effects
 - Use dry-brush and chalk for textured, painterly effects
+- Use wet-brush for soft watercolour bleeds and ink-wash effects
 
 RESPONSE FORMAT (JSON only):
 {{
@@ -599,6 +613,25 @@ IMPORTANT: Respond ONLY with valid JSON. Do not include any markdown formatting,
                     "points": stroke["points"],  # Expected as list of [x, y] pairs
                     "chalk_width": int(stroke["chalk_width"]),
                     "grain_density": int(stroke["grain_density"]),
+                }
+            )
+
+        elif stroke_type == "wet-brush":
+            parsed.update(
+                {
+                    "points": stroke["points"],  # list of [x, y] pairs
+                    "softness": int(stroke["softness"]),
+                    "flow": float(stroke["flow"]),
+                }
+            )
+
+        elif stroke_type in ("burn", "dodge"):
+            parsed.update(
+                {
+                    "center_x": int(stroke["center_x"]),
+                    "center_y": int(stroke["center_y"]),
+                    "radius": int(stroke["radius"]),
+                    "intensity": float(stroke["intensity"]),
                 }
             )
 

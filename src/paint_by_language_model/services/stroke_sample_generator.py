@@ -4,6 +4,14 @@ import logging
 from pathlib import Path
 
 from config import (
+    MAX_BURN_DODGE_INTENSITY,
+    MAX_BURN_DODGE_RADIUS,
+    MAX_FLOW,
+    MAX_SOFTNESS,
+    MIN_BURN_DODGE_INTENSITY,
+    MIN_BURN_DODGE_RADIUS,
+    MIN_FLOW,
+    MIN_SOFTNESS,
     STROKE_SAMPLE_BACKGROUND,
     STROKE_SAMPLE_DIR,
     STROKE_SAMPLE_HEIGHT,
@@ -24,6 +32,9 @@ SUPPORTED_STROKE_TYPES: list[str] = [
     "splatter",
     "dry-brush",
     "chalk",
+    "wet-brush",
+    "burn",
+    "dodge",
 ]
 
 
@@ -148,6 +159,9 @@ class StrokeSampleGenerator:
             "splatter": self._generate_splatter_samples,
             "dry-brush": self._generate_dry_brush_samples,
             "chalk": self._generate_chalk_samples,
+            "wet-brush": self._generate_wet_brush_samples,
+            "burn": self._generate_burn_samples,
+            "dodge": self._generate_dodge_samples,
         }
         return generators[stroke_type]()
 
@@ -561,6 +575,78 @@ class StrokeSampleGenerator:
             ),
         ]
 
+    def _generate_wet_brush_samples(self) -> list[Stroke]:
+        """Generate 5 varied wet-brush strokes for the sample canvas.
+
+        Variations cover different softness values (``MIN_SOFTNESS``–
+        ``MAX_SOFTNESS``), flow values (``MIN_FLOW``–``MAX_FLOW``), and
+        polyline paths with varying lengths and shapes spread across the
+        200×100 canvas. The resulting images demonstrate the soft, bleeding
+        edge characteristic of this stroke type.
+
+        Returns:
+            list[Stroke]: List of 5 wet-brush Stroke dicts.
+        """
+        # Clamp convenience values to configured limits.
+        low_softness = max(MIN_SOFTNESS, 2)
+        mid_softness = (MIN_SOFTNESS + MAX_SOFTNESS) // 2  # ~15
+        high_softness = min(MAX_SOFTNESS, 25)
+        low_flow = max(MIN_FLOW, 0.3)
+        high_flow = min(MAX_FLOW, 0.95)
+
+        return [
+            # Soft, high-flow — red horizontal sweep
+            Stroke(
+                type="wet-brush",
+                color_hex="#CC0000",
+                thickness=12,
+                opacity=0.8,
+                points=[[10, 20], [80, 25], [150, 18]],
+                softness=high_softness,
+                flow=high_flow,
+            ),
+            # Medium softness, medium flow — blue diagonal
+            Stroke(
+                type="wet-brush",
+                color_hex="#0044CC",
+                thickness=10,
+                opacity=0.7,
+                points=[[20, 50], [90, 40], [170, 60]],
+                softness=mid_softness,
+                flow=0.6,
+            ),
+            # Low softness, low flow — green (sharper edge)
+            Stroke(
+                type="wet-brush",
+                color_hex="#226622",
+                thickness=8,
+                opacity=0.9,
+                points=[[180, 80], [120, 72], [40, 82]],
+                softness=low_softness,
+                flow=low_flow,
+            ),
+            # High softness, low flow — orange (wide bleed, translucent)
+            Stroke(
+                type="wet-brush",
+                color_hex="#FF8800",
+                thickness=15,
+                opacity=0.6,
+                points=[[30, 10], [70, 35], [130, 28], [175, 40]],
+                softness=high_softness,
+                flow=low_flow,
+            ),
+            # Medium softness, high flow — purple
+            Stroke(
+                type="wet-brush",
+                color_hex="#7700AA",
+                thickness=10,
+                opacity=0.75,
+                points=[[60, 88], [120, 82], [175, 90]],
+                softness=mid_softness,
+                flow=high_flow,
+            ),
+        ]
+
     def _generate_chalk_samples(self) -> list[Stroke]:
         """Generate 5 varied chalk strokes for the sample canvas.
 
@@ -621,5 +707,163 @@ class StrokeSampleGenerator:
                 points=[[70, 85], [130, 88], [180, 85]],
                 chalk_width=15,
                 grain_density=5,
+            ),
+        ]
+
+    def _generate_burn_samples(self) -> list[Stroke]:
+        """Generate 5 varied burn strokes for the sample canvas.
+
+        Variations cover different ``radius`` values (``MIN_BURN_DODGE_RADIUS``–
+        ``MAX_BURN_DODGE_RADIUS``) and ``intensity`` values
+        (``MIN_BURN_DODGE_INTENSITY``–``MAX_BURN_DODGE_INTENSITY``) spread
+        across the 200×100 canvas.  ``color_hex`` and ``thickness`` are
+        structurally required by the ``Stroke`` TypedDict but are ignored
+        during burn rendering.
+
+        Returns:
+            list[Stroke]: List of 5 burn ``Stroke`` dicts.
+        """
+        low_radius = max(MIN_BURN_DODGE_RADIUS, 10)
+        mid_radius = (MIN_BURN_DODGE_RADIUS + MAX_BURN_DODGE_RADIUS) // 2  # ~152
+        high_radius = min(MAX_BURN_DODGE_RADIUS, 60)
+
+        low_intensity = max(MIN_BURN_DODGE_INTENSITY, 0.1)
+        mid_intensity = (MIN_BURN_DODGE_INTENSITY + MAX_BURN_DODGE_INTENSITY) / 2  # ~0.425
+        high_intensity = min(MAX_BURN_DODGE_INTENSITY, 0.75)
+
+        return [
+            # Small radius, high intensity — top-left corner shadow
+            Stroke(
+                type="burn",
+                color_hex="#000000",
+                thickness=1,
+                opacity=1.0,
+                center_x=30,
+                center_y=25,
+                radius=high_radius,
+                intensity=high_intensity,
+            ),
+            # Medium radius, medium intensity — centre
+            Stroke(
+                type="burn",
+                color_hex="#333333",
+                thickness=1,
+                opacity=1.0,
+                center_x=100,
+                center_y=50,
+                radius=mid_radius,
+                intensity=mid_intensity,
+            ),
+            # Small radius, low intensity — top-right
+            Stroke(
+                type="burn",
+                color_hex="#666666",
+                thickness=1,
+                opacity=1.0,
+                center_x=170,
+                center_y=20,
+                radius=low_radius,
+                intensity=low_intensity,
+            ),
+            # Large radius, high intensity — vignette-style bottom
+            Stroke(
+                type="burn",
+                color_hex="#000000",
+                thickness=1,
+                opacity=1.0,
+                center_x=100,
+                center_y=90,
+                radius=min(MAX_BURN_DODGE_RADIUS, 80),
+                intensity=high_intensity,
+            ),
+            # Medium radius, high intensity — bottom-right
+            Stroke(
+                type="burn",
+                color_hex="#222222",
+                thickness=1,
+                opacity=1.0,
+                center_x=165,
+                center_y=75,
+                radius=high_radius,
+                intensity=high_intensity,
+            ),
+        ]
+
+    def _generate_dodge_samples(self) -> list[Stroke]:
+        """Generate 5 varied dodge strokes for the sample canvas.
+
+        Variations cover different ``radius`` values (``MIN_BURN_DODGE_RADIUS``–
+        ``MAX_BURN_DODGE_RADIUS``) and ``intensity`` values
+        (``MIN_BURN_DODGE_INTENSITY``–``MAX_BURN_DODGE_INTENSITY``) spread
+        across the 200×100 canvas.  ``color_hex`` and ``thickness`` are
+        structurally required by the ``Stroke`` TypedDict but are ignored
+        during dodge rendering.
+
+        Returns:
+            list[Stroke]: List of 5 dodge ``Stroke`` dicts.
+        """
+        low_radius = max(MIN_BURN_DODGE_RADIUS, 10)
+        mid_radius = (MIN_BURN_DODGE_RADIUS + MAX_BURN_DODGE_RADIUS) // 2  # ~152
+        high_radius = min(MAX_BURN_DODGE_RADIUS, 60)
+
+        low_intensity = max(MIN_BURN_DODGE_INTENSITY, 0.1)
+        mid_intensity = (MIN_BURN_DODGE_INTENSITY + MAX_BURN_DODGE_INTENSITY) / 2  # ~0.425
+        high_intensity = min(MAX_BURN_DODGE_INTENSITY, 0.75)
+
+        return [
+            # Small radius, high intensity — top-left highlight
+            Stroke(
+                type="dodge",
+                color_hex="#ffffff",
+                thickness=1,
+                opacity=1.0,
+                center_x=30,
+                center_y=25,
+                radius=high_radius,
+                intensity=high_intensity,
+            ),
+            # Medium radius, medium intensity — centre
+            Stroke(
+                type="dodge",
+                color_hex="#cccccc",
+                thickness=1,
+                opacity=1.0,
+                center_x=100,
+                center_y=50,
+                radius=mid_radius,
+                intensity=mid_intensity,
+            ),
+            # Small radius, low intensity — top-right
+            Stroke(
+                type="dodge",
+                color_hex="#999999",
+                thickness=1,
+                opacity=1.0,
+                center_x=170,
+                center_y=20,
+                radius=low_radius,
+                intensity=low_intensity,
+            ),
+            # Large radius, high intensity — bright spot bottom
+            Stroke(
+                type="dodge",
+                color_hex="#ffffff",
+                thickness=1,
+                opacity=1.0,
+                center_x=100,
+                center_y=90,
+                radius=min(MAX_BURN_DODGE_RADIUS, 80),
+                intensity=high_intensity,
+            ),
+            # Medium radius, high intensity — bottom-right highlight
+            Stroke(
+                type="dodge",
+                color_hex="#dddddd",
+                thickness=1,
+                opacity=1.0,
+                center_x=165,
+                center_y=75,
+                radius=high_radius,
+                intensity=high_intensity,
             ),
         ]
