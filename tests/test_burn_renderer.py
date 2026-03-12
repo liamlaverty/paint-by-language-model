@@ -263,9 +263,9 @@ def test_canvas_manager_applies_burn() -> None:
 
 
 def test_parse_burn_stroke_branch() -> None:
-    """_parse_single_stroke correctly parses a raw burn stroke dict."""
+    """StrokeParser._parse_single_stroke correctly parses a raw burn stroke dict."""
     sys.path.insert(0, str(project_root / "src" / "paint_by_language_model"))
-    from services.stroke_vlm_client import StrokeVLMClient  # noqa: F401
+    from services.stroke_parser import StrokeParser
 
     raw: dict[str, object] = {
         "type": "burn",
@@ -279,9 +279,8 @@ def test_parse_burn_stroke_branch() -> None:
         "reasoning": "shadowing",
     }
 
-    # Access the private method via name mangling workaround
-    client = StrokeVLMClient.__new__(StrokeVLMClient)
-    parsed = client._parse_single_stroke(raw)  # type: ignore[attr-defined]
+    parser = StrokeParser()
+    parsed = parser._parse_single_stroke(raw)  # type: ignore[arg-type]
 
     assert parsed["center_x"] == 150
     assert parsed["center_y"] == 100

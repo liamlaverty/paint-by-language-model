@@ -313,7 +313,7 @@ class TestLayerCompleteInPromptAndParsing:
     def test_parse_stroke_response_with_layer_complete_true(
         self, stroke_client: StrokeVLMClient
     ) -> None:
-        """Test that _parse_stroke_response() returns layer_complete True when present."""
+        """Test that parser.parse() returns layer_complete True when present."""
         import json
 
         response_text = json.dumps(
@@ -325,14 +325,14 @@ class TestLayerCompleteInPromptAndParsing:
             }
         )
 
-        result = stroke_client._parse_stroke_response(response_text)
+        result = stroke_client.parser.parse(response_text)
 
         assert result.get("layer_complete") is True
 
     def test_parse_stroke_response_with_layer_complete_false(
         self, stroke_client: StrokeVLMClient
     ) -> None:
-        """Test that _parse_stroke_response() returns layer_complete False when present."""
+        """Test that parser.parse() returns layer_complete False when present."""
         import json
 
         response_text = json.dumps(
@@ -344,14 +344,14 @@ class TestLayerCompleteInPromptAndParsing:
             }
         )
 
-        result = stroke_client._parse_stroke_response(response_text)
+        result = stroke_client.parser.parse(response_text)
 
         assert result.get("layer_complete") is False
 
     def test_parse_stroke_response_without_layer_complete(
         self, stroke_client: StrokeVLMClient
     ) -> None:
-        """Test that _parse_stroke_response() omits layer_complete when absent in response."""
+        """Test that parser.parse() omits layer_complete when absent in response."""
         import json
 
         response_text = json.dumps(
@@ -362,6 +362,6 @@ class TestLayerCompleteInPromptAndParsing:
             }
         )
 
-        result = stroke_client._parse_stroke_response(response_text)
+        result = stroke_client.parser.parse(response_text)
 
         assert "layer_complete" not in result
