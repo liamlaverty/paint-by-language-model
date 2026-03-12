@@ -2,7 +2,7 @@
  * Unit tests for stroke-renderers.ts - Canvas rendering functions
  */
 
-import { renderStroke } from '@/lib/stroke-renderers';
+import { renderStroke } from '@/lib/renderers';
 import type { EnrichedStroke } from '@/lib/types';
 
 // Mock canvas context
