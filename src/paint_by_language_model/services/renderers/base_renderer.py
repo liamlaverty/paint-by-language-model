@@ -5,7 +5,7 @@ from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from PIL import ImageDraw
+    from PIL import Image, ImageDraw
 
     from models import Stroke
 
@@ -47,6 +47,40 @@ class StrokeRenderer(ABC):
             ValueError: If stroke validation fails (missing fields, out of bounds, etc.)
         """
         pass
+
+    @property
+    def needs_image_access(self) -> bool:
+        """Whether this renderer needs direct PIL Image access (for blend modes).
+
+        Override to return True in renderers that use render_to_image() instead
+        of render(). Default is False.
+
+        Returns:
+            bool: True if render_to_image() should be called instead of render().
+        """
+        return False
+
+    def render_to_image(self, stroke: "Stroke", image: "Image.Image") -> "Image.Image":
+        """Render a stroke that requires full image pixel access.
+
+        Called instead of render() when needs_image_access is True.
+        The renderer reads existing pixels, applies the blend, and returns
+        the (possibly new) Image object.
+
+        Args:
+            stroke (Stroke): Stroke data
+            image (Image.Image): The current canvas PIL Image (RGB mode)
+
+        Returns:
+            Image.Image: The modified canvas image (may be the same object or a new one)
+
+        Raises:
+            NotImplementedError: If the renderer does not implement image access
+        """
+        raise NotImplementedError(
+            f"{type(self).__name__} declared needs_image_access=True "
+            "but did not implement render_to_image()"
+        )
 
 
 class StrokeRendererFactory:

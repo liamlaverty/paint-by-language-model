@@ -10,7 +10,7 @@
 
 import { useRef, useEffect } from 'react';
 import type { EnrichedStroke, ArtworkMetadata } from '@/lib/types';
-import { renderStroke } from '@/lib/stroke-renderers';
+import { renderStroke } from '@/lib/renderers';
 import { getStrokeIndexAtPoint } from '@/lib/hit-detection';
 
 /**

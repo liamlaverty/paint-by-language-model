@@ -1,6 +1,6 @@
 {
   // Python configuration
-  "python.defaultInterpreterPath": "${workspaceFolder}/../../../opt/homebrew/anaconda3/envs/paint-by-language-model/bin/python",
+  "python.defaultInterpreterPath": "${workspaceFolder}/../../../../../opt/homebrew/anaconda3/envs/paint-by-language-model/bin/python",
 
   // Ruff extension settings
   "ruff.enable": true,
