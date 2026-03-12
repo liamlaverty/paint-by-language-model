@@ -46,6 +46,7 @@ class ArtworkPersistence:
             evaluation (EvaluationResult): The evaluation result to save.
         """
         eval_dir = self.artwork_dir / OUTPUT_STRUCTURE["evaluations"]
+        eval_dir.mkdir(parents=True, exist_ok=True)
         filename = f"iteration-{evaluation['iteration']:03d}.json"
         filepath = eval_dir / filename
 
@@ -62,6 +63,7 @@ class ArtworkPersistence:
                 accumulated during the generation run.
         """
         eval_dir = self.artwork_dir / OUTPUT_STRUCTURE["evaluations"]
+        eval_dir.mkdir(parents=True, exist_ok=True)
         filepath = eval_dir / "all_evaluations.json"
 
         with open(filepath, "w", encoding="utf-8") as f:
@@ -72,26 +74,6 @@ class ArtworkPersistence:
     # ------------------------------------------------------------------
     # Stroke persistence
     # ------------------------------------------------------------------
-
-    def save_stroke(self, stroke: Stroke, iteration: int) -> None:
-        """Save an individual stroke to a per-iteration JSON file.
-
-        This method exists for backward-compatibility with callers that
-        persist strokes one-at-a-time.  For normal operation prefer
-        :meth:`save_stroke_batch`.
-
-        Args:
-            stroke (Stroke): The stroke data to save.
-            iteration (int): The iteration number used to name the file.
-        """
-        strokes_dir = self.artwork_dir / OUTPUT_STRUCTURE["strokes"]
-        filename = f"iteration-{iteration:03d}.json"
-        filepath = strokes_dir / filename
-
-        with open(filepath, "w", encoding="utf-8") as f:
-            json.dump(stroke, f, indent=2)
-
-        logger.debug(f"Saved stroke: {filename}")
 
     def save_stroke_batch(
         self,
@@ -118,6 +100,7 @@ class ArtworkPersistence:
                 that the current layer is complete.
         """
         strokes_dir = self.artwork_dir / OUTPUT_STRUCTURE["strokes"]
+        strokes_dir.mkdir(parents=True, exist_ok=True)
         filename = f"iteration-{iteration:03d}_batch.json"
         filepath = strokes_dir / filename
 
@@ -159,6 +142,7 @@ class ArtworkPersistence:
                 generation run.
         """
         strokes_dir = self.artwork_dir / OUTPUT_STRUCTURE["strokes"]
+        strokes_dir.mkdir(parents=True, exist_ok=True)
         filepath = strokes_dir / "all_strokes.json"
 
         with open(filepath, "w", encoding="utf-8") as f:
@@ -178,6 +162,7 @@ class ArtworkPersistence:
                 by the orchestrator.
         """
         filepath = self.artwork_dir / OUTPUT_STRUCTURE["metadata"]
+        filepath.parent.mkdir(parents=True, exist_ok=True)
 
         with open(filepath, "w", encoding="utf-8") as f:
             json.dump(metadata, f, indent=2)

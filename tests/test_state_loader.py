@@ -5,6 +5,8 @@ import sys
 from pathlib import Path
 from unittest.mock import MagicMock
 
+import pytest
+
 sys.path.insert(
     0, str(Path(__file__).parent.parent / "src" / "paint_by_language_model")
 )
@@ -388,3 +390,104 @@ class TestEvaluationLoading:
         state = loader.load(canvas_manager=_make_canvas_manager_mock())
 
         assert state["evaluations"] == []
+
+
+# ---------------------------------------------------------------------------
+# Painting plan loading
+# ---------------------------------------------------------------------------
+
+
+class TestPaintingPlanLoading:
+    """Tests for ArtworkStateLoader loading of painting_plan.json."""
+
+    def test_painting_plan_loaded_from_file(self, tmp_path: Path) -> None:
+        """painting_plan should be populated when painting_plan.json is present."""
+        artwork_dir = tmp_path / "artwork-plan"
+        artwork_dir.mkdir()
+        plan = {
+            "layers": [
+                {"layer_number": 1, "name": "Background"},
+            ]
+        }
+        with open(artwork_dir / "painting_plan.json", "w", encoding="utf-8") as f:
+            json.dump(plan, f)
+
+        loader = ArtworkStateLoader(artwork_dir=artwork_dir)
+        state = loader.load(canvas_manager=_make_canvas_manager_mock())
+
+        assert state["painting_plan"] is not None
+        assert "layers" in state["painting_plan"]
+
+
+# ---------------------------------------------------------------------------
+# Layer tracking
+# ---------------------------------------------------------------------------
+
+
+class TestLayerTracking:
+    """Tests for layer iteration tracking in ArtworkStateLoader."""
+
+    def test_layer_iterations_populated_from_batch_files(self, tmp_path: Path) -> None:
+        """layer_iterations should count how many batches belong to each layer."""
+        artwork_dir = tmp_path / "artwork-layer-iter"
+        strokes_dir, _ = _setup_dirs(artwork_dir)
+
+        plan = {
+            "layers": [
+                {"layer_number": 1, "name": "Background"},
+            ]
+        }
+        with open(artwork_dir / "painting_plan.json", "w", encoding="utf-8") as f:
+            json.dump(plan, f)
+
+        _write_batch_file(strokes_dir, 1, [_make_stroke()], layer_number=1)
+        _write_batch_file(strokes_dir, 2, [_make_stroke()], layer_number=1)
+
+        loader = ArtworkStateLoader(artwork_dir=artwork_dir)
+        state = loader.load(canvas_manager=_make_canvas_manager_mock())
+
+        assert state["layer_iterations"][1] == 2
+
+    def test_current_layer_index_set_from_last_batch(self, tmp_path: Path) -> None:
+        """current_layer_index should reflect the layer of the most recent batch."""
+        artwork_dir = tmp_path / "artwork-layer-idx"
+        strokes_dir, _ = _setup_dirs(artwork_dir)
+
+        plan = {
+            "layers": [
+                {"layer_number": 1, "name": "Background"},
+                {"layer_number": 2, "name": "Midground"},
+            ]
+        }
+        with open(artwork_dir / "painting_plan.json", "w", encoding="utf-8") as f:
+            json.dump(plan, f)
+
+        _write_batch_file(strokes_dir, 1, [_make_stroke()], layer_number=1)
+        _write_batch_file(strokes_dir, 2, [_make_stroke()], layer_number=2)
+
+        loader = ArtworkStateLoader(artwork_dir=artwork_dir)
+        state = loader.load(canvas_manager=_make_canvas_manager_mock())
+
+        assert state["current_layer_index"] == 1
+
+
+# ---------------------------------------------------------------------------
+# Error handling
+# ---------------------------------------------------------------------------
+
+
+class TestErrorHandling:
+    """Tests for ArtworkStateLoader error handling on corrupt files."""
+
+    def test_corrupted_batch_file_raises(self, tmp_path: Path) -> None:
+        """A JSON-corrupt batch file should cause load() to raise an exception."""
+        artwork_dir = tmp_path / "artwork-corrupt"
+        strokes_dir, _ = _setup_dirs(artwork_dir)
+
+        _write_batch_file(strokes_dir, 1, [_make_stroke()])
+        corrupt_path = strokes_dir / "iteration-002_batch.json"
+        corrupt_path.write_text("not valid json", encoding="utf-8")
+
+        loader = ArtworkStateLoader(artwork_dir=artwork_dir)
+        with pytest.raises(Exception):
+            loader.load(canvas_manager=_make_canvas_manager_mock())

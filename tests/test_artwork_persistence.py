@@ -124,6 +124,19 @@ class TestSaveEvaluation:
         assert filepath.exists()
 
 
+def _make_results(strokes: list) -> list:
+    """Build fake application results for a list of strokes.
+
+    Args:
+        strokes (list): The stroke list the results correspond to.
+
+    Returns:
+        list: A list of result dicts with ``index``, ``success``, and
+            ``error`` keys.
+    """
+    return [{"index": i, "success": True, "error": None} for i in range(len(strokes))]
+
+
 # ---------------------------------------------------------------------------
 # save_stroke_batch
 # ---------------------------------------------------------------------------
@@ -132,25 +145,11 @@ class TestSaveEvaluation:
 class TestSaveStrokeBatch:
     """Tests for ArtworkPersistence.save_stroke_batch."""
 
-    def _make_results(self, strokes: list) -> list:
-        """Build fake application results for a list of strokes.
-
-        Args:
-            strokes (list): The stroke list the results correspond to.
-
-        Returns:
-            list: A list of result dicts with ``index``, ``success``, and
-                ``error`` keys.
-        """
-        return [
-            {"index": i, "success": True, "error": None} for i in range(len(strokes))
-        ]
-
     def test_creates_batch_json_file(self, tmp_path: Path) -> None:
         """save_stroke_batch should write iteration-NNN_batch.json."""
         persistence = _make_persistence(tmp_path)
         strokes = [_make_stroke("line"), _make_stroke("arc")]
-        results = self._make_results(strokes)
+        results = _make_results(strokes)
 
         persistence.save_stroke_batch(
             strokes=strokes,
@@ -166,7 +165,7 @@ class TestSaveStrokeBatch:
         """The batch JSON must contain the standard metadata keys."""
         persistence = _make_persistence(tmp_path)
         strokes = [_make_stroke("circle")]
-        results = self._make_results(strokes)
+        results = _make_results(strokes)
 
         persistence.save_stroke_batch(
             strokes=strokes,
@@ -270,3 +269,76 @@ class TestLogException:
         content = log_file.read_text(encoding="utf-8")
 
         assert raw in content
+
+
+# ---------------------------------------------------------------------------
+# save_all_strokes
+# ---------------------------------------------------------------------------
+
+
+class TestSaveAllStrokes:
+    """Tests for ArtworkPersistence.save_all_strokes."""
+
+    def test_creates_all_strokes_file(self, tmp_path: Path) -> None:
+        """save_all_strokes should write strokes/all_strokes.json."""
+        persistence = _make_persistence(tmp_path)
+        stroke1 = _make_stroke("line")
+        stroke2 = _make_stroke("arc")
+
+        persistence.save_all_strokes([stroke1, stroke2])
+
+        expected = persistence.artwork_dir / "strokes" / "all_strokes.json"
+        assert expected.exists(), "Expected all_strokes.json was not created"
+
+    def test_file_contains_all_strokes(self, tmp_path: Path) -> None:
+        """The written file should contain both strokes serialised as JSON."""
+        persistence = _make_persistence(tmp_path)
+        stroke1 = _make_stroke("line")
+        stroke2 = _make_stroke("arc")
+
+        persistence.save_all_strokes([stroke1, stroke2])
+
+        filepath = persistence.artwork_dir / "strokes" / "all_strokes.json"
+        with open(filepath, encoding="utf-8") as f:
+            data = json.load(f)
+
+        assert len(data) == 2
+        assert data[0]["type"] == "line"
+        assert data[1]["type"] == "arc"
+
+
+# ---------------------------------------------------------------------------
+# save_metadata
+# ---------------------------------------------------------------------------
+
+
+class TestSaveMetadata:
+    """Tests for ArtworkPersistence.save_metadata."""
+
+    def test_creates_metadata_file(self, tmp_path: Path) -> None:
+        """save_metadata should write the file at OUTPUT_STRUCTURE['metadata']."""
+        from config import OUTPUT_STRUCTURE
+
+        persistence = _make_persistence(tmp_path)
+
+        persistence.save_metadata({"key": "value"})
+
+        expected = persistence.artwork_dir / OUTPUT_STRUCTURE["metadata"]
+        assert expected.exists(), "Expected metadata file was not created"
+
+    def test_file_contains_correct_data(self, tmp_path: Path) -> None:
+        """The written metadata file should contain the supplied dict."""
+        persistence = _make_persistence(tmp_path)
+        metadata = {"artist": "Monet", "iterations": 10, "score": 87.5}
+
+        persistence.save_metadata(metadata)
+
+        from config import OUTPUT_STRUCTURE
+
+        filepath = persistence.artwork_dir / OUTPUT_STRUCTURE["metadata"]
+        with open(filepath, encoding="utf-8") as f:
+            data = json.load(f)
+
+        assert data["artist"] == "Monet"
+        assert data["iterations"] == 10
+        assert data["score"] == pytest.approx(87.5)

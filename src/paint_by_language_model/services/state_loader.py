@@ -187,10 +187,14 @@ class ArtworkStateLoader:
         """
         logger.info(f"Found {len(batch_files)} batch files, loading state...")
 
+        loaded_batches: list[dict] = []
+
         for batch_file in batch_files:
             try:
                 with open(batch_file, encoding="utf-8") as f:
                     batch_data = json.load(f)
+
+                loaded_batches.append(batch_data)
 
                 state["total_strokes_requested"] += batch_data["total_requested"]
                 state["total_strokes_applied"] += batch_data["applied_count"]
@@ -220,10 +224,8 @@ class ArtworkStateLoader:
 
         # Rebuild layer tracking from batch metadata
         painting_plan = state["painting_plan"]
-        if painting_plan and batch_files:
-            for batch_file in batch_files:
-                with open(batch_file, encoding="utf-8") as f:
-                    batch_data = json.load(f)
+        if painting_plan and loaded_batches:
+            for batch_data in loaded_batches:
                 layer_num = batch_data.get("layer_number")
                 if layer_num:
                     state["layer_iterations"][layer_num] = (
@@ -231,8 +233,7 @@ class ArtworkStateLoader:
                     )
 
             # Determine current layer index from most recent batch
-            with open(batch_files[-1], encoding="utf-8") as f:
-                last_batch = json.load(f)
+            last_batch = loaded_batches[-1]
             last_layer_num = last_batch.get("layer_number")
             if last_layer_num:
                 for idx, layer in enumerate(painting_plan["layers"]):
