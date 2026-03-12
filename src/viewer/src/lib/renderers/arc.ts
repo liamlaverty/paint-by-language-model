@@ -3,7 +3,7 @@
  */
 
 import type { EnrichedStroke } from '@/lib/types';
-import { strokeColor, hitLineWidth } from '@/lib/renderers/renderer-utils';
+import { hitLineWidth, strokeColor } from '@/utils/renderer-utils';
 
 /**
  * Render an elliptical arc stroke.

@@ -19,9 +19,7 @@ import { hexToRGBA, strokeIndexToColor } from '@/lib/color-utils';
  * @returns {string} CSS color string
  */
 export function strokeColor(stroke: EnrichedStroke, isHit: boolean): string {
-  return isHit
-    ? strokeIndexToColor(stroke.index)
-    : hexToRGBA(stroke.color_hex, stroke.opacity);
+  return isHit ? strokeIndexToColor(stroke.index) : hexToRGBA(stroke.color_hex, stroke.opacity);
 }
 
 /**

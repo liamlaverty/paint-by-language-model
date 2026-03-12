@@ -3,7 +3,7 @@
  */
 
 import type { EnrichedStroke } from '@/lib/types';
-import { strokeColor, hitLineWidth } from '@/lib/renderers/renderer-utils';
+import { strokeColor, hitLineWidth } from '@/utils/renderer-utils';
 
 /**
  * Render a circle stroke (filled or outlined).

@@ -3,8 +3,8 @@
  */
 
 import type { EnrichedStroke } from '@/lib/types';
-import { strokeColor } from '@/lib/renderers/renderer-utils';
 import { mulberry32 } from '@/lib/prng';
+import { strokeColor } from '@/utils/renderer-utils';
 
 /**
  * Render a dry-brush stroke with visible bristle gaps.

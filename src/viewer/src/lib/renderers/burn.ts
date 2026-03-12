@@ -3,8 +3,8 @@
  */
 
 import type { EnrichedStroke } from '@/lib/types';
-import { drawFilledCircle } from '@/lib/renderers/renderer-utils';
 import { strokeIndexToColor } from '@/lib/color-utils';
+import { drawFilledCircle } from '@/utils/renderer-utils';
 
 /**
  * Render a burn stroke that darkens existing pixels in a soft circular region.

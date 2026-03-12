@@ -3,8 +3,8 @@
  */
 
 import type { EnrichedStroke } from '@/lib/types';
-import { strokeColor, drawFilledCircle } from '@/lib/renderers/renderer-utils';
 import { mulberry32 } from '@/lib/prng';
+import { drawFilledCircle, strokeColor } from '@/utils/renderer-utils';
 
 /**
  * Render a chalk stroke with grainy texture.
