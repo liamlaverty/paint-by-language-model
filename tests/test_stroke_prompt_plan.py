@@ -365,3 +365,68 @@ class TestLayerCompleteInPromptAndParsing:
         result = stroke_client.parser.parse(response_text)
 
         assert "layer_complete" not in result
+
+
+# ============================================================================
+# Tests for Consider-line filtering by allowed_stroke_types
+# ============================================================================
+
+
+def _build_prompt_for(allowed: list[str] | None) -> str:
+    """Build a stroke prompt using a client limited to the given stroke types."""
+    client = StrokeVLMClient(allowed_stroke_types=allowed)
+    return client._build_stroke_prompt(
+        artist_name="Test Artist",
+        subject="Test Subject",
+        iteration=1,
+        strategy_context="",
+        num_strokes=3,
+    )
+
+
+def test_consider_wet_brush_line_present_when_wet_brush_allowed() -> None:
+    """Consider line for wet-brush is present when wet-brush is in allowed_stroke_types.
+
+    When ``allowed_stroke_types=["wet-brush"]`` is set, the prompt should contain
+    the wet-brush Consider line but not the dry-brush/chalk Consider line.
+    """
+    prompt = _build_prompt_for(["wet-brush"])
+
+    assert "Use wet-brush for soft watercolour bleeds and ink-wash effects" in prompt, (
+        "wet-brush Consider line should appear when wet-brush is allowed"
+    )
+    assert "Use dry-brush and chalk for textured, painterly effects" not in prompt, (
+        "dry-brush/chalk Consider line should not appear when neither is allowed"
+    )
+
+
+def test_consider_lines_absent_when_only_line_allowed() -> None:
+    """Both specialist Consider lines are absent when only 'line' is allowed.
+
+    When ``allowed_stroke_types=["line"]``, neither the dry-brush/chalk nor the
+    wet-brush Consider lines should appear in the prompt.
+    """
+    prompt = _build_prompt_for(["line"])
+
+    assert "Use dry-brush and chalk for textured, painterly effects" not in prompt, (
+        "dry-brush/chalk Consider line should not appear when neither is allowed"
+    )
+    assert "Use wet-brush for soft watercolour bleeds and ink-wash effects" not in prompt, (
+        "wet-brush Consider line should not appear when wet-brush is not allowed"
+    )
+
+
+def test_consider_lines_both_present_when_allowed_stroke_types_is_none() -> None:
+    """Both specialist Consider lines appear when allowed_stroke_types is None.
+
+    Preserves backward-compatibility: omitting ``allowed_stroke_types`` must
+    keep both Consider lines in the prompt.
+    """
+    prompt = _build_prompt_for(None)
+
+    assert "Use dry-brush and chalk for textured, painterly effects" in prompt, (
+        "dry-brush/chalk Consider line should appear when all types are allowed"
+    )
+    assert "Use wet-brush for soft watercolour bleeds and ink-wash effects" in prompt, (
+        "wet-brush Consider line should appear when all types are allowed"
+    )

@@ -139,3 +139,58 @@ def test_prompt_references_samples() -> None:
 
     for label in _EXPECTED_SAMPLE_LABELS:
         assert label in prompt, f"Prompt should contain '{label}' but it was not found"
+
+
+# ============================================================================
+# Tests for _build_stroke_types_section filtering
+# ============================================================================
+
+_ALL_TEN_TYPES = ["LINE", "ARC", "POLYLINE", "CIRCLE", "SPLATTER", "DRY-BRUSH", "CHALK", "WET-BRUSH", "BURN", "DODGE"]
+
+
+def test_stroke_types_section_filters_to_allowed_types() -> None:
+    """_build_stroke_types_section() only includes allowed stroke types.
+
+    When ``allowed_stroke_types=["line", "circle"]`` is set, the returned
+    section must contain LINE and CIRCLE entries and must not contain any of
+    the other eight type names.
+    """
+    client = StrokeVLMClient(allowed_stroke_types=["line", "circle"])
+    section = client._build_stroke_types_section()
+
+    assert "LINE" in section, "Section should contain LINE"
+    assert "CIRCLE" in section, "Section should contain CIRCLE"
+
+    excluded = ["ARC", "POLYLINE", "SPLATTER", "DRY-BRUSH", "CHALK", "WET-BRUSH", "BURN", "DODGE"]
+    for excluded_type in excluded:
+        assert excluded_type not in section, (
+            f"Section should NOT contain {excluded_type} when it is not in allowed_stroke_types"
+        )
+
+
+def test_stroke_types_section_renumbers_sequentially() -> None:
+    """_build_stroke_types_section() re-numbers filtered entries without gaps.
+
+    With ``allowed_stroke_types=["line", "circle"]`` the two entries should be
+    numbered 1 and 2 with no gaps.
+    """
+    client = StrokeVLMClient(allowed_stroke_types=["line", "circle"])
+    section = client._build_stroke_types_section()
+
+    assert "1. LINE" in section, "First entry should be numbered 1"
+    assert "2. CIRCLE" in section, "Second entry should be numbered 2"
+
+
+def test_stroke_types_section_all_types_when_none() -> None:
+    """_build_stroke_types_section() returns all ten types when allowed_stroke_types is None.
+
+    Preserves backward-compatibility: callers that do not specify
+    ``allowed_stroke_types`` should see all ten stroke types in the section.
+    """
+    client = StrokeVLMClient()  # allowed_stroke_types defaults to None
+    section = client._build_stroke_types_section()
+
+    for stroke_type in _ALL_TEN_TYPES:
+        assert stroke_type in section, (
+            f"Section should contain {stroke_type} when allowed_stroke_types is None"
+        )

@@ -49,6 +49,7 @@ class GenerationOrchestrator:
         strokes_per_query: int = DEFAULT_STROKES_PER_QUERY,
         gif_frame_duration: int = GIF_FRAME_DURATION_MS,
         expanded_subject: str | None = None,
+        allowed_stroke_types: list[str] | None = None,
     ) -> None:
         """
         Initialize Generation Orchestrator.
@@ -61,6 +62,9 @@ class GenerationOrchestrator:
             strokes_per_query (int): Number of strokes to request per VLM query
             gif_frame_duration (int): GIF frame duration in milliseconds
             expanded_subject (str | None): Detailed description of the final image
+            allowed_stroke_types (list[str] | None): Restrict the stroke types the
+                VLM may suggest.  When ``None`` all supported types are available
+                (existing behaviour preserved).
         """
         self.artist_name = artist_name
         self.subject = subject
@@ -70,13 +74,17 @@ class GenerationOrchestrator:
         self.artwork_dir = output_dir / artwork_id
         self.strokes_per_query = strokes_per_query
         self.gif_frame_duration = gif_frame_duration
+        self.allowed_stroke_types = allowed_stroke_types
 
         # Initialize components
         logger.info(f"Initializing generation for '{subject}' in style of {artist_name}")
 
         self.prompt_logger = PromptLogger(artwork_dir=self.artwork_dir)
         self.canvas_manager = CanvasManager()
-        self.stroke_vlm = StrokeVLMClient(prompt_logger=self.prompt_logger)
+        self.stroke_vlm = StrokeVLMClient(
+            prompt_logger=self.prompt_logger,
+            allowed_stroke_types=self.allowed_stroke_types,
+        )
         self.eval_vlm = EvaluationVLMClient(prompt_logger=self.prompt_logger)
         self.strategy_manager = StrategyManager(artwork_id=artwork_id, output_dir=output_dir)
 
