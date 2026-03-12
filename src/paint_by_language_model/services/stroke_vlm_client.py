@@ -3,6 +3,7 @@
 import json
 import logging
 from datetime import datetime
+from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
@@ -31,6 +32,10 @@ from services.stroke_sample_generator import StrokeSampleGenerator
 from vlm_client import VLMClient
 
 logger = logging.getLogger(__name__)
+
+_STROKE_PROMPT_TEMPLATE_PATH = (
+    Path(__file__).parent.parent.parent / "datafiles" / "prompts" / "stroke_prompt.txt"
+)
 
 
 class StrokeVLMClient:
@@ -61,6 +66,10 @@ class StrokeVLMClient:
                 appear in the AVAILABLE STROKE TYPES prompt block.  When ``None``
                 or an empty list, all ten stroke types are included (existing
                 behaviour preserved).
+
+        The stroke prompt template is loaded once from
+        ``_STROKE_PROMPT_TEMPLATE_PATH`` and cached as
+        ``self._stroke_prompt_template`` for the lifetime of the instance.
         """
         self.client = VLMClient(
             base_url=base_url,
@@ -85,6 +94,8 @@ class StrokeVLMClient:
         self.sample_generator = StrokeSampleGenerator()
         self._stroke_samples = self.sample_generator.generate_all_samples()
         logger.info(f"Generated {len(self._stroke_samples)} stroke sample images")
+
+        self._stroke_prompt_template: str = _STROKE_PROMPT_TEMPLATE_PATH.read_text(encoding="utf-8")
 
     def suggest_strokes(
         self,
@@ -339,7 +350,8 @@ class StrokeVLMClient:
             expanded_subject (str | None): Detailed subject description
 
         Returns:
-            str: Formatted prompt
+            str: Formatted prompt string produced by rendering the template at
+                ``_STROKE_PROMPT_TEMPLATE_PATH`` via ``str.format_map``.
         """
         # Build subject section with optional expanded description
         subject_section = f"Subject: {subject}"
@@ -401,42 +413,26 @@ have been adequately addressed on the canvas.
                 "\n- Use wet-brush for soft watercolour bleeds and ink-wash effects"
             )
 
-        prompt = f"""You are an expert artist creating a piece in the style of {artist_name}.
-
-Current Canvas: [Image attached]
-{subject_section}
-Iteration: {iteration}{strategy_section}{plan_section}
-
-Task: Suggest {num_strokes} stroke(s) to add to this canvas that evoke {artist_name}'s artistic style.
-
-{stroke_types_section}
-
-Canvas dimensions: {CANVAS_WIDTH}x{CANVAS_HEIGHT} pixels
-All coordinates must be within bounds (0 to {CANVAS_WIDTH} for x, 0 to {CANVAS_HEIGHT} for y).
-Use 0 for the left/top edge and {CANVAS_WIDTH}/{CANVAS_HEIGHT} for the right/bottom edge.
-
-Stroke constraints:
-- Thickness: {MIN_STROKE_THICKNESS} to {MAX_STROKE_THICKNESS} pixels
-- Opacity: {MIN_STROKE_OPACITY} to {MAX_STROKE_OPACITY} (0.0 = transparent, 1.0 = opaque)
-
-Consider:
-- {artist_name}'s characteristic techniques, color palette, and composition style
-- The current state of the canvas and how to build upon it
-- Creating cohesive, original artwork (not copying specific existing pieces)
-- Using varied stroke types to achieve different artistic effects{dry_chalk_consider}{wet_brush_consider}
-
-RESPONSE FORMAT (JSON only):
-{{
-  "strokes": [
-    // {num_strokes} stroke object(s) here - each must include all required fields for its type
-  ],
-  "updated_strategy": "<optional strategy update for future iterations, or null>",
-  "batch_reasoning": "<REQUIRED: explanation for this batch of strokes>"{layer_complete_field}
-}}
-
-IMPORTANT: Respond ONLY with valid JSON. Do not include any markdown formatting, code blocks, or text before/after the JSON."""
-
-        return prompt
+        return self._stroke_prompt_template.format_map(
+            {
+                "artist_name": artist_name,
+                "subject_section": subject_section,
+                "iteration": iteration,
+                "strategy_section": strategy_section,
+                "plan_section": plan_section,
+                "num_strokes": num_strokes,
+                "stroke_types_section": stroke_types_section,
+                "canvas_width": CANVAS_WIDTH,
+                "canvas_height": CANVAS_HEIGHT,
+                "min_stroke_thickness": MIN_STROKE_THICKNESS,
+                "max_stroke_thickness": MAX_STROKE_THICKNESS,
+                "min_stroke_opacity": MIN_STROKE_OPACITY,
+                "max_stroke_opacity": MAX_STROKE_OPACITY,
+                "dry_chalk_consider": dry_chalk_consider,
+                "wet_brush_consider": wet_brush_consider,
+                "layer_complete_field": layer_complete_field,
+            }
+        )
 
     def _build_stroke_types_section(self) -> str:
         """
