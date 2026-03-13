@@ -12,7 +12,7 @@ sys.path.insert(
 
 import config
 from services.canvas_manager import CanvasManager
-from services.evaluation_vlm_client import EvaluationVLMClient
+from services.clients.evaluation_vlm_client import EvaluationVLMClient
 
 
 def main() -> None:

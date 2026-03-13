@@ -12,13 +12,13 @@ sys.path.insert(
 )
 
 from models.painting_plan import PaintingPlan
-from services.stroke_vlm_client import StrokeVLMClient
+from services.clients.stroke_vlm_client import StrokeVLMClient
 
 
 @pytest.fixture
 def mock_vlm_client() -> Mock:
     """Create a mock VLMClient."""
-    with patch("services.stroke_vlm_client.VLMClient") as mock_client_class:
+    with patch("services.clients.stroke_vlm_client.VLMClient") as mock_client_class:
         mock_instance = Mock()
         mock_client_class.return_value = mock_instance
         yield mock_instance
@@ -477,7 +477,9 @@ def test_missing_template_file_raises_file_not_found_error() -> None:
     """
     missing_path = Path("/nonexistent/path/stroke_prompt.txt")
 
-    with patch("services.stroke_vlm_client._STROKE_PROMPT_TEMPLATE_PATH", missing_path):
+    with patch(
+        "services.clients.stroke_vlm_client._STROKE_PROMPT_TEMPLATE_PATH", missing_path
+    ):
         with pytest.raises(FileNotFoundError):
             StrokeVLMClient(
                 base_url="http://test.com",

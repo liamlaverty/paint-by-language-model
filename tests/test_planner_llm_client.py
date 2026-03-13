@@ -12,13 +12,13 @@ sys.path.insert(
 )
 
 from config import CANVAS_HEIGHT, CANVAS_WIDTH
-from services.planner_llm_client import PlannerLLMClient
+from services.clients.planner_llm_client import PlannerLLMClient
 
 
 @pytest.fixture
 def mock_vlm_client() -> Mock:
     """Create a mock VLMClient."""
-    with patch("services.planner_llm_client.VLMClient") as mock_client_class:
+    with patch("services.clients.planner_llm_client.VLMClient") as mock_client_class:
         mock_instance = Mock()
         mock_client_class.return_value = mock_instance
         yield mock_instance

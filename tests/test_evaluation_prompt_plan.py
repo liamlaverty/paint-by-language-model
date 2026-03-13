@@ -11,13 +11,13 @@ sys.path.insert(
 )
 
 from models.painting_plan import PaintingPlan
-from services.evaluation_vlm_client import EvaluationVLMClient
+from services.clients.evaluation_vlm_client import EvaluationVLMClient
 
 
 @pytest.fixture
 def mock_vlm_client() -> Mock:
     """Create a mock VLMClient."""
-    with patch("services.evaluation_vlm_client.VLMClient") as mock_client_class:
+    with patch("services.clients.evaluation_vlm_client.VLMClient") as mock_client_class:
         mock_instance = Mock()
         mock_client_class.return_value = mock_instance
         yield mock_instance
