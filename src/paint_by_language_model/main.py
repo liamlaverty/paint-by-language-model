@@ -78,6 +78,11 @@ def build_generation_config(
         resolved_vlm_model = config.LMSTUDIO_VLM_MODEL
         resolved_eval_model = config.LMSTUDIO_EVALUATION_VLM_MODEL
         resolved_planner_model = config.LMSTUDIO_PLANNER_MODEL
+    elif provider is not None:
+        raise ValueError(
+            f"Unknown provider: {provider!r}. "
+            "Valid values are 'mistral', 'anthropic', and 'lmstudio'."
+        )
 
     if api_key:
         resolved_api_key = api_key
@@ -162,21 +167,6 @@ def run_generation(
         target_score=target_score,
         min_strokes_per_layer=min_strokes_per_layer,
     )
-
-    # Validate that Mistral has an API key
-    if generation_cfg["provider"] == "mistral" and not generation_cfg["api_key"]:
-        logger.error(
-            "Mistral provider requires an API key. Set MISTRAL_API_KEY in .env or pass --api-key."
-        )
-        sys.exit(1)
-
-    # Validate that Anthropic has an API key
-    if generation_cfg["provider"] == "anthropic" and not generation_cfg["api_key"]:
-        logger.error(
-            "ANTHROPIC_API_KEY not found in environment. "
-            "Set ANTHROPIC_API_KEY in .env or pass --api-key."
-        )
-        sys.exit(1)
 
     logger.info("Starting image generation")
     logger.info("=" * 80)

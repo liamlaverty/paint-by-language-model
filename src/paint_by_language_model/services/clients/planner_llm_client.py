@@ -8,7 +8,6 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-import config
 from config import (
     API_BASE_URL,
     API_KEY,
@@ -16,6 +15,7 @@ from config import (
     CANVAS_WIDTH,
     COLOR_HEX_PATTERN,
     DEFAULT_STROKES_PER_QUERY,
+    MIN_STROKES_PER_LAYER,
     OUTPUT_DIR,
     PLANNER_MAX_TOKENS,
     PLANNER_MODEL,
@@ -42,7 +42,7 @@ class PlannerLLMClient:
         api_key: str = API_KEY,
         temperature: float = PLANNER_PROMPT_TEMPERATURE,
         prompt_logger: PromptLogger | None = None,
-        min_strokes_per_layer: int = config.MIN_STROKES_PER_LAYER,
+        min_strokes_per_layer: int = MIN_STROKES_PER_LAYER,
     ) -> None:
         """
         Initialize Planner LLM Client.
@@ -57,6 +57,8 @@ class PlannerLLMClient:
                 full prompt/response pairs to disk
             min_strokes_per_layer (int): Minimum iterations on a layer before
                 ``layer_complete: true`` is honoured. Defaults to the config value.
+                Evaluated once at class-definition time; the caller must pass
+                an explicit value if a runtime override is required.
         """
         self.client = VLMClient(
             base_url=base_url,

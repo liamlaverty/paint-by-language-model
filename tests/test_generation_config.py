@@ -11,6 +11,7 @@ sys.path.insert(
 
 import config as _config
 from main import build_generation_config
+from models import GenerationConfig
 
 
 # ---------------------------------------------------------------------------
@@ -18,7 +19,7 @@ from main import build_generation_config
 # ---------------------------------------------------------------------------
 
 
-def _build_defaults() -> dict:  # type: ignore[type-arg]
+def _build_defaults() -> GenerationConfig:
     """Call build_generation_config with all None overrides."""
     return build_generation_config(
         provider=None,
@@ -117,7 +118,9 @@ class TestBuildGenerationConfigProviderAnthropic:
 
     def test_evaluation_vlm_model_is_anthropic(self) -> None:
         """evaluation_vlm_model equals ANTHROPIC_EVALUATION_VLM_MODEL."""
-        assert self._cfg["evaluation_vlm_model"] == _config.ANTHROPIC_EVALUATION_VLM_MODEL
+        assert (
+            self._cfg["evaluation_vlm_model"] == _config.ANTHROPIC_EVALUATION_VLM_MODEL
+        )
 
     def test_planner_model_is_anthropic(self) -> None:
         """planner_model equals ANTHROPIC_PLANNER_MODEL."""
@@ -187,7 +190,9 @@ class TestBuildGenerationConfigProviderLmstudio:
 
     def test_evaluation_vlm_model_is_lmstudio(self) -> None:
         """evaluation_vlm_model equals LMSTUDIO_EVALUATION_VLM_MODEL."""
-        assert self._cfg["evaluation_vlm_model"] == _config.LMSTUDIO_EVALUATION_VLM_MODEL
+        assert (
+            self._cfg["evaluation_vlm_model"] == _config.LMSTUDIO_EVALUATION_VLM_MODEL
+        )
 
     def test_planner_model_is_lmstudio(self) -> None:
         """planner_model equals LMSTUDIO_PLANNER_MODEL."""
@@ -403,3 +408,36 @@ class TestBuildGenerationConfigReturnType:
         }
         for key in required_keys:
             assert key in result, f"Missing key '{key}' for provider='{provider}'"
+
+
+# ---------------------------------------------------------------------------
+# Unknown provider
+# ---------------------------------------------------------------------------
+
+
+class TestBuildGenerationConfigUnknownProvider:
+    """build_generation_config() raises ValueError for unknown provider strings."""
+
+    def test_unknown_provider_raises(self) -> None:
+        """An unrecognised provider string raises ValueError."""
+        with pytest.raises(ValueError, match="Unknown provider"):
+            build_generation_config(
+                provider="openai",
+                api_key=None,
+                planner_model=None,
+                max_iterations=None,
+                target_score=None,
+                min_strokes_per_layer=None,
+            )
+
+    def test_none_provider_does_not_raise(self) -> None:
+        """provider=None falls through to config defaults without raising."""
+        result = build_generation_config(
+            provider=None,
+            api_key=None,
+            planner_model=None,
+            max_iterations=None,
+            target_score=None,
+            min_strokes_per_layer=None,
+        )
+        assert "provider" in result

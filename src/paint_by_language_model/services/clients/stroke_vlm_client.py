@@ -9,7 +9,6 @@ from typing import TYPE_CHECKING, Any
 if TYPE_CHECKING:
     from models import PaintingPlan, PlanLayer
 
-import config
 from config import (
     API_BASE_URL,
     API_KEY,
@@ -21,6 +20,7 @@ from config import (
     MAX_STROKES_PER_QUERY,
     MIN_STROKE_OPACITY,
     MIN_STROKE_THICKNESS,
+    MIN_STROKES_PER_LAYER,
     MIN_STROKES_PER_QUERY,
     STROKE_PROMPT_TEMPERATURE,
     VLM_MODEL,
@@ -51,7 +51,7 @@ class StrokeVLMClient:
         temperature: float = STROKE_PROMPT_TEMPERATURE,
         prompt_logger: PromptLogger | None = None,
         allowed_stroke_types: list[str] | None = None,
-        min_strokes_per_layer: int = config.MIN_STROKES_PER_LAYER,
+        min_strokes_per_layer: int = MIN_STROKES_PER_LAYER,
     ):
         """
         Initialize Stroke VLM Client.
@@ -70,6 +70,8 @@ class StrokeVLMClient:
                 behaviour preserved).
             min_strokes_per_layer (int): Minimum iterations on a layer before
                 ``layer_complete: true`` is honoured. Defaults to the config value.
+                Evaluated once at class-definition time; the caller must pass
+                an explicit value if a runtime override is required.
 
         The stroke prompt template is loaded once from
         ``_STROKE_PROMPT_TEMPLATE_PATH`` and cached as

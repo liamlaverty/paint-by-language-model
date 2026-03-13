@@ -119,7 +119,9 @@ class TestOrchestratorStoresConfigValues:
         orch = _make_orchestrator(tmp_path, cfg)
         assert orch.min_strokes_per_layer == 3
 
-    def test_max_iterations_uses_config_not_module_default(self, tmp_path: Path) -> None:
+    def test_max_iterations_uses_config_not_module_default(
+        self, tmp_path: Path
+    ) -> None:
         """Orchestrator uses the provided max_iterations, not config.MAX_ITERATIONS."""
         # Use a value unlikely to match the module default (150)
         cfg = _make_valid_config(max_iterations=5)
@@ -147,7 +149,9 @@ class TestStrokeVlmClientPropagation:
         orch = _make_orchestrator(tmp_path, cfg)
         assert orch.stroke_vlm.min_strokes_per_layer == 3
 
-    def test_stroke_vlm_min_strokes_per_layer_different_value(self, tmp_path: Path) -> None:
+    def test_stroke_vlm_min_strokes_per_layer_different_value(
+        self, tmp_path: Path
+    ) -> None:
         """stroke_vlm.min_strokes_per_layer reflects a different config value."""
         cfg = _make_valid_config(min_strokes_per_layer=7)
         orch = _make_orchestrator(tmp_path, cfg)
@@ -168,7 +172,9 @@ class TestPlannerVlmClientPropagation:
         orch = _make_orchestrator(tmp_path, cfg)
         assert orch.planner_vlm.min_strokes_per_layer == 3
 
-    def test_planner_vlm_min_strokes_per_layer_different_value(self, tmp_path: Path) -> None:
+    def test_planner_vlm_min_strokes_per_layer_different_value(
+        self, tmp_path: Path
+    ) -> None:
         """planner_vlm.min_strokes_per_layer reflects a different config value."""
         cfg = _make_valid_config(min_strokes_per_layer=9)
         orch = _make_orchestrator(tmp_path, cfg)
@@ -209,13 +215,17 @@ class TestOrchestratorValidation:
         with pytest.raises(ValueError, match="API key"):
             _make_orchestrator(tmp_path, cfg)
 
-    def test_min_strokes_per_layer_zero_raises_value_error(self, tmp_path: Path) -> None:
+    def test_min_strokes_per_layer_zero_raises_value_error(
+        self, tmp_path: Path
+    ) -> None:
         """min_strokes_per_layer=0 raises ValueError."""
         cfg = _make_valid_config(min_strokes_per_layer=0)
         with pytest.raises(ValueError, match="min_strokes_per_layer"):
             _make_orchestrator(tmp_path, cfg)
 
-    def test_min_strokes_per_layer_negative_raises_value_error(self, tmp_path: Path) -> None:
+    def test_min_strokes_per_layer_negative_raises_value_error(
+        self, tmp_path: Path
+    ) -> None:
         """min_strokes_per_layer=-1 raises ValueError."""
         cfg = _make_valid_config(min_strokes_per_layer=-1)
         with pytest.raises(ValueError, match="min_strokes_per_layer"):
@@ -242,13 +252,17 @@ class TestOrchestratorValidation:
 class TestOrchestratorClientConsistency:
     """Orchestrator instance attribute and client attribute stay in sync."""
 
-    def test_orchestrator_and_stroke_vlm_min_strokes_match(self, tmp_path: Path) -> None:
+    def test_orchestrator_and_stroke_vlm_min_strokes_match(
+        self, tmp_path: Path
+    ) -> None:
         """orch.min_strokes_per_layer and orch.stroke_vlm.min_strokes_per_layer are equal."""
         cfg = _make_valid_config(min_strokes_per_layer=4)
         orch = _make_orchestrator(tmp_path, cfg)
         assert orch.min_strokes_per_layer == orch.stroke_vlm.min_strokes_per_layer
 
-    def test_orchestrator_and_planner_vlm_min_strokes_match(self, tmp_path: Path) -> None:
+    def test_orchestrator_and_planner_vlm_min_strokes_match(
+        self, tmp_path: Path
+    ) -> None:
         """orch.min_strokes_per_layer and orch.planner_vlm.min_strokes_per_layer are equal."""
         cfg = _make_valid_config(min_strokes_per_layer=4)
         orch = _make_orchestrator(tmp_path, cfg)
