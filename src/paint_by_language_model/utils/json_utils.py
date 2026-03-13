@@ -4,7 +4,7 @@ import json
 import logging
 import re
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 logger = logging.getLogger(__name__)
 
@@ -63,7 +63,7 @@ def clean_and_parse_json(response_text: str) -> dict[str, Any]:
     # Step 6: Parse JSON
     try:
         data = json.loads(json_text)
-        return data
+        return cast(dict[str, Any], data)
     except json.JSONDecodeError as e:
         logger.error(f"Failed to parse JSON after cleaning: {e}")
         logger.error(f"Cleaned JSON (first 1000 chars): {json_text[:1000]}")

@@ -769,3 +769,151 @@ class TestGeneratePlan:
         assert history[0]["artist_name"] == "Test Artist"
         assert history[0]["subject"] == "Test Subject"
         assert history[0]["layer_count"] == 1
+
+
+# ============================================================================
+# Tests for allowed_stroke_types filtering in _parse_plan_response
+# ============================================================================
+
+
+class TestParseplanResponseAllowedStrokeTypes:
+    """Tests for stroke-type filtering in _parse_plan_response."""
+
+    def _make_single_layer_plan(self, stroke_types: list[str]) -> str:
+        """Build a minimal JSON plan string with the given layer stroke_types."""
+        return json.dumps(
+            {
+                "artist_name": "Test Artist",
+                "subject": "Test Subject",
+                "expanded_subject": None,
+                "total_layers": 1,
+                "layers": [
+                    {
+                        "layer_number": 1,
+                        "name": "Background",
+                        "description": "Paint the background",
+                        "colour_palette": ["#FF5733"],
+                        "stroke_types": stroke_types,
+                        "techniques": "Broad strokes",
+                        "shapes": "Horizontal bands",
+                        "highlights": "Top-left lighting",
+                    }
+                ],
+                "overall_notes": "Notes",
+            }
+        )
+
+    def test_parse_plan_removes_disallowed_stroke_type(
+        self, planner_client: PlannerLLMClient
+    ) -> None:
+        """_parse_plan_response strips stroke types that are not in allowed_stroke_types.
+
+        When the LLM returns ``wet-brush`` in a layer but
+        ``allowed_stroke_types=["line"]``, the returned plan's layer must not
+        contain ``wet-brush``.
+        """
+        response = self._make_single_layer_plan(stroke_types=["line", "wet-brush"])
+
+        plan = planner_client._parse_plan_response(
+            response, allowed_stroke_types=["line"]
+        )
+
+        layer_stroke_types = plan["layers"][0]["stroke_types"]
+        assert "wet-brush" not in layer_stroke_types, (
+            "wet-brush should have been stripped because it is not in allowed_stroke_types"
+        )
+        assert "line" in layer_stroke_types, (
+            "line should remain in the layer stroke_types"
+        )
+
+    def test_parse_plan_raises_for_unknown_stroke_type(
+        self, planner_client: PlannerLLMClient
+    ) -> None:
+        """_parse_plan_response raises ValueError for genuinely unknown stroke types.
+
+        A type that is not in SUPPORTED_STROKE_TYPES at all (not merely
+        disallowed) should still raise ``ValueError``.
+        """
+        response = self._make_single_layer_plan(
+            stroke_types=["line", "totally-fake-type"]
+        )
+
+        with pytest.raises(ValueError, match="unsupported stroke type"):
+            planner_client._parse_plan_response(
+                response, allowed_stroke_types=["line", "totally-fake-type"]
+            )
+
+    def test_parse_plan_falls_back_to_allowed_when_all_filtered(
+        self, planner_client: PlannerLLMClient
+    ) -> None:
+        """_parse_plan_response falls back to all allowed types when a layer is empty.
+
+        If all of a layer's stroke_types are disallowed, the layer should fall
+        back to the full ``allowed_stroke_types`` list rather than being empty.
+        """
+        response = self._make_single_layer_plan(stroke_types=["wet-brush", "chalk"])
+
+        plan = planner_client._parse_plan_response(
+            response, allowed_stroke_types=["line", "circle"]
+        )
+
+        layer_stroke_types = plan["layers"][0]["stroke_types"]
+        assert set(layer_stroke_types) == {"line", "circle"}, (
+            f"Expected fallback to ['line', 'circle'], got {layer_stroke_types}"
+        )
+
+
+class TestGeneratePlanPromptStrokeTypes:
+    """Tests that generate_plan passes stroke_types through to the prompt."""
+
+    def test_generate_plan_prompt_contains_only_allowed_types(
+        self, planner_client: PlannerLLMClient, mock_vlm_client: Mock
+    ) -> None:
+        """generate_plan() builds a prompt listing only the requested stroke types.
+
+        When ``stroke_types=["line"]`` is passed, the prompt sent to the VLM
+        should list only ``line`` under ``Available stroke types:`` and must not
+        contain other types such as ``arc`` or ``wet-brush``.
+        """
+        mock_vlm_client.query.return_value = json.dumps(
+            {
+                "artist_name": "Test Artist",
+                "subject": "Test Subject",
+                "expanded_subject": None,
+                "total_layers": 1,
+                "layers": [
+                    {
+                        "layer_number": 1,
+                        "name": "Background",
+                        "description": "Paint the background",
+                        "colour_palette": ["#FF5733"],
+                        "stroke_types": ["line"],
+                        "techniques": "Broad strokes",
+                        "shapes": "Horizontal bands",
+                        "highlights": "Top-left lighting",
+                    }
+                ],
+                "overall_notes": "Notes",
+            }
+        )
+
+        planner_client.generate_plan(
+            artist_name="Test Artist",
+            subject="Test Subject",
+            expanded_subject=None,
+            stroke_types=["line"],
+        )
+
+        # Inspect the prompt that was sent to the VLM
+        mock_vlm_client.query.assert_called_once()
+        call_kwargs = mock_vlm_client.query.call_args
+        prompt: str = call_kwargs.kwargs.get("prompt") or call_kwargs.args[0]
+
+        # The planning prompt contains a line: "Available stroke types: line, arc, ..."
+        # With stroke_types=["line"] it should contain only "line"
+        assert "Available stroke types: line" in prompt, (
+            "Prompt should list only 'line' under Available stroke types"
+        )
+        assert "Available stroke types: line, arc" not in prompt, (
+            "Prompt must not list 'arc' alongside 'line' in Available stroke types"
+        )

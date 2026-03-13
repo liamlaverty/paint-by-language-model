@@ -1,55 +1,146 @@
 """Integration test for Generation Orchestrator."""
 
+import json
 import tempfile
 from pathlib import Path
+from unittest.mock import MagicMock, patch
 
-from paint_by_language_model.generation_orchestrator import GenerationOrchestrator
+# ---------------------------------------------------------------------------
+# Pytest tests
+# ---------------------------------------------------------------------------
 
-# Create test output directory
-test_dir = Path(tempfile.mkdtemp())
 
-try:
-    # Initialize orchestrator
-    orchestrator = GenerationOrchestrator(
-        artist_name="Vincent van Gogh",
-        subject="Simple Landscape",
-        artwork_id="test-integration-001",
-        output_dir=test_dir,
+def _make_plan_json(stroke_types: list[str] | None = None) -> str:
+    """Return a minimal PaintingPlan JSON string."""
+    return json.dumps(
+        {
+            "artist_name": "Test Artist",
+            "subject": "Test Subject",
+            "expanded_subject": None,
+            "total_layers": 1,
+            "overall_notes": "Test",
+            "layers": [
+                {
+                    "layer_number": 1,
+                    "name": "Background",
+                    "description": "Background layer",
+                    "colour_palette": ["#FFFFFF"],
+                    "stroke_types": stroke_types or ["line"],
+                    "techniques": "broad",
+                    "shapes": "rectangles",
+                    "highlights": "none",
+                }
+            ],
+        }
     )
 
-    print("Starting generation (will run a few iterations)...")
-    print("Press Ctrl+C to interrupt early")
 
-    # Run generation
-    summary = orchestrator.generate()
+def test_orchestrator_passes_allowed_stroke_types_to_planner() -> None:
+    """GenerationOrchestrator passes allowed_stroke_types to planner.generate_plan.
 
-    print("\n" + "=" * 80)
-    print("Generation Complete!")
-    print("=" * 80)
-    print(f"Artwork ID: {summary['artwork_id']}")
-    print(f"Total Iterations: {summary['total_iterations']}")
-    print(f"Final Score: {summary['final_score']:.1f}/100")
-    print(f"Total Strokes: {summary['total_strokes']}")
-    print(f"Output: {summary['output_directory']}")
-    print("=" * 80)
+    When constructed with ``allowed_stroke_types=["line", "circle"]``, the
+    orchestrator must call ``planner.generate_plan`` with ``["line", "circle"]``
+    and NOT with the module-level ``SUPPORTED_STROKE_TYPES`` constant.
+    """
+    import sys
 
-    # Verify artifacts exist
-    artwork_dir = Path(summary["output_directory"])
-    assert (artwork_dir / "final_artwork.png").exists(), "Final artwork missing"
-    assert (artwork_dir / "metadata.json").exists(), "Metadata missing"
-    assert (artwork_dir / "generation_report.md").exists(), "Report missing"
-    assert (artwork_dir / "snapshots").exists(), "Snapshots directory missing"
+    sys.path.insert(
+        0, str(Path(__file__).parent.parent / "src" / "paint_by_language_model")
+    )
 
-    print("\n✓ All artifacts generated successfully!")
+    from generation_orchestrator import GenerationOrchestrator
 
-except KeyboardInterrupt:
-    print("\n\nTest interrupted by user")
-except Exception as e:
-    print(f"\n✗ Test failed: {e}")
-    import traceback
+    allowed = ["line", "circle"]
+    test_dir = Path(tempfile.mkdtemp())
 
-    traceback.print_exc()
-finally:
-    # Cleanup (comment out to inspect output)
-    # shutil.rmtree(test_dir)
-    print(f"\nTest output saved to: {test_dir}")
+    mock_plan_json = _make_plan_json(stroke_types=allowed)
+
+    # Patch PlannerLLMClient so no real VLM call happens and capture the call args
+    with patch("generation_orchestrator.PlannerLLMClient") as MockPlanner:
+        mock_planner_instance = MagicMock()
+        mock_planner_instance.generate_plan.return_value = json.loads(mock_plan_json)
+        MockPlanner.return_value = mock_planner_instance
+
+        # Also patch StrokeVLMClient and EvaluationVLMClient to prevent real VLM calls
+        with (
+            patch("generation_orchestrator.StrokeVLMClient"),
+            patch("generation_orchestrator.EvaluationVLMClient"),
+        ):
+            orchestrator = GenerationOrchestrator(
+                artist_name="Test Artist",
+                subject="Test Subject",
+                artwork_id="test-allowed-types-001",
+                output_dir=test_dir,
+                allowed_stroke_types=allowed,
+            )
+
+            # Call _run_planning_phase directly (avoids running full generation loop)
+            orchestrator._run_planning_phase()
+
+    # Verify generate_plan was called with the effective allowed list, not SUPPORTED_STROKE_TYPES
+    mock_planner_instance.generate_plan.assert_called_once()
+    call_args = mock_planner_instance.generate_plan.call_args
+    # stroke_types is the 4th positional arg (index 3) or keyword
+    stroke_types_used: list[str] = call_args.kwargs.get("stroke_types") or (
+        call_args.args[3] if len(call_args.args) > 3 else None
+    )
+    assert stroke_types_used == allowed, (
+        f"Expected generate_plan called with {allowed}, got {stroke_types_used}"
+    )
+
+
+# ---------------------------------------------------------------------------
+# Standalone script (not collected by pytest)
+# ---------------------------------------------------------------------------
+
+if __name__ == "__main__":
+    from paint_by_language_model.generation_orchestrator import GenerationOrchestrator
+
+    # Create test output directory
+    _test_dir = Path(tempfile.mkdtemp())
+
+    try:
+        # Initialize orchestrator
+        _orchestrator = GenerationOrchestrator(
+            artist_name="Vincent van Gogh",
+            subject="Simple Landscape",
+            artwork_id="test-integration-001",
+            output_dir=_test_dir,
+        )
+
+        print("Starting generation (will run a few iterations)...")
+        print("Press Ctrl+C to interrupt early")
+
+        # Run generation
+        _summary = _orchestrator.generate()
+
+        print("\n" + "=" * 80)
+        print("Generation Complete!")
+        print("=" * 80)
+        print(f"Artwork ID: {_summary['artwork_id']}")
+        print(f"Total Iterations: {_summary['total_iterations']}")
+        print(f"Final Score: {_summary['final_score']:.1f}/100")
+        print(f"Total Strokes: {_summary['total_strokes']}")
+        print(f"Output: {_summary['output_directory']}")
+        print("=" * 80)
+
+        # Verify artifacts exist
+        _artwork_dir = Path(_summary["output_directory"])
+        assert (_artwork_dir / "final_artwork.png").exists(), "Final artwork missing"
+        assert (_artwork_dir / "metadata.json").exists(), "Metadata missing"
+        assert (_artwork_dir / "generation_report.md").exists(), "Report missing"
+        assert (_artwork_dir / "snapshots").exists(), "Snapshots directory missing"
+
+        print("\n✓ All artifacts generated successfully!")
+
+    except KeyboardInterrupt:
+        print("\n\nTest interrupted by user")
+    except Exception as _e:
+        print(f"\n✗ Test failed: {_e}")
+        import traceback
+
+        traceback.print_exc()
+    finally:
+        # Cleanup (comment out to inspect output)
+        # shutil.rmtree(_test_dir)
+        print(f"\nTest output saved to: {_test_dir}")

@@ -151,6 +151,7 @@ def run_generation(
             strokes_per_query=strokes_per_query,
             gif_frame_duration=gif_frame_duration,
             expanded_subject=expanded_subject,
+            allowed_stroke_types=stroke_types,
         )
         logger.info("Orchestrator initialized")
     except Exception as e:

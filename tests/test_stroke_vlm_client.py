@@ -139,3 +139,157 @@ def test_prompt_references_samples() -> None:
 
     for label in _EXPECTED_SAMPLE_LABELS:
         assert label in prompt, f"Prompt should contain '{label}' but it was not found"
+
+
+# ============================================================================
+# Tests for _build_stroke_types_section filtering
+# ============================================================================
+
+_ALL_TEN_TYPES = [
+    "LINE",
+    "ARC",
+    "POLYLINE",
+    "CIRCLE",
+    "SPLATTER",
+    "DRY-BRUSH",
+    "CHALK",
+    "WET-BRUSH",
+    "BURN",
+    "DODGE",
+]
+
+
+def test_stroke_types_section_filters_to_allowed_types() -> None:
+    """_build_stroke_types_section() only includes allowed stroke types.
+
+    When ``allowed_stroke_types=["line", "circle"]`` is set, the returned
+    section must contain LINE and CIRCLE entries and must not contain any of
+    the other eight type names.
+    """
+    client = StrokeVLMClient(allowed_stroke_types=["line", "circle"])
+    section = client._build_stroke_types_section()
+
+    assert "LINE" in section, "Section should contain LINE"
+    assert "CIRCLE" in section, "Section should contain CIRCLE"
+
+    excluded = [
+        "ARC",
+        "POLYLINE",
+        "SPLATTER",
+        "DRY-BRUSH",
+        "CHALK",
+        "WET-BRUSH",
+        "BURN",
+        "DODGE",
+    ]
+    for excluded_type in excluded:
+        assert excluded_type not in section, (
+            f"Section should NOT contain {excluded_type} when it is not in allowed_stroke_types"
+        )
+
+
+def test_stroke_types_section_renumbers_sequentially() -> None:
+    """_build_stroke_types_section() re-numbers filtered entries without gaps.
+
+    With ``allowed_stroke_types=["line", "circle"]`` the two entries should be
+    numbered 1 and 2 with no gaps.
+    """
+    client = StrokeVLMClient(allowed_stroke_types=["line", "circle"])
+    section = client._build_stroke_types_section()
+
+    assert "1. LINE" in section, "First entry should be numbered 1"
+    assert "2. CIRCLE" in section, "Second entry should be numbered 2"
+
+
+def test_stroke_types_section_all_types_when_none() -> None:
+    """_build_stroke_types_section() returns all ten types when allowed_stroke_types is None.
+
+    Preserves backward-compatibility: callers that do not specify
+    ``allowed_stroke_types`` should see all ten stroke types in the section.
+    """
+    client = StrokeVLMClient()  # allowed_stroke_types defaults to None
+    section = client._build_stroke_types_section()
+
+    for stroke_type in _ALL_TEN_TYPES:
+        assert stroke_type in section, (
+            f"Section should contain {stroke_type} when allowed_stroke_types is None"
+        )
+
+
+# ============================================================================
+# Tests for sample image filtering
+# ============================================================================
+
+
+def test_suggest_strokes_filters_samples_to_allowed_type() -> None:
+    """suggest_strokes() only attaches sample images for allowed stroke types.
+
+    When ``allowed_stroke_types=["line"]`` is set, exactly one sample image
+    (the LINE sample) should be appended beyond the canvas image, giving a total
+    of 2 entries in the ``images`` argument passed to
+    ``query_multimodal_multi_image``.
+    """
+    client = StrokeVLMClient(allowed_stroke_types=["line"])
+
+    with patch.object(
+        client.client,
+        "query_multimodal_multi_image",
+        return_value=_VALID_STROKE_JSON,
+    ) as mock_multi:
+        client.suggest_strokes(
+            canvas_image=b"fake_canvas_bytes",
+            artist_name="Test Artist",
+            subject="Test Subject",
+            iteration=1,
+        )
+
+    mock_multi.assert_called_once()
+    call_kwargs = mock_multi.call_args
+    images: list[tuple[bytes, str]] = (
+        call_kwargs.kwargs.get("images") or call_kwargs.args[1]
+    )
+
+    assert len(images) == 2, (
+        f"Expected 2 images (1 canvas + 1 allowed sample), got {len(images)}"
+    )
+    assert images[0][1] == "Current canvas", (
+        f"First image label should be 'Current canvas', got '{images[0][1]}'"
+    )
+    assert images[1][1] == "LINE stroke sample", (
+        f"Second image label should be 'LINE stroke sample', got '{images[1][1]}'"
+    )
+
+
+def test_suggest_strokes_sends_all_samples_when_allowed_none() -> None:
+    """suggest_strokes() attaches all sample images when allowed_stroke_types is None.
+
+    When no ``allowed_stroke_types`` restriction is set (the default), all ten
+    stroke sample images should be attached giving 11 total (canvas + 10 samples).
+    """
+    client = StrokeVLMClient()  # allowed_stroke_types defaults to None
+
+    with patch.object(
+        client.client,
+        "query_multimodal_multi_image",
+        return_value=_VALID_STROKE_JSON,
+    ) as mock_multi:
+        client.suggest_strokes(
+            canvas_image=b"fake_canvas_bytes",
+            artist_name="Test Artist",
+            subject="Test Subject",
+            iteration=1,
+        )
+
+    mock_multi.assert_called_once()
+    call_kwargs = mock_multi.call_args
+    images: list[tuple[bytes, str]] = (
+        call_kwargs.kwargs.get("images") or call_kwargs.args[1]
+    )
+
+    assert len(images) == 11, (
+        f"Expected 11 images (1 canvas + 10 samples), got {len(images)}"
+    )
+    sample_labels = {label for _, label in images[1:]}
+    assert sample_labels == _EXPECTED_SAMPLE_LABELS, (
+        f"Sample labels mismatch. Expected {_EXPECTED_SAMPLE_LABELS}, got {sample_labels}"
+    )

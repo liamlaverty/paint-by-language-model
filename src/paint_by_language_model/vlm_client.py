@@ -3,6 +3,7 @@
 import base64
 import logging
 import time
+from typing import cast
 
 import requests
 
@@ -106,9 +107,9 @@ class VLMClient:
             str: Extracted text content
         """
         if self.provider == "anthropic":
-            return response_data["content"][0]["text"]
+            return cast(str, response_data["content"][0]["text"])
         else:
-            return response_data["choices"][0]["message"]["content"]
+            return cast(str, response_data["choices"][0]["message"]["content"])
 
     def query(self, prompt: str, max_tokens: int = MAX_TOKENS) -> str:
         """
