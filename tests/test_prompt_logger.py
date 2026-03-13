@@ -8,7 +8,6 @@ import sys
 from pathlib import Path
 from unittest.mock import Mock, patch
 
-
 sys.path.insert(
     0, str(Path(__file__).parent.parent / "src" / "paint_by_language_model")
 )
@@ -307,7 +306,7 @@ class TestPromptLoggerWithStrokeVLMClient:
 
     def test_stroke_log_file_written_on_suggest_strokes(self, tmp_path: Path) -> None:
         """suggest_strokes() writes a 'stroke' log file when prompt_logger is set."""
-        from services.stroke_vlm_client import StrokeVLMClient
+        from services.clients.stroke_vlm_client import StrokeVLMClient
 
         artwork_dir = tmp_path / "artwork"
         pl = PromptLogger(artwork_dir=artwork_dir)
@@ -343,7 +342,7 @@ class TestPromptLoggerWithStrokeVLMClient:
 
     def test_no_log_file_when_no_prompt_logger(self, tmp_path: Path) -> None:
         """suggest_strokes() does not error and writes no log when prompt_logger is None."""
-        from services.stroke_vlm_client import StrokeVLMClient
+        from services.clients.stroke_vlm_client import StrokeVLMClient
 
         client = StrokeVLMClient()
 
@@ -377,7 +376,7 @@ class TestPromptLoggerWithEvaluationVLMClient:
         self, tmp_path: Path
     ) -> None:
         """evaluate_style() writes an 'evaluation' log file when prompt_logger is set."""
-        from services.evaluation_vlm_client import EvaluationVLMClient
+        from services.clients.evaluation_vlm_client import EvaluationVLMClient
 
         artwork_dir = tmp_path / "artwork"
         pl = PromptLogger(artwork_dir=artwork_dir)
@@ -413,7 +412,7 @@ class TestPromptLoggerWithEvaluationVLMClient:
 
     def test_no_log_file_when_no_prompt_logger_eval(self, tmp_path: Path) -> None:
         """evaluate_style() does not error when prompt_logger is None."""
-        from services.evaluation_vlm_client import EvaluationVLMClient
+        from services.clients.evaluation_vlm_client import EvaluationVLMClient
 
         client = EvaluationVLMClient()
 
@@ -442,12 +441,12 @@ class TestPromptLoggerWithPlannerLLMClient:
 
     def test_plan_log_file_written_on_generate_plan(self, tmp_path: Path) -> None:
         """generate_plan() writes a 'plan' log file when prompt_logger is set."""
-        from services.planner_llm_client import PlannerLLMClient
+        from services.clients.planner_llm_client import PlannerLLMClient
 
         artwork_dir = tmp_path / "artwork"
         pl = PromptLogger(artwork_dir=artwork_dir)
 
-        with patch("services.planner_llm_client.VLMClient") as MockVLMClient:
+        with patch("services.clients.planner_llm_client.VLMClient") as MockVLMClient:
             mock_instance = Mock()
             mock_instance.query.return_value = _PLAN_JSON
             mock_instance.provider = "anthropic"
@@ -476,9 +475,9 @@ class TestPromptLoggerWithPlannerLLMClient:
 
     def test_no_log_file_when_no_prompt_logger_plan(self, tmp_path: Path) -> None:
         """generate_plan() does not error when prompt_logger is None."""
-        from services.planner_llm_client import PlannerLLMClient
+        from services.clients.planner_llm_client import PlannerLLMClient
 
-        with patch("services.planner_llm_client.VLMClient") as MockVLMClient:
+        with patch("services.clients.planner_llm_client.VLMClient") as MockVLMClient:
             mock_instance = Mock()
             mock_instance.query.return_value = _PLAN_JSON
             mock_instance.provider = "lmstudio"

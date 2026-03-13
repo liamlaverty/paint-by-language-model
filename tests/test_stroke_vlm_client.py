@@ -9,7 +9,7 @@ sys.path.insert(
     0, str(Path(__file__).parent.parent / "src" / "paint_by_language_model")
 )
 
-from services.stroke_vlm_client import StrokeVLMClient
+from services.clients.stroke_vlm_client import StrokeVLMClient
 
 # ============================================================================
 # Helpers

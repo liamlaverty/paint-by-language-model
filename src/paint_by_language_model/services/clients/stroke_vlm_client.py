@@ -34,7 +34,7 @@ from vlm_client import VLMClient
 logger = logging.getLogger(__name__)
 
 _STROKE_PROMPT_TEMPLATE_PATH = (
-    Path(__file__).parent.parent.parent / "datafiles" / "prompts" / "stroke_prompt.txt"
+    Path(__file__).parent.parent.parent.parent / "datafiles" / "prompts" / "stroke_prompt.txt"
 )
 
 
