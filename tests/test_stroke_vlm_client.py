@@ -13,7 +13,6 @@ from services.clients.stroke_vlm_client import StrokeVLMClient
 
 # ============================================================================
 # Helpers
-# ============================================================================
 
 _VALID_STROKE_JSON = json.dumps(
     {

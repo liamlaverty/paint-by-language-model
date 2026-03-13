@@ -17,6 +17,7 @@ from config import (
     IMAGE_EXPORT_FORMATS,
     MAX_ITERATIONS,
     MIN_ITERATIONS,
+    MIN_STROKES_PER_LAYER,
     NEXTJS_VIEWER_DATA_DIR,
     OUTPUT_DIR,
     OUTPUT_STRUCTURE,
@@ -235,6 +236,10 @@ class GenerationOrchestrator:
 
             # Step 3: Query Stroke VLM for batch of strokes
             logger.info(f"Requesting {self.strokes_per_query} strokes from VLM...")
+            current_layer_iteration_count = 0
+            if current_layer:
+                layer_num = current_layer["layer_number"]
+                current_layer_iteration_count = self.layer_iterations.get(layer_num, 0)
             try:
                 stroke_response = self.stroke_vlm.suggest_strokes(
                     canvas_image=canvas_bytes,
@@ -246,6 +251,7 @@ class GenerationOrchestrator:
                     painting_plan=self.painting_plan,
                     current_layer=current_layer,
                     expanded_subject=self.expanded_subject,
+                    layer_iteration_count=current_layer_iteration_count,
                 )
                 strokes_batch = stroke_response["strokes"]
                 batch_reasoning = stroke_response.get("batch_reasoning", "")
@@ -357,18 +363,32 @@ class GenerationOrchestrator:
                 logger.info("Updated strategy")
 
             # Check for layer advancement (from stroke VLM)
+            layer_complete_signal = stroke_response.get("layer_complete", False)
             if (
-                stroke_response.get("layer_complete", False)
+                layer_complete_signal
                 and self.painting_plan is not None
                 and self.current_layer_index < len(self.painting_plan["layers"]) - 1
             ):
-                self.current_layer_index += 1
-                next_layer = self.painting_plan["layers"][self.current_layer_index]
-                logger.info(
-                    f"Advancing to Layer {next_layer['layer_number']}: {next_layer['name']}"
-                )
-                # Update current_layer so evaluation uses the new layer
-                current_layer = next_layer
+                # Only advance if the minimum iterations for this layer have been met
+                layer_num = current_layer["layer_number"] if current_layer else 0
+                layer_iters = (
+                    self.layer_iterations.get(layer_num, 0) + 1
+                )  # +1 for current iteration
+                if layer_iters >= MIN_STROKES_PER_LAYER:
+                    self.current_layer_index += 1
+                    next_layer = self.painting_plan["layers"][self.current_layer_index]
+                    logger.info(
+                        f"Advancing to Layer {next_layer['layer_number']}: {next_layer['name']} "
+                        f"(after {layer_iters} iterations on layer {layer_num})"
+                    )
+                    # Update current_layer so evaluation uses the new layer
+                    current_layer = next_layer
+                else:
+                    logger.info(
+                        f"Layer complete signal received but ignored — only "
+                        f"{layer_iters}/{MIN_STROKES_PER_LAYER} iterations completed "
+                        f"for layer {layer_num}"
+                    )
 
             # Step 7: Get updated canvas bytes for evaluation
             canvas_bytes = self.canvas_manager.get_image_bytes()
@@ -403,6 +423,23 @@ class GenerationOrchestrator:
                 if current_layer:
                     layer_num = current_layer["layer_number"]
                     self.layer_iterations[layer_num] = self.layer_iterations.get(layer_num, 0) + 1
+
+                # Check for graceful stop when the final layer signals completion
+                if (
+                    layer_complete_signal
+                    and self.painting_plan is not None
+                    and self.current_layer_index >= len(self.painting_plan["layers"]) - 1
+                ):
+                    layer_num = current_layer["layer_number"] if current_layer else 0
+                    layer_iters = self.layer_iterations.get(
+                        layer_num, 0
+                    )  # Already incremented above
+                    if layer_iters >= MIN_STROKES_PER_LAYER:
+                        logger.info(
+                            f"Final layer {layer_num} marked complete after {layer_iters} iterations "
+                            f"— ending generation"
+                        )
+                        return True
 
                 # Step 10: Check stopping conditions
                 should_stop = self._check_stopping_conditions(iteration, evaluation)
