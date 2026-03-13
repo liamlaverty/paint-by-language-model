@@ -1,9 +1,14 @@
-name: PR Tests
+name: CI — Lint, Type-Check, Test & Build
+description: >
+  Runs lint, format, type-check, tests, and build validation for both the
+  Python backend and the Next.js viewer on all pull requests targeting
+  development or main.
 
 on:
   pull_request:
     branches:
       - development
+      - main
 
 jobs:
   python-tests:
