@@ -32,6 +32,9 @@ jobs:
       - name: Run lint check
         run: ruff check .
 
+      - name: Run format check
+        run: ruff format --check .
+
       - name: Run type check
         run: mypy .
 
@@ -87,3 +90,6 @@ jobs:
 
       - name: Run tests
         run: pnpm run test
+
+      - name: Build
+        run: pnpm run build
