@@ -12,7 +12,7 @@ sys.path.insert(
 
 import config
 from services.canvas_manager import CanvasManager
-from services.stroke_vlm_client import StrokeVLMClient
+from services.clients.stroke_vlm_client import StrokeVLMClient
 
 
 def main():

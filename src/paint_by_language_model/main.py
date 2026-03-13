@@ -9,6 +9,7 @@ from config import (
     GIF_FRAME_DURATION_MS,
     MAX_ITERATIONS,
     MAX_STROKES_PER_QUERY,
+    MIN_STROKES_PER_LAYER,
     MIN_STROKES_PER_QUERY,
     OUTPUT_DIR,
     SUPPORTED_STROKE_TYPES,
@@ -50,6 +51,7 @@ def run_generation(
     gif_frame_duration: int = GIF_FRAME_DURATION_MS,
     expanded_subject: str | None = None,
     planner_model: str | None = None,
+    min_strokes_per_layer: int | None = None,
 ) -> None:
     """
     Run image generation mode.
@@ -69,6 +71,7 @@ def run_generation(
         gif_frame_duration (int): GIF frame duration in milliseconds
         expanded_subject (str | None): Detailed description of the final image
         planner_model (str | None): Override the planner LLM model
+        min_strokes_per_layer (int | None): Override MIN_STROKES_PER_LAYER
     """
     import config
 
@@ -167,6 +170,10 @@ def run_generation(
         import config
 
         config.TARGET_STYLE_SCORE = target_score
+    if min_strokes_per_layer is not None:
+        import config as _config
+
+        _config.MIN_STROKES_PER_LAYER = min_strokes_per_layer
 
     # Run generation
     try:
@@ -338,6 +345,16 @@ Examples:
         help="Override the planner LLM model (e.g. mistral-large-latest)",
     )
 
+    parser.add_argument(
+        "--min-strokes-per-layer",
+        type=int,
+        default=None,
+        help=(
+            f"Minimum VLM iterations per painting layer before the layer can be marked "
+            f"complete (default: {MIN_STROKES_PER_LAYER} from config)"
+        ),
+    )
+
     return parser.parse_args()
 
 
@@ -412,6 +429,7 @@ def main() -> None:
         gif_frame_duration=args.gif_frame_duration,
         expanded_subject=args.expanded_subject,
         planner_model=args.planner_model,
+        min_strokes_per_layer=args.min_strokes_per_layer,
     )
 
 

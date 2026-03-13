@@ -20,6 +20,7 @@ from config import (
     MAX_STROKES_PER_QUERY,
     MIN_STROKE_OPACITY,
     MIN_STROKE_THICKNESS,
+    MIN_STROKES_PER_LAYER,
     MIN_STROKES_PER_QUERY,
     STROKE_PROMPT_TEMPERATURE,
     VLM_MODEL,
@@ -34,7 +35,7 @@ from vlm_client import VLMClient
 logger = logging.getLogger(__name__)
 
 _STROKE_PROMPT_TEMPLATE_PATH = (
-    Path(__file__).parent.parent.parent / "datafiles" / "prompts" / "stroke_prompt.txt"
+    Path(__file__).parent.parent.parent.parent / "datafiles" / "prompts" / "stroke_prompt.txt"
 )
 
 
@@ -108,6 +109,7 @@ class StrokeVLMClient:
         painting_plan: "PaintingPlan | None" = None,
         current_layer: "PlanLayer | None" = None,
         expanded_subject: str | None = None,
+        layer_iteration_count: int = 0,
     ) -> StrokeVLMResponse:
         """
         Query VLM for multiple stroke suggestions.
@@ -122,6 +124,9 @@ class StrokeVLMClient:
             painting_plan (PaintingPlan | None): Complete painting plan
             current_layer (PlanLayer | None): Current layer information
             expanded_subject (str | None): Detailed subject description
+            layer_iteration_count (int): Number of iterations already completed for the
+                current layer. Used to inform the VLM of its progress relative to the
+                minimum required before layer completion is allowed. Defaults to 0.
 
         Returns:
             StrokeVLMResponse: List of strokes and optional strategy update
@@ -155,6 +160,7 @@ class StrokeVLMClient:
             painting_plan=painting_plan,
             current_layer=current_layer,
             expanded_subject=expanded_subject,
+            layer_iteration_count=layer_iteration_count,
         )
 
         # Query VLM
@@ -335,6 +341,7 @@ class StrokeVLMClient:
         painting_plan: "PaintingPlan | None" = None,
         current_layer: "PlanLayer | None" = None,
         expanded_subject: str | None = None,
+        layer_iteration_count: int = 0,
     ) -> str:
         """
         Build prompt for multiple stroke suggestions.
@@ -348,6 +355,8 @@ class StrokeVLMClient:
             painting_plan (PaintingPlan | None): Complete painting plan
             current_layer (PlanLayer | None): Current layer information
             expanded_subject (str | None): Detailed subject description
+            layer_iteration_count (int): Number of VLM iterations already completed
+                for the current layer, used to build the LAYER PROGRESS section.
 
         Returns:
             str: Formatted prompt string produced by rendering the template at
@@ -392,6 +401,25 @@ Also assess whether this layer's objectives have been sufficiently met.
 If the layer goals are complete and it's time to move on, set "layer_complete" to true.
 Only signal completion when the layer's description, palette, shapes, and techniques
 have been adequately addressed on the canvas.
+"""
+
+            remaining = MIN_STROKES_PER_LAYER - layer_iteration_count
+            if layer_iteration_count >= MIN_STROKES_PER_LAYER:
+                progress_msg = (
+                    "You have completed the minimum iterations for this layer. "
+                    "You may signal layer_complete: true when the layer's objectives are met."
+                )
+            else:
+                progress_msg = (
+                    f"You must complete at least {remaining} more iteration(s) before this layer "
+                    f"can be marked complete. Do NOT set layer_complete to true yet."
+                )
+
+            plan_section += f"""
+=== LAYER PROGRESS ===
+You are currently on iteration {layer_iteration_count} of this layer.
+The minimum iterations per layer is {MIN_STROKES_PER_LAYER}.
+{progress_msg}
 """
 
         layer_complete_field = ""

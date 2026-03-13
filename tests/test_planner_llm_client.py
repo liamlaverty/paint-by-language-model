@@ -11,14 +11,14 @@ sys.path.insert(
     0, str(Path(__file__).parent.parent / "src" / "paint_by_language_model")
 )
 
-from config import CANVAS_HEIGHT, CANVAS_WIDTH
-from services.planner_llm_client import PlannerLLMClient
+from config import CANVAS_HEIGHT, CANVAS_WIDTH, MIN_STROKES_PER_LAYER
+from services.clients.planner_llm_client import PlannerLLMClient
 
 
 @pytest.fixture
 def mock_vlm_client() -> Mock:
     """Create a mock VLMClient."""
-    with patch("services.planner_llm_client.VLMClient") as mock_client_class:
+    with patch("services.clients.planner_llm_client.VLMClient") as mock_client_class:
         mock_instance = Mock()
         mock_client_class.return_value = mock_instance
         yield mock_instance
@@ -133,6 +133,20 @@ class TestPromptConstruction:
 
         assert "RESPONSE FORMAT (JSON only)" in prompt
         assert "IMPORTANT: Respond ONLY with valid JSON" in prompt
+
+    def test_prompt_includes_minimum_iterations_per_layer(
+        self, planner_client: PlannerLLMClient
+    ) -> None:
+        """Test that prompt includes the minimum iterations per layer line."""
+        prompt = planner_client._build_planning_prompt(
+            artist_name="Test Artist",
+            subject="Test Subject",
+            expanded_subject=None,
+            stroke_types=["line"],
+        )
+
+        assert "Minimum iterations per layer:" in prompt
+        assert str(MIN_STROKES_PER_LAYER) in prompt
 
 
 class TestResponseParsingValid:

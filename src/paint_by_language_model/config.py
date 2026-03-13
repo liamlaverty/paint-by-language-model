@@ -244,6 +244,12 @@ TARGET_STYLE_SCORE = 70.0
 # Minimum expected score improvement per iteration
 MIN_STYLE_SCORE_IMPROVEMENT = 2.0
 
+# Minimum iterations per layer before allowing layer advancement.
+# Each iteration applies one batch of strokes (strokes_per_query, default 5).
+# The stroke VLM may continue a layer beyond this minimum, but cannot signal
+# layer_complete: true until this threshold has been reached.
+MIN_STROKES_PER_LAYER = 15
+
 
 # ----------------------------------------------------------------------------
 # Strategy Management Settings
