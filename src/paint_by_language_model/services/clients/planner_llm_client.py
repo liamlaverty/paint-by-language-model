@@ -8,6 +8,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+import config
 from config import (
     API_BASE_URL,
     API_KEY,
@@ -15,7 +16,6 @@ from config import (
     CANVAS_WIDTH,
     COLOR_HEX_PATTERN,
     DEFAULT_STROKES_PER_QUERY,
-    MIN_STROKES_PER_LAYER,
     OUTPUT_DIR,
     PLANNER_MAX_TOKENS,
     PLANNER_MODEL,
@@ -42,6 +42,7 @@ class PlannerLLMClient:
         api_key: str = API_KEY,
         temperature: float = PLANNER_PROMPT_TEMPERATURE,
         prompt_logger: PromptLogger | None = None,
+        min_strokes_per_layer: int = config.MIN_STROKES_PER_LAYER,
     ) -> None:
         """
         Initialize Planner LLM Client.
@@ -54,6 +55,8 @@ class PlannerLLMClient:
             temperature (float): Sampling temperature for plan generation
             prompt_logger (PromptLogger | None): Optional logger for persisting
                 full prompt/response pairs to disk
+            min_strokes_per_layer (int): Minimum iterations on a layer before
+                ``layer_complete: true`` is honoured. Defaults to the config value.
         """
         self.client = VLMClient(
             base_url=base_url,
@@ -65,6 +68,7 @@ class PlannerLLMClient:
         self.model = model
         self.timeout = timeout
         self.prompt_logger = prompt_logger
+        self.min_strokes_per_layer = min_strokes_per_layer
 
         # Storage for interaction history (for debugging and tracing)
         self.interaction_history: list[dict[str, Any]] = []
@@ -269,9 +273,9 @@ Subject: {subject}{expanded_section}
 
 Available stroke types: {", ".join(stroke_types)}
 Canvas dimensions: {CANVAS_WIDTH}x{CANVAS_HEIGHT} pixels
-Minimum iterations per layer: {MIN_STROKES_PER_LAYER} (each iteration applies up to
+Minimum iterations per layer: {self.min_strokes_per_layer} (each iteration applies up to
 {DEFAULT_STROKES_PER_QUERY} strokes, so each layer will contain at most
-{MIN_STROKES_PER_LAYER * DEFAULT_STROKES_PER_QUERY} individual strokes before it can be
+{self.min_strokes_per_layer * DEFAULT_STROKES_PER_QUERY} individual strokes before it can be
 marked complete)
 
 Task: Create a step-by-step layer plan for painting this image. Each layer will be

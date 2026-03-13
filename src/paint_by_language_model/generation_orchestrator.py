@@ -11,23 +11,17 @@ from config import (
     CANVAS_HEIGHT,
     CANVAS_WIDTH,
     DEFAULT_STROKES_PER_QUERY,
-    EVALUATION_VLM_MODEL,
     GIF_FILENAME,
     GIF_FRAME_DURATION_MS,
     IMAGE_EXPORT_FORMATS,
-    MAX_ITERATIONS,
     MIN_ITERATIONS,
-    MIN_STROKES_PER_LAYER,
     NEXTJS_VIEWER_DATA_DIR,
     OUTPUT_DIR,
     OUTPUT_STRUCTURE,
-    PLANNER_MODEL,
     SUPPORTED_STROKE_TYPES,
-    TARGET_STYLE_SCORE,
     VIEWER_DATA_FILENAME,
-    VLM_MODEL,
 )
-from models import EvaluationResult, PaintingPlan, PlanLayer, Stroke
+from models import EvaluationResult, GenerationConfig, PaintingPlan, PlanLayer, Stroke
 from services import (
     ArtworkPersistence,
     ArtworkStateLoader,
@@ -52,6 +46,7 @@ class GenerationOrchestrator:
         artist_name: str,
         subject: str,
         artwork_id: str,
+        generation_config: GenerationConfig,
         output_dir: Path = OUTPUT_DIR,
         strokes_per_query: int = DEFAULT_STROKES_PER_QUERY,
         gif_frame_duration: int = GIF_FRAME_DURATION_MS,
@@ -65,6 +60,9 @@ class GenerationOrchestrator:
             artist_name (str): Target artist name
             subject (str): Subject to paint
             artwork_id (str): Unique artwork identifier
+            generation_config (GenerationConfig): Fully-resolved runtime configuration
+                for the generation run, including provider, API credentials, model
+                identifiers, and iteration limits.
             output_dir (Path): Base output directory
             strokes_per_query (int): Number of strokes to request per VLM query
             gif_frame_duration (int): GIF frame duration in milliseconds
@@ -72,7 +70,26 @@ class GenerationOrchestrator:
             allowed_stroke_types (list[str] | None): Restrict the stroke types the
                 VLM may suggest.  When ``None`` all supported types are available
                 (existing behaviour preserved).
+
+        Raises:
+            ValueError: If ``generation_config`` contains invalid values (empty
+                ``api_base_url``, missing API key for authenticated providers, or
+                ``min_strokes_per_layer < 1``).
         """
+        # Validate config before anything else
+        if not generation_config["api_base_url"]:
+            raise ValueError("GenerationConfig.api_base_url must not be empty")
+        if (
+            generation_config["provider"] in ("mistral", "anthropic")
+            and not generation_config["api_key"]
+        ):
+            raise ValueError(
+                f"Provider '{generation_config['provider']}' requires an API key "
+                "(set via --api-key or the relevant env var)"
+            )
+        if generation_config["min_strokes_per_layer"] < 1:
+            raise ValueError("GenerationConfig.min_strokes_per_layer must be >= 1")
+
         self.artist_name = artist_name
         self.subject = subject
         self.expanded_subject = expanded_subject
@@ -83,16 +100,41 @@ class GenerationOrchestrator:
         self.gif_frame_duration = gif_frame_duration
         self.allowed_stroke_types = allowed_stroke_types
 
+        # Store runtime scalars from config
+        self.max_iterations = generation_config["max_iterations"]
+        self.target_style_score = generation_config["target_style_score"]
+        self.min_strokes_per_layer = generation_config["min_strokes_per_layer"]
+        self.provider = generation_config["provider"]
+        self.vlm_model = generation_config["vlm_model"]
+        self.evaluation_vlm_model = generation_config["evaluation_vlm_model"]
+        self.planner_model = generation_config["planner_model"]
+
         # Initialize components
         logger.info(f"Initializing generation for '{subject}' in style of {artist_name}")
 
         self.prompt_logger = PromptLogger(artwork_dir=self.artwork_dir)
         self.canvas_manager = CanvasManager()
         self.stroke_vlm = StrokeVLMClient(
+            base_url=generation_config["api_base_url"],
+            model=generation_config["vlm_model"],
+            api_key=generation_config["api_key"],
             prompt_logger=self.prompt_logger,
             allowed_stroke_types=self.allowed_stroke_types,
+            min_strokes_per_layer=generation_config["min_strokes_per_layer"],
         )
-        self.eval_vlm = EvaluationVLMClient(prompt_logger=self.prompt_logger)
+        self.eval_vlm = EvaluationVLMClient(
+            base_url=generation_config["api_base_url"],
+            model=generation_config["evaluation_vlm_model"],
+            api_key=generation_config["api_key"],
+            prompt_logger=self.prompt_logger,
+        )
+        self.planner_vlm = PlannerLLMClient(
+            base_url=generation_config["api_base_url"],
+            model=generation_config["planner_model"],
+            api_key=generation_config["api_key"],
+            prompt_logger=self.prompt_logger,
+            min_strokes_per_layer=generation_config["min_strokes_per_layer"],
+        )
         self.strategy_manager = StrategyManager(artwork_id=artwork_id, output_dir=output_dir)
 
         # Persistence service
@@ -103,9 +145,7 @@ class GenerationOrchestrator:
         )
 
         # Log provider information
-        import config
-
-        logger.info(f"Using provider: {config.PROVIDER} ({config.API_BASE_URL})")
+        logger.info(f"Using provider: {self.provider} ({generation_config['api_base_url']})")
 
         # Tracking
         self.evaluations: list[EvaluationResult] = []
@@ -174,9 +214,9 @@ class GenerationOrchestrator:
         try:
             # Main iteration loop
             iteration = 1
-            for iteration in range(self.starting_iteration, MAX_ITERATIONS + 1):
+            for iteration in range(self.starting_iteration, self.max_iterations + 1):
                 logger.info(f"\n{'=' * 80}")
-                logger.info(f"Iteration {iteration}/{MAX_ITERATIONS}")
+                logger.info(f"Iteration {iteration}/{self.max_iterations}")
                 logger.info(f"{'=' * 80}")
 
                 # Determine current layer
@@ -195,7 +235,7 @@ class GenerationOrchestrator:
                     break
 
             # Generation complete
-            final_iteration = min(iteration, MAX_ITERATIONS)
+            final_iteration = min(iteration, self.max_iterations)
             logger.info(f"\nGeneration complete after {final_iteration} iterations")
 
             # Save final artifacts
@@ -374,7 +414,7 @@ class GenerationOrchestrator:
                 layer_iters = (
                     self.layer_iterations.get(layer_num, 0) + 1
                 )  # +1 for current iteration
-                if layer_iters >= MIN_STROKES_PER_LAYER:
+                if layer_iters >= self.min_strokes_per_layer:
                     self.current_layer_index += 1
                     next_layer = self.painting_plan["layers"][self.current_layer_index]
                     logger.info(
@@ -386,7 +426,7 @@ class GenerationOrchestrator:
                 else:
                     logger.info(
                         f"Layer complete signal received but ignored — only "
-                        f"{layer_iters}/{MIN_STROKES_PER_LAYER} iterations completed "
+                        f"{layer_iters}/{self.min_strokes_per_layer} iterations completed "
                         f"for layer {layer_num}"
                     )
 
@@ -434,7 +474,7 @@ class GenerationOrchestrator:
                     layer_iters = self.layer_iterations.get(
                         layer_num, 0
                     )  # Already incremented above
-                    if layer_iters >= MIN_STROKES_PER_LAYER:
+                    if layer_iters >= self.min_strokes_per_layer:
                         logger.info(
                             f"Final layer {layer_num} marked complete after {layer_iters} iterations "
                             f"— ending generation"
@@ -483,14 +523,14 @@ class GenerationOrchestrator:
             bool: True if should stop, False to continue
         """
         # Condition 1: Max iterations reached
-        if iteration >= MAX_ITERATIONS:
-            logger.info(f"Max iterations ({MAX_ITERATIONS}) reached")
+        if iteration >= self.max_iterations:
+            logger.info(f"Max iterations ({self.max_iterations}) reached")
             return True
 
         # Condition 2: Target score achieved (after minimum iterations)
-        if iteration >= MIN_ITERATIONS and evaluation["score"] >= TARGET_STYLE_SCORE:
+        if iteration >= MIN_ITERATIONS and evaluation["score"] >= self.target_style_score:
             logger.info(
-                f"Target score ({TARGET_STYLE_SCORE}) reached with score {evaluation['score']:.1f}"
+                f"Target score ({self.target_style_score}) reached with score {evaluation['score']:.1f}"
             )
             return True
 
@@ -520,9 +560,8 @@ class GenerationOrchestrator:
 
         # Generate new plan
         logger.info("Generating new painting plan...")
-        planner = PlannerLLMClient(prompt_logger=self.prompt_logger)
         effective_stroke_types = self.allowed_stroke_types or SUPPORTED_STROKE_TYPES
-        plan = planner.generate_plan(
+        plan = self.planner_vlm.generate_plan(
             self.artist_name, self.subject, self.expanded_subject, effective_stroke_types
         )
 
@@ -682,8 +721,8 @@ class GenerationOrchestrator:
                 "score_progression": [e["score"] for e in self.evaluations],
                 "generation_date": self.generation_start_time.isoformat(),
                 "vlm_models": {
-                    "stroke_generator": VLM_MODEL,
-                    "evaluator": EVALUATION_VLM_MODEL,
+                    "stroke_generator": self.vlm_model,
+                    "evaluator": self.evaluation_vlm_model,
                 },
             },
             "painting_plan": self.painting_plan,
@@ -780,12 +819,12 @@ class GenerationOrchestrator:
             "interrupted": interrupted,
             "canvas_dimensions": {"width": CANVAS_WIDTH, "height": CANVAS_HEIGHT},
             "vlm_models": {
-                "stroke_generator": VLM_MODEL,
-                "evaluator": EVALUATION_VLM_MODEL,
+                "stroke_generator": self.vlm_model,
+                "evaluator": self.evaluation_vlm_model,
             },
             "configuration": {
-                "max_iterations": MAX_ITERATIONS,
-                "target_style_score": TARGET_STYLE_SCORE,
+                "max_iterations": self.max_iterations,
+                "target_style_score": self.target_style_score,
                 "min_iterations": MIN_ITERATIONS,
                 "strokes_per_query": self.strokes_per_query,
             },
@@ -801,7 +840,7 @@ class GenerationOrchestrator:
             },
             "painting_plan": self.painting_plan,
             "layer_progression": self.layer_iterations,
-            "planner_model": PLANNER_MODEL,
+            "planner_model": self.planner_model,
             "expanded_subject": self.expanded_subject,
         }
 

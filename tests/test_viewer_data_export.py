@@ -28,6 +28,22 @@ from config import (
     VIEWER_DATA_FILENAME,
 )
 from generation_orchestrator import GenerationOrchestrator
+from models import GenerationConfig
+
+
+def _make_test_config() -> GenerationConfig:
+    """Return a minimal GenerationConfig suitable for unit tests."""
+    return GenerationConfig(
+        provider="lmstudio",
+        api_base_url="http://localhost:1234/v1",
+        api_key="",
+        vlm_model="test-model",
+        evaluation_vlm_model="test-model",
+        planner_model="test-model",
+        max_iterations=10,
+        target_style_score=85.0,
+        min_strokes_per_layer=1,
+    )
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -121,6 +137,7 @@ def orchestrator_with_batches() -> Generator[
         subject="Test Subject",
         artwork_id="test-viewer-001",
         output_dir=tmpdir,
+        generation_config=_make_test_config(),
     )
 
     # Create batch files in the strokes sub-directory
@@ -558,6 +575,7 @@ class TestViewerDataSkippedStrokes:
                 subject="Skip Subject",
                 artwork_id="test-skip-001",
                 output_dir=tmpdir,
+                generation_config=_make_test_config(),
             )
 
             strokes_dir = orch.artwork_dir / OUTPUT_STRUCTURE["strokes"]
@@ -658,6 +676,7 @@ class TestViewerDataEvaluations:
                 subject="No Eval Subject",
                 artwork_id="test-no-evals-001",
                 output_dir=tmpdir,
+                generation_config=_make_test_config(),
             )
 
             strokes_dir = orch.artwork_dir / OUTPUT_STRUCTURE["strokes"]

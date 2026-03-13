@@ -4,6 +4,7 @@ import argparse
 import logging
 import sys
 
+import config
 from config import (
     DEFAULT_STROKES_PER_QUERY,
     GIF_FRAME_DURATION_MS,
@@ -16,8 +17,88 @@ from config import (
     TARGET_STYLE_SCORE,
 )
 from generation_orchestrator import GenerationOrchestrator
+from models import GenerationConfig
 
 logger = logging.getLogger(__name__)
+
+
+def build_generation_config(
+    provider: str | None,
+    api_key: str | None,
+    planner_model: str | None,
+    max_iterations: int | None,
+    target_score: float | None,
+    min_strokes_per_layer: int | None,
+) -> GenerationConfig:
+    """
+    Resolve all runtime overrides and return a fully-populated GenerationConfig.
+
+    Reads defaults from the ``config`` module and applies any CLI overrides on
+    top. Does NOT mutate the ``config`` module.
+
+    Args:
+        provider (str | None): Provider override ("mistral", "lmstudio",
+            "anthropic"), or None to use the value from config.
+        api_key (str | None): API key override, or None to use config default.
+        planner_model (str | None): Planner model override, or None to use
+            config default.
+        max_iterations (int | None): Override for MAX_ITERATIONS, or None.
+        target_score (float | None): Override for TARGET_STYLE_SCORE, or None.
+        min_strokes_per_layer (int | None): Override for MIN_STROKES_PER_LAYER,
+            or None.
+
+    Returns:
+        GenerationConfig: Fully-resolved configuration object.
+    """
+    resolved_provider = config.PROVIDER
+    resolved_api_base_url = config.API_BASE_URL
+    resolved_api_key = config.API_KEY
+    resolved_vlm_model = config.VLM_MODEL
+    resolved_eval_model = config.EVALUATION_VLM_MODEL
+    resolved_planner_model = config.PLANNER_MODEL
+
+    if provider == "mistral":
+        resolved_provider = "mistral"
+        resolved_api_base_url = config.MISTRAL_BASE_URL
+        resolved_api_key = config.MISTRAL_API_KEY
+        resolved_vlm_model = config.MISTRAL_VLM_MODEL
+        resolved_eval_model = config.MISTRAL_EVALUATION_VLM_MODEL
+        resolved_planner_model = config.MISTRAL_PLANNER_MODEL
+    elif provider == "anthropic":
+        resolved_provider = "anthropic"
+        resolved_api_base_url = config.ANTHROPIC_BASE_URL
+        resolved_api_key = config.ANTHROPIC_API_KEY
+        resolved_vlm_model = config.ANTHROPIC_VLM_MODEL
+        resolved_eval_model = config.ANTHROPIC_EVALUATION_VLM_MODEL
+        resolved_planner_model = config.ANTHROPIC_PLANNER_MODEL
+    elif provider == "lmstudio":
+        resolved_provider = "lmstudio"
+        resolved_api_base_url = config.LMSTUDIO_BASE_URL
+        resolved_api_key = ""
+        resolved_vlm_model = config.LMSTUDIO_VLM_MODEL
+        resolved_eval_model = config.LMSTUDIO_EVALUATION_VLM_MODEL
+        resolved_planner_model = config.LMSTUDIO_PLANNER_MODEL
+
+    if api_key:
+        resolved_api_key = api_key
+    if planner_model:
+        resolved_planner_model = planner_model
+
+    return GenerationConfig(
+        provider=resolved_provider,
+        api_base_url=resolved_api_base_url,
+        api_key=resolved_api_key,
+        vlm_model=resolved_vlm_model,
+        evaluation_vlm_model=resolved_eval_model,
+        planner_model=resolved_planner_model,
+        max_iterations=max_iterations if max_iterations is not None else config.MAX_ITERATIONS,
+        target_style_score=target_score if target_score is not None else config.TARGET_STYLE_SCORE,
+        min_strokes_per_layer=(
+            min_strokes_per_layer
+            if min_strokes_per_layer is not None
+            else config.MIN_STROKES_PER_LAYER
+        ),
+    )
 
 
 def setup_logging(log_level: str = "INFO") -> None:
@@ -73,48 +154,24 @@ def run_generation(
         planner_model (str | None): Override the planner LLM model
         min_strokes_per_layer (int | None): Override MIN_STROKES_PER_LAYER
     """
-    import config
-
-    # Apply provider override
-    if provider:
-        config.PROVIDER = provider
-        if provider == "mistral":
-            config.API_BASE_URL = config.MISTRAL_BASE_URL
-            config.API_KEY = config.MISTRAL_API_KEY
-            config.DEFAULT_MODEL = config.MISTRAL_DEFAULT_MODEL
-            config.VLM_MODEL = config.MISTRAL_VLM_MODEL
-            config.EVALUATION_VLM_MODEL = config.MISTRAL_EVALUATION_VLM_MODEL
-        elif provider == "anthropic":
-            config.API_BASE_URL = config.ANTHROPIC_BASE_URL
-            config.API_KEY = config.ANTHROPIC_API_KEY
-            config.DEFAULT_MODEL = config.ANTHROPIC_DEFAULT_MODEL
-            config.VLM_MODEL = config.ANTHROPIC_VLM_MODEL
-            config.EVALUATION_VLM_MODEL = config.ANTHROPIC_EVALUATION_VLM_MODEL
-            config.PLANNER_MODEL = config.ANTHROPIC_PLANNER_MODEL
-        else:  # lmstudio
-            config.API_BASE_URL = config.LMSTUDIO_BASE_URL
-            config.API_KEY = ""
-            config.DEFAULT_MODEL = config.LMSTUDIO_MODEL
-            config.VLM_MODEL = config.LMSTUDIO_VLM_MODEL
-            config.EVALUATION_VLM_MODEL = config.LMSTUDIO_EVALUATION_VLM_MODEL
-
-    # Apply API key override (overrides both env var and provider default)
-    if api_key:
-        config.API_KEY = api_key
-
-    # Apply planner model override
-    if planner_model:
-        config.PLANNER_MODEL = planner_model
+    generation_cfg = build_generation_config(
+        provider=provider,
+        api_key=api_key,
+        planner_model=planner_model,
+        max_iterations=max_iterations,
+        target_score=target_score,
+        min_strokes_per_layer=min_strokes_per_layer,
+    )
 
     # Validate that Mistral has an API key
-    if config.PROVIDER == "mistral" and not config.API_KEY:
+    if generation_cfg["provider"] == "mistral" and not generation_cfg["api_key"]:
         logger.error(
             "Mistral provider requires an API key. Set MISTRAL_API_KEY in .env or pass --api-key."
         )
         sys.exit(1)
 
     # Validate that Anthropic has an API key
-    if config.PROVIDER == "anthropic" and not config.API_KEY:
+    if generation_cfg["provider"] == "anthropic" and not generation_cfg["api_key"]:
         logger.error(
             "ANTHROPIC_API_KEY not found in environment. "
             "Set ANTHROPIC_API_KEY in .env or pass --api-key."
@@ -123,16 +180,16 @@ def run_generation(
 
     logger.info("Starting image generation")
     logger.info("=" * 80)
-    logger.info(f"Provider: {config.PROVIDER}")
-    logger.info(f"API Base URL: {config.API_BASE_URL}")
-    logger.info(f"VLM Model: {config.VLM_MODEL}")
+    logger.info(f"Provider: {generation_cfg['provider']}")
+    logger.info(f"API Base URL: {generation_cfg['api_base_url']}")
+    logger.info(f"VLM Model: {generation_cfg['vlm_model']}")
     logger.info(f"Artist: {artist}")
     logger.info(f"Subject: {subject}")
     logger.info(f"Output ID: {output_id}")
     logger.info(f"Strokes per query: {strokes_per_query}")
-    logger.info(f"Max iterations: {max_iterations or MAX_ITERATIONS}")
-    logger.info(f"Target score: {target_score or TARGET_STYLE_SCORE}")
-    logger.info(f"Planner model: {config.PLANNER_MODEL}")
+    logger.info(f"Max iterations: {generation_cfg['max_iterations']}")
+    logger.info(f"Target score: {generation_cfg['target_style_score']}")
+    logger.info(f"Planner model: {generation_cfg['planner_model']}")
 
     if expanded_subject:
         logger.info(f"Expanded subject: {expanded_subject}")
@@ -150,6 +207,7 @@ def run_generation(
             artist_name=artist,
             subject=subject,
             artwork_id=output_id,
+            generation_config=generation_cfg,
             output_dir=OUTPUT_DIR,
             strokes_per_query=strokes_per_query,
             gif_frame_duration=gif_frame_duration,
@@ -160,20 +218,6 @@ def run_generation(
     except Exception as e:
         logger.error(f"Failed to initialize orchestrator: {e}")
         sys.exit(1)
-
-    # Apply overrides if provided
-    if max_iterations:
-        import config
-
-        config.MAX_ITERATIONS = max_iterations
-    if target_score:
-        import config
-
-        config.TARGET_STYLE_SCORE = target_score
-    if min_strokes_per_layer is not None:
-        import config as _config
-
-        _config.MIN_STROKES_PER_LAYER = min_strokes_per_layer
 
     # Run generation
     try:

@@ -13,6 +13,7 @@ sys.path.insert(
 
 from config import MIN_STROKES_PER_LAYER
 from generation_orchestrator import GenerationOrchestrator
+from models import GenerationConfig
 from models.painting_plan import PaintingPlan, PlanLayer
 
 # ---------------------------------------------------------------------------
@@ -85,6 +86,21 @@ def _make_apply_strokes_results() -> list[dict[str, Any]]:
     return [{"success": True, "index": 0, "error": None}]
 
 
+def _make_test_config() -> GenerationConfig:
+    """Return a minimal GenerationConfig suitable for unit tests."""
+    return GenerationConfig(
+        provider="lmstudio",
+        api_base_url="http://localhost:1234/v1",
+        api_key="",
+        vlm_model="test-model",
+        evaluation_vlm_model="test-model",
+        planner_model="test-model",
+        max_iterations=10,
+        target_style_score=85.0,
+        min_strokes_per_layer=MIN_STROKES_PER_LAYER,
+    )
+
+
 def _build_orchestrator(tmp_path: Path) -> GenerationOrchestrator:
     """Create a GenerationOrchestrator pointing at a temp directory."""
     return GenerationOrchestrator(
@@ -92,6 +108,7 @@ def _build_orchestrator(tmp_path: Path) -> GenerationOrchestrator:
         subject="Test Subject",
         artwork_id="test-min-strokes",
         output_dir=tmp_path,
+        generation_config=_make_test_config(),
     )
 
 
