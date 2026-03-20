@@ -1,0 +1,16 @@
+[
+  {
+    "artist": "Realist (hyper-detailed, photorealistic)",
+    "subject": "Pelican Riding a Vintage Bicycle by the Seaside",
+    "output-id": "pelican-bicycle-realist-claude-sonnet-4-6",
+    "isComplete": true,
+    "expanded-subject": "A highly detailed, photorealistic painting of a pelican perched on the seat of a vintage bicycle, pedaling along a sunlit seaside boardwalk. The pelican's feathers are rendered with meticulous texture, from the iridescent sheen on its neck to the individual barbs on its wings. The bicycle is an old-fashioned cruiser with a wicker basket, its chrome fenders gleaming in the sunlight. The background features a sandy beach, gentle waves, and a few seagulls in flight, all captured with lifelike precision. The lighting is warm and golden, casting soft shadows and highlighting the intricate details of the pelican's beak, the bicycle's leather seat, and the weathered wood of the boardwalk. The composition should balance humor and realism, with a focus on hyper-detailed textures and naturalistic colors.",
+    "provider": "anthropic",
+    "planner-model": "claude-sonnet-4-6",
+    "max-iterations": 150,
+    "target-score": 88,
+    "strokes-per-query": 3,
+    "stroke-types": "line,polyline,arc,circle",
+    "log-level": "INFO"
+  }
+]
