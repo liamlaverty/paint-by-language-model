@@ -51,6 +51,7 @@ class StrokeVLMClient:
         temperature: float = STROKE_PROMPT_TEMPERATURE,
         prompt_logger: PromptLogger | None = None,
         allowed_stroke_types: list[str] | None = None,
+        min_strokes_per_layer: int = MIN_STROKES_PER_LAYER,
     ):
         """
         Initialize Stroke VLM Client.
@@ -67,6 +68,10 @@ class StrokeVLMClient:
                 appear in the AVAILABLE STROKE TYPES prompt block.  When ``None``
                 or an empty list, all ten stroke types are included (existing
                 behaviour preserved).
+            min_strokes_per_layer (int): Minimum iterations on a layer before
+                ``layer_complete: true`` is honoured. Defaults to the config value.
+                Evaluated once at class-definition time; the caller must pass
+                an explicit value if a runtime override is required.
 
         The stroke prompt template is loaded once from
         ``_STROKE_PROMPT_TEMPLATE_PATH`` and cached as
@@ -83,6 +88,7 @@ class StrokeVLMClient:
         self.timeout = timeout
         self.prompt_logger = prompt_logger
         self.allowed_stroke_types = allowed_stroke_types
+        self.min_strokes_per_layer = min_strokes_per_layer
 
         # Storage for interaction history (for debugging and tracing)
         self.interaction_history: list[dict[str, Any]] = []
@@ -403,8 +409,8 @@ Only signal completion when the layer's description, palette, shapes, and techni
 have been adequately addressed on the canvas.
 """
 
-            remaining = MIN_STROKES_PER_LAYER - layer_iteration_count
-            if layer_iteration_count >= MIN_STROKES_PER_LAYER:
+            remaining = self.min_strokes_per_layer - layer_iteration_count
+            if layer_iteration_count >= self.min_strokes_per_layer:
                 progress_msg = (
                     "You have completed the minimum iterations for this layer. "
                     "You may signal layer_complete: true when the layer's objectives are met."
@@ -418,7 +424,7 @@ have been adequately addressed on the canvas.
             plan_section += f"""
 === LAYER PROGRESS ===
 You are currently on iteration {layer_iteration_count} of this layer.
-The minimum iterations per layer is {MIN_STROKES_PER_LAYER}.
+The minimum iterations per layer is {self.min_strokes_per_layer}.
 {progress_msg}
 """
 

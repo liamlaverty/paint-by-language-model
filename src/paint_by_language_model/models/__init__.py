@@ -2,6 +2,7 @@
 
 from .canvas_state import CanvasState
 from .evaluation_result import EvaluationResult
+from .generation_config import GenerationConfig
 from .generation_metadata import GenerationMetadata
 from .painting_plan import PaintingPlan, PlanLayer
 from .strategy_context import StrategyContext
@@ -13,6 +14,7 @@ __all__ = [
     "StrokeType",
     "EvaluationResult",
     "StrategyContext",
+    "GenerationConfig",
     "GenerationMetadata",
     "StrokeVLMResponse",
     "CanvasState",

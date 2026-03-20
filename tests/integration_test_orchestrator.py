@@ -49,6 +49,21 @@ def test_orchestrator_passes_allowed_stroke_types_to_planner() -> None:
     )
 
     from generation_orchestrator import GenerationOrchestrator
+    from models import GenerationConfig
+
+    def _make_test_config() -> GenerationConfig:
+        """Return a minimal GenerationConfig suitable for unit tests."""
+        return GenerationConfig(
+            provider="lmstudio",
+            api_base_url="http://localhost:1234/v1",
+            api_key="",
+            vlm_model="test-model",
+            evaluation_vlm_model="test-model",
+            planner_model="test-model",
+            max_iterations=10,
+            target_style_score=85.0,
+            min_strokes_per_layer=1,
+        )
 
     allowed = ["line", "circle"]
     test_dir = Path(tempfile.mkdtemp())
@@ -72,6 +87,7 @@ def test_orchestrator_passes_allowed_stroke_types_to_planner() -> None:
                 artwork_id="test-allowed-types-001",
                 output_dir=test_dir,
                 allowed_stroke_types=allowed,
+                generation_config=_make_test_config(),
             )
 
             # Call _run_planning_phase directly (avoids running full generation loop)
