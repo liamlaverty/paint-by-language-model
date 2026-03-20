@@ -11,6 +11,22 @@ sys.path.insert(
 
 from config import DEFAULT_STROKES_PER_QUERY
 from generation_orchestrator import GenerationOrchestrator
+from models import GenerationConfig
+
+
+def _make_test_config() -> GenerationConfig:
+    """Return a minimal GenerationConfig suitable for unit tests."""
+    return GenerationConfig(
+        provider="lmstudio",
+        api_base_url="http://localhost:1234/v1",
+        api_key="",
+        vlm_model="test-model",
+        evaluation_vlm_model="test-model",
+        planner_model="test-model",
+        max_iterations=10,
+        target_style_score=85.0,
+        min_strokes_per_layer=1,
+    )
 
 
 def test_orchestrator_batch_initialization() -> None:
@@ -23,6 +39,7 @@ def test_orchestrator_batch_initialization() -> None:
         artwork_id="test-001",
         output_dir=test_dir,
         strokes_per_query=3,  # Custom value
+        generation_config=_make_test_config(),
     )
 
     # Verify basic attributes
@@ -53,6 +70,7 @@ def test_orchestrator_default_strokes_per_query() -> None:
         subject="Test Subject",
         artwork_id="test-002",
         output_dir=test_dir,
+        generation_config=_make_test_config(),
         # strokes_per_query not specified - should use default
     )
 

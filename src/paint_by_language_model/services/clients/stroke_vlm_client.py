@@ -15,9 +15,39 @@ from config import (
     CANVAS_HEIGHT,
     CANVAS_WIDTH,
     DEFAULT_STROKES_PER_QUERY,
+    MAX_ARC_ANGLE,
+    MAX_BRISTLE_COUNT,
+    MAX_BRUSH_WIDTH,
+    MAX_BURN_DODGE_INTENSITY,
+    MAX_BURN_DODGE_RADIUS,
+    MAX_CHALK_WIDTH,
+    MAX_CIRCLE_RADIUS,
+    MAX_DOT_SIZE,
+    MAX_FLOW,
+    MAX_GAP_PROBABILITY,
+    MAX_GRAIN_DENSITY,
+    MAX_POLYLINE_POINTS,
+    MAX_SOFTNESS,
+    MAX_SPLATTER_COUNT,
+    MAX_SPLATTER_RADIUS,
     MAX_STROKE_OPACITY,
     MAX_STROKE_THICKNESS,
     MAX_STROKES_PER_QUERY,
+    MIN_ARC_ANGLE,
+    MIN_BRISTLE_COUNT,
+    MIN_BRUSH_WIDTH,
+    MIN_BURN_DODGE_INTENSITY,
+    MIN_BURN_DODGE_RADIUS,
+    MIN_CHALK_WIDTH,
+    MIN_CIRCLE_RADIUS,
+    MIN_DOT_SIZE,
+    MIN_FLOW,
+    MIN_GAP_PROBABILITY,
+    MIN_GRAIN_DENSITY,
+    MIN_POLYLINE_POINTS,
+    MIN_SOFTNESS,
+    MIN_SPLATTER_COUNT,
+    MIN_SPLATTER_RADIUS,
     MIN_STROKE_OPACITY,
     MIN_STROKE_THICKNESS,
     MIN_STROKES_PER_LAYER,
@@ -51,6 +81,7 @@ class StrokeVLMClient:
         temperature: float = STROKE_PROMPT_TEMPERATURE,
         prompt_logger: PromptLogger | None = None,
         allowed_stroke_types: list[str] | None = None,
+        min_strokes_per_layer: int = MIN_STROKES_PER_LAYER,
     ):
         """
         Initialize Stroke VLM Client.
@@ -67,6 +98,10 @@ class StrokeVLMClient:
                 appear in the AVAILABLE STROKE TYPES prompt block.  When ``None``
                 or an empty list, all ten stroke types are included (existing
                 behaviour preserved).
+            min_strokes_per_layer (int): Minimum iterations on a layer before
+                ``layer_complete: true`` is honoured. Defaults to the config value.
+                Evaluated once at class-definition time; the caller must pass
+                an explicit value if a runtime override is required.
 
         The stroke prompt template is loaded once from
         ``_STROKE_PROMPT_TEMPLATE_PATH`` and cached as
@@ -83,6 +118,7 @@ class StrokeVLMClient:
         self.timeout = timeout
         self.prompt_logger = prompt_logger
         self.allowed_stroke_types = allowed_stroke_types
+        self.min_strokes_per_layer = min_strokes_per_layer
 
         # Storage for interaction history (for debugging and tracing)
         self.interaction_history: list[dict[str, Any]] = []
@@ -403,8 +439,8 @@ Only signal completion when the layer's description, palette, shapes, and techni
 have been adequately addressed on the canvas.
 """
 
-            remaining = MIN_STROKES_PER_LAYER - layer_iteration_count
-            if layer_iteration_count >= MIN_STROKES_PER_LAYER:
+            remaining = self.min_strokes_per_layer - layer_iteration_count
+            if layer_iteration_count >= self.min_strokes_per_layer:
                 progress_msg = (
                     "You have completed the minimum iterations for this layer. "
                     "You may signal layer_complete: true when the layer's objectives are met."
@@ -418,7 +454,7 @@ have been adequately addressed on the canvas.
             plan_section += f"""
 === LAYER PROGRESS ===
 You are currently on iteration {layer_iteration_count} of this layer.
-The minimum iterations per layer is {MIN_STROKES_PER_LAYER}.
+The minimum iterations per layer is {self.min_strokes_per_layer}.
 {progress_msg}
 """
 
@@ -493,7 +529,8 @@ The minimum iterations per layer is {MIN_STROKES_PER_LAYER}.
                 ' "arc_start_angle": 0, "arc_end_angle": 180, "color_hex": "#3366CC",'
                 ' "thickness": 3, "opacity": 0.9}\n'
                 "   Required fields: type, arc_bbox (list [x0,y0,x1,y1]),"
-                " arc_start_angle (degrees), arc_end_angle (degrees), color_hex, thickness, opacity",
+                f" arc_start_angle ({MIN_ARC_ANGLE}-{MAX_ARC_ANGLE} degrees),"
+                f" arc_end_angle ({MIN_ARC_ANGLE}-{MAX_ARC_ANGLE} degrees), color_hex, thickness, opacity",
             ),
             (
                 "polyline",
@@ -501,7 +538,9 @@ The minimum iterations per layer is {MIN_STROKES_PER_LAYER}.
                 " image showing 5 examples with varying point counts, path shapes, and thickness.\n"
                 '   Example: {"type": "polyline", "points": [[100,100], [150,200], [200,150], [250,250]],'
                 ' "color_hex": "#22AA44", "thickness": 4, "opacity": 0.7}\n'
-                "   Required fields: type, points (list of [x,y] coordinates), color_hex, thickness, opacity",
+                "   Required fields: type,"
+                f" points (list of [x,y] coordinates, {MIN_POLYLINE_POINTS}-{MAX_POLYLINE_POINTS} points),"
+                " color_hex, thickness, opacity",
             ),
             (
                 "circle",
@@ -509,8 +548,9 @@ The minimum iterations per layer is {MIN_STROKES_PER_LAYER}.
                 " image showing 5 examples with varying radii, fill modes, and opacity.\n"
                 '   Example: {"type": "circle", "center_x": 400, "center_y": 300,'
                 ' "radius": 50, "fill": true, "color_hex": "#FFAA00", "thickness": 2, "opacity": 0.6}\n'
-                "   Required fields: type, center_x, center_y, radius, fill (true/false),"
-                " color_hex, thickness, opacity",
+                "   Required fields: type, center_x, center_y,"
+                f" radius ({MIN_CIRCLE_RADIUS}-{MAX_CIRCLE_RADIUS}),"
+                " fill (true/false), color_hex, thickness, opacity",
             ),
             (
                 "splatter",
@@ -519,18 +559,25 @@ The minimum iterations per layer is {MIN_STROKES_PER_LAYER}.
                 '   Example: {"type": "splatter", "center_x": 200, "center_y": 150,'
                 ' "splatter_radius": 30, "splatter_count": 15, "dot_size_min": 2, "dot_size_max": 6,'
                 ' "color_hex": "#8B4513", "thickness": 1, "opacity": 0.5}\n'
-                "   Required fields: type, center_x, center_y, splatter_radius, splatter_count,"
-                " dot_size_min, dot_size_max, color_hex, thickness, opacity",
+                "   Required fields: type, center_x, center_y,"
+                f" splatter_radius ({MIN_SPLATTER_RADIUS}-{MAX_SPLATTER_RADIUS}),"
+                f" splatter_count ({MIN_SPLATTER_COUNT}-{MAX_SPLATTER_COUNT}),"
+                f" dot_size_min ({MIN_DOT_SIZE}-{MAX_DOT_SIZE}),"
+                f" dot_size_max ({MIN_DOT_SIZE}-{MAX_DOT_SIZE}),"
+                " color_hex, thickness, opacity",
             ),
             (
                 "dry-brush",
                 "DRY-BRUSH - Bristle-textured stroke with gaps showing canvas through."
                 ' See attached "DRY-BRUSH stroke sample" image.\n'
                 '   Example: {"type": "dry-brush", "points": [[100,100], [300,200], [500,150]],'
-                ' "brush_width": 30, "bristle_count": 8, "gap_probability": 0.3,'
+                ' "brush_width": 12, "bristle_count": 8, "gap_probability": 0.3,'
                 ' "color_hex": "#8B4513", "thickness": 20, "opacity": 0.8}\n'
-                "   Required fields: type, points (list of [x,y] coordinates, 2-50 points),"
-                " brush_width (4-100), bristle_count (3-20), gap_probability (0.0-0.7),"
+                "   Required fields: type,"
+                f" points (list of [x,y] coordinates, {MIN_POLYLINE_POINTS}-{MAX_POLYLINE_POINTS} points),"
+                f" brush_width ({MIN_BRUSH_WIDTH}-{MAX_BRUSH_WIDTH}),"
+                f" bristle_count ({MIN_BRISTLE_COUNT}-{MAX_BRISTLE_COUNT}),"
+                f" gap_probability ({MIN_GAP_PROBABILITY}-{MAX_GAP_PROBABILITY}),"
                 " color_hex, thickness, opacity",
             ),
             (
@@ -538,10 +585,13 @@ The minimum iterations per layer is {MIN_STROKES_PER_LAYER}.
                 "CHALK - Grainy, textured stroke like chalk or pastel on rough paper."
                 ' See attached "CHALK stroke sample" image.\n'
                 '   Example: {"type": "chalk", "points": [[150,200], [350,180], [450,250]],'
-                ' "chalk_width": 20, "grain_density": 4, "color_hex": "#D2691E",'
+                ' "chalk_width": 15, "grain_density": 4, "color_hex": "#D2691E",'
                 ' "thickness": 1, "opacity": 0.7}\n'
-                "   Required fields: type, points (list of [x,y] coordinates, 2-50 points),"
-                " chalk_width (2-60), grain_density (1-8), color_hex, thickness, opacity",
+                "   Required fields: type,"
+                f" points (list of [x,y] coordinates, {MIN_POLYLINE_POINTS}-{MAX_POLYLINE_POINTS} points),"
+                f" chalk_width ({MIN_CHALK_WIDTH}-{MAX_CHALK_WIDTH}),"
+                f" grain_density ({MIN_GRAIN_DENSITY}-{MAX_GRAIN_DENSITY}),"
+                " color_hex, thickness, opacity",
             ),
             (
                 "wet-brush",
@@ -551,8 +601,10 @@ The minimum iterations per layer is {MIN_STROKES_PER_LAYER}.
                 '   Example: {"type": "wet-brush", "points": [[100,200], [300,180], [500,220]],'
                 ' "softness": 12, "flow": 0.7, "color_hex": "#4477AA",'
                 ' "thickness": 14, "opacity": 0.75}\n'
-                "   Required fields: type, points (list of [x,y] coordinates, 2-50 points),"
-                " softness (1-30, controls blur radius), flow (0.1-1.0, controls paint density),"
+                "   Required fields: type,"
+                f" points (list of [x,y] coordinates, {MIN_POLYLINE_POINTS}-{MAX_POLYLINE_POINTS} points),"
+                f" softness ({MIN_SOFTNESS}-{MAX_SOFTNESS}, controls blur radius),"
+                f" flow ({MIN_FLOW}-{MAX_FLOW}, controls paint density),"
                 " color_hex, thickness, opacity",
             ),
             (
@@ -563,8 +615,10 @@ The minimum iterations per layer is {MIN_STROKES_PER_LAYER}.
                 '   Example: {"type": "burn", "center_x": 400, "center_y": 300,'
                 ' "radius": 80, "intensity": 0.6, "color_hex": "#000000",'
                 ' "thickness": 1, "opacity": 1.0}\n'
-                "   Required fields: type, center_x, center_y, radius (5\u2013300),"
-                " intensity (0.05\u20130.8), color_hex, thickness, opacity",
+                "   Required fields: type, center_x, center_y,"
+                f" radius ({MIN_BURN_DODGE_RADIUS}-{MAX_BURN_DODGE_RADIUS}),"
+                f" intensity ({MIN_BURN_DODGE_INTENSITY}-{MAX_BURN_DODGE_INTENSITY}),"
+                " color_hex, thickness, opacity",
             ),
             (
                 "dodge",
@@ -574,8 +628,10 @@ The minimum iterations per layer is {MIN_STROKES_PER_LAYER}.
                 '   Example: {"type": "dodge", "center_x": 400, "center_y": 300,'
                 ' "radius": 80, "intensity": 0.6, "color_hex": "#ffffff",'
                 ' "thickness": 1, "opacity": 1.0}\n'
-                "   Required fields: type, center_x, center_y, radius (5\u2013300),"
-                " intensity (0.05\u20130.8), color_hex, thickness, opacity\n"
+                "   Required fields: type, center_x, center_y,"
+                f" radius ({MIN_BURN_DODGE_RADIUS}-{MAX_BURN_DODGE_RADIUS}),"
+                f" intensity ({MIN_BURN_DODGE_INTENSITY}-{MAX_BURN_DODGE_INTENSITY}),"
+                " color_hex, thickness, opacity\n"
                 "   Tip: Use dodge on dark areas to add highlights, simulate rim-lighting,"
                 " or brighten under-exposed regions.",
             ),
