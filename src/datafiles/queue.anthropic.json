@@ -2,112 +2,112 @@
   {
     "artist": "Claude Monet",
     "subject": "La Corniche near Monaco at golden hour, with shimmering Mediterranean light on the sea, rocky cliffs, and lush coastal vegetation rendered in loose impressionist brushwork",
-    "output-id": "monet-corniche-001-mistral-large-2512",
+    "output-id": "monet-corniche-001",
     "isComplete": true
   },
   {
     "artist": "Claude Monet",
     "subject": "La Corniche near Monaco at golden hour, with shimmering Mediterranean light on the sea, rocky cliffs, and lush coastal vegetation rendered in loose impressionist brushwork",
-    "output-id": "monet-corniche-002-mistral-large-2512",
+    "output-id": "monet-corniche-002-mistral",
     "isComplete": true
   },
   {
     "artist": "Frida Kahlo",
     "subject": "Self-portrait with vibrant floral headdress, intense gaze, and symbolic Mexican iconography",
-    "output-id": "kahlo-self-portrait-001-mistral-large-2512",
+    "output-id": "kahlo-self-portrait-001",
     "isComplete": true
   },
   {
     "artist": "Vassily Kandinsky",
     "subject": "Abstract composition of bold geometric shapes, vivid primary colours, dynamic diagonal lines, and floating circles evoking spiritual harmony",
-    "output-id": "kandinsky-abstract-001-mistral-large-2512",
+    "output-id": "kandinsky-abstract-001",
     "isComplete": true
   },
   {
     "artist": "Vincent van Gogh",
     "subject": "A sunlit flower field of sunflowers and wildflowers under a swirling sky, rendered in thick impasto brushstrokes with intense yellows and blues",
-    "output-id": "vangogh-flower-field-001-mistral-large-2512",
+    "output-id": "vangogh-flower-field-001",
     "isComplete": true
   },
   {
     "artist": "Children's book illustration",
     "subject": "A patchwork elephant walking through a lush jungle, its body made of colourful fabric pieces, surrounded by oversized tropical leaves and friendly jungle animals peeking through the foliage",
-    "output-id": "patchwork-elephant-line-arc-polyline-circle-splatter-drybrush-chalk-mistral-large-2512",
+    "output-id": "patchwork-elephant-line-arc-polyline-circle-splatter-drybrush-chalk-claude-4-6",
     "isComplete": true,
     "stroke-types": "line,arc,polyline,circle,splatter,dry-brush,chalk"
   },
   {
     "artist": "Marc Chagall",
     "subject": "A dreamy floating village scene with a whimsical blue goat drifting above rooftops, surrounded by bouquets of flowers and lovers embracing under a crescent moon",
-    "output-id": "chagall-goat-001-mistral-large-2512",
+    "output-id": "chagall-goat-001",
     "isComplete": false
   },
   {
     "artist": "Katsushika Hokusai",
     "subject": "The Great Wave off Kanagawa — a towering cresting wave with foamy claws looming over small fishing boats, Mount Fuji small and serene in the background, rendered in the ukiyo-e woodblock print style with deep Prussian blue and white",
-    "output-id": "hokusai-great-wave-001-mistral-large-2512",
+    "output-id": "hokusai-great-wave-001",
     "isComplete": false
   },
   {
     "artist": "Children's book illustration",
     "subject": "A patchwork elephant walking through a lush jungle, its body made of colourful fabric pieces, surrounded by oversized tropical leaves and friendly jungle animals peeking through the foliage",
-    "output-id": "patchwork-elephant-line-mistral-large-2512",
+    "output-id": "patchwork-elephant-line-claude-4-6",
     "isComplete": false,
     "stroke-types": "line"
   },
   {
     "artist": "Children's book illustration",
     "subject": "A patchwork elephant walking through a lush jungle, its body made of colourful fabric pieces, surrounded by oversized tropical leaves and friendly jungle animals peeking through the foliage",
-    "output-id": "patchwork-elephant-line-arc-mistral-large-2512",
+    "output-id": "patchwork-elephant-line-arc-claude-4-6",
     "isComplete": false,
     "stroke-types": "line,arc"
   },
   {
     "artist": "Children's book illustration",
     "subject": "A patchwork elephant walking through a lush jungle, its body made of colourful fabric pieces, surrounded by oversized tropical leaves and friendly jungle animals peeking through the foliage",
-    "output-id": "patchwork-elephant-line-arc-polyline-mistral-large-2512",
+    "output-id": "patchwork-elephant-line-arc-polyline-claude-4-6",
     "isComplete": false,
     "stroke-types": "line,arc,polyline"
   },
   {
     "artist": "Children's book illustration",
     "subject": "A patchwork elephant walking through a lush jungle, its body made of colourful fabric pieces, surrounded by oversized tropical leaves and friendly jungle animals peeking through the foliage",
-    "output-id": "patchwork-elephant-line-arc-polyline-circle-mistral-large-2512",
+    "output-id": "patchwork-elephant-line-arc-polyline-circle-claude-4-6",
     "isComplete": false,
     "stroke-types": "line,arc,polyline,circle"
   },
   {
     "artist": "Children's book illustration",
     "subject": "A patchwork elephant walking through a lush jungle, its body made of colourful fabric pieces, surrounded by oversized tropical leaves and friendly jungle animals peeking through the foliage",
-    "output-id": "patchwork-elephant-line-arc-polyline-circle-splatter-mistral-large-2512",
+    "output-id": "patchwork-elephant-line-arc-polyline-circle-splatter-claude-4-6",
     "isComplete": false,
     "stroke-types": "line,arc,polyline,circle,splatter"
   },
   {
     "artist": "Children's book illustration",
     "subject": "A patchwork elephant walking through a lush jungle, its body made of colourful fabric pieces, surrounded by oversized tropical leaves and friendly jungle animals peeking through the foliage",
-    "output-id": "patchwork-elephant-line-arc-polyline-circle-splatter-drybrush-mistral-large-2512",
+    "output-id": "patchwork-elephant-line-arc-polyline-circle-splatter-drybrush-claude-4-6",
     "isComplete": false,
     "stroke-types": "line,arc,polyline,circle,splatter,dry-brush"
   },
   {
     "artist": "Children's book illustration",
     "subject": "A patchwork elephant walking through a lush jungle, its body made of colourful fabric pieces, surrounded by oversized tropical leaves and friendly jungle animals peeking through the foliage",
-    "output-id": "patchwork-elephant-line-arc-polyline-circle-splatter-drybrush-chalk-wetbrush-mistral-large-2512",
+    "output-id": "patchwork-elephant-line-arc-polyline-circle-splatter-drybrush-chalk-wetbrush-claude-4-6",
     "isComplete": false,
     "stroke-types": "line,arc,polyline,circle,splatter,dry-brush,chalk,wet-brush"
   },
   {
     "artist": "Children's book illustration",
     "subject": "A patchwork elephant walking through a lush jungle, its body made of colourful fabric pieces, surrounded by oversized tropical leaves and friendly jungle animals peeking through the foliage",
-    "output-id": "patchwork-elephant-line-arc-polyline-circle-splatter-drybrush-chalk-wetbrush-burn-mistral-large-2512",
+    "output-id": "patchwork-elephant-line-arc-polyline-circle-splatter-drybrush-chalk-wetbrush-burn-claude-4-6",
     "isComplete": false,
     "stroke-types": "line,arc,polyline,circle,splatter,dry-brush,chalk,wet-brush,burn"
   },
   {
     "artist": "Children's book illustration",
     "subject": "A patchwork elephant walking through a lush jungle, its body made of colourful fabric pieces, surrounded by oversized tropical leaves and friendly jungle animals peeking through the foliage",
-    "output-id": "patchwork-elephant-all-strokes-mistral-large-2512",
+    "output-id": "patchwork-elephant-all-strokes-claude-4-6",
     "isComplete": false,
     "stroke-types": "line,arc,polyline,circle,splatter,dry-brush,chalk,wet-brush,burn,dodge"
   }
