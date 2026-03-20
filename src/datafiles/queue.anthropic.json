@@ -32,7 +32,7 @@
   {
     "artist": "Children's book illustration",
     "subject": "A patchwork elephant walking through a lush jungle, its body made of colourful fabric pieces, surrounded by oversized tropical leaves and friendly jungle animals peeking through the foliage",
-    "output-id": "patchwork-elephant-line-arc-polyline-circle-splatter-drybrush-chalk-mistral-large-2512",
+    "output-id": "patchwork-elephant-line-arc-polyline-circle-splatter-drybrush-chalk-claude-4-6",
     "isComplete": true,
     "stroke-types": "line,arc,polyline,circle,splatter,dry-brush,chalk"
   },
@@ -51,63 +51,63 @@
   {
     "artist": "Children's book illustration",
     "subject": "A patchwork elephant walking through a lush jungle, its body made of colourful fabric pieces, surrounded by oversized tropical leaves and friendly jungle animals peeking through the foliage",
-    "output-id": "patchwork-elephant-line-mistral-large-2512",
+    "output-id": "patchwork-elephant-line-claude-4-6",
     "isComplete": false,
     "stroke-types": "line"
   },
   {
     "artist": "Children's book illustration",
     "subject": "A patchwork elephant walking through a lush jungle, its body made of colourful fabric pieces, surrounded by oversized tropical leaves and friendly jungle animals peeking through the foliage",
-    "output-id": "patchwork-elephant-line-arc-mistral-large-2512",
+    "output-id": "patchwork-elephant-line-arc-claude-4-6",
     "isComplete": false,
     "stroke-types": "line,arc"
   },
   {
     "artist": "Children's book illustration",
     "subject": "A patchwork elephant walking through a lush jungle, its body made of colourful fabric pieces, surrounded by oversized tropical leaves and friendly jungle animals peeking through the foliage",
-    "output-id": "patchwork-elephant-line-arc-polyline-mistral-large-2512",
+    "output-id": "patchwork-elephant-line-arc-polyline-claude-4-6",
     "isComplete": false,
     "stroke-types": "line,arc,polyline"
   },
   {
     "artist": "Children's book illustration",
     "subject": "A patchwork elephant walking through a lush jungle, its body made of colourful fabric pieces, surrounded by oversized tropical leaves and friendly jungle animals peeking through the foliage",
-    "output-id": "patchwork-elephant-line-arc-polyline-circle-mistral-large-2512",
+    "output-id": "patchwork-elephant-line-arc-polyline-circle-claude-4-6",
     "isComplete": false,
     "stroke-types": "line,arc,polyline,circle"
   },
   {
     "artist": "Children's book illustration",
     "subject": "A patchwork elephant walking through a lush jungle, its body made of colourful fabric pieces, surrounded by oversized tropical leaves and friendly jungle animals peeking through the foliage",
-    "output-id": "patchwork-elephant-line-arc-polyline-circle-splatter-mistral-large-2512",
+    "output-id": "patchwork-elephant-line-arc-polyline-circle-splatter-claude-4-6",
     "isComplete": false,
     "stroke-types": "line,arc,polyline,circle,splatter"
   },
   {
     "artist": "Children's book illustration",
     "subject": "A patchwork elephant walking through a lush jungle, its body made of colourful fabric pieces, surrounded by oversized tropical leaves and friendly jungle animals peeking through the foliage",
-    "output-id": "patchwork-elephant-line-arc-polyline-circle-splatter-drybrush-mistral-large-2512",
+    "output-id": "patchwork-elephant-line-arc-polyline-circle-splatter-drybrush-claude-4-6",
     "isComplete": false,
     "stroke-types": "line,arc,polyline,circle,splatter,dry-brush"
   },
   {
     "artist": "Children's book illustration",
     "subject": "A patchwork elephant walking through a lush jungle, its body made of colourful fabric pieces, surrounded by oversized tropical leaves and friendly jungle animals peeking through the foliage",
-    "output-id": "patchwork-elephant-line-arc-polyline-circle-splatter-drybrush-chalk-wetbrush-mistral-large-2512",
+    "output-id": "patchwork-elephant-line-arc-polyline-circle-splatter-drybrush-chalk-wetbrush-claude-4-6",
     "isComplete": false,
     "stroke-types": "line,arc,polyline,circle,splatter,dry-brush,chalk,wet-brush"
   },
   {
     "artist": "Children's book illustration",
     "subject": "A patchwork elephant walking through a lush jungle, its body made of colourful fabric pieces, surrounded by oversized tropical leaves and friendly jungle animals peeking through the foliage",
-    "output-id": "patchwork-elephant-line-arc-polyline-circle-splatter-drybrush-chalk-wetbrush-burn-mistral-large-2512",
+    "output-id": "patchwork-elephant-line-arc-polyline-circle-splatter-drybrush-chalk-wetbrush-burn-claude-4-6",
     "isComplete": false,
     "stroke-types": "line,arc,polyline,circle,splatter,dry-brush,chalk,wet-brush,burn"
   },
   {
     "artist": "Children's book illustration",
     "subject": "A patchwork elephant walking through a lush jungle, its body made of colourful fabric pieces, surrounded by oversized tropical leaves and friendly jungle animals peeking through the foliage",
-    "output-id": "patchwork-elephant-all-strokes-mistral-large-2512",
+    "output-id": "patchwork-elephant-all-strokes-claude-4-6",
     "isComplete": false,
     "stroke-types": "line,arc,polyline,circle,splatter,dry-brush,chalk,wet-brush,burn,dodge"
   }
