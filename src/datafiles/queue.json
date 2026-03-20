@@ -2,31 +2,31 @@
   {
     "artist": "Claude Monet",
     "subject": "La Corniche near Monaco at golden hour, with shimmering Mediterranean light on the sea, rocky cliffs, and lush coastal vegetation rendered in loose impressionist brushwork",
-    "output-id": "monet-corniche-001",
+    "output-id": "monet-corniche-001-mistral-large-2512",
     "isComplete": true
   },
   {
     "artist": "Claude Monet",
     "subject": "La Corniche near Monaco at golden hour, with shimmering Mediterranean light on the sea, rocky cliffs, and lush coastal vegetation rendered in loose impressionist brushwork",
-    "output-id": "monet-corniche-002-mistral",
+    "output-id": "monet-corniche-002-mistral-large-2512",
     "isComplete": true
   },
   {
     "artist": "Frida Kahlo",
     "subject": "Self-portrait with vibrant floral headdress, intense gaze, and symbolic Mexican iconography",
-    "output-id": "kahlo-self-portrait-001",
+    "output-id": "kahlo-self-portrait-001-mistral-large-2512",
     "isComplete": true
   },
   {
     "artist": "Vassily Kandinsky",
     "subject": "Abstract composition of bold geometric shapes, vivid primary colours, dynamic diagonal lines, and floating circles evoking spiritual harmony",
-    "output-id": "kandinsky-abstract-001",
+    "output-id": "kandinsky-abstract-001-mistral-large-2512",
     "isComplete": true
   },
   {
     "artist": "Vincent van Gogh",
     "subject": "A sunlit flower field of sunflowers and wildflowers under a swirling sky, rendered in thick impasto brushstrokes with intense yellows and blues",
-    "output-id": "vangogh-flower-field-001",
+    "output-id": "vangogh-flower-field-001-mistral-large-2512",
     "isComplete": true
   },
   {
@@ -39,13 +39,13 @@
   {
     "artist": "Marc Chagall",
     "subject": "A dreamy floating village scene with a whimsical blue goat drifting above rooftops, surrounded by bouquets of flowers and lovers embracing under a crescent moon",
-    "output-id": "chagall-goat-001",
+    "output-id": "chagall-goat-001-mistral-large-2512",
     "isComplete": false
   },
   {
     "artist": "Katsushika Hokusai",
     "subject": "The Great Wave off Kanagawa — a towering cresting wave with foamy claws looming over small fishing boats, Mount Fuji small and serene in the background, rendered in the ukiyo-e woodblock print style with deep Prussian blue and white",
-    "output-id": "hokusai-great-wave-001",
+    "output-id": "hokusai-great-wave-001-mistral-large-2512",
     "isComplete": false
   },
   {
