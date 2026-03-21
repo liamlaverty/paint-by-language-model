@@ -1,8 +1,11 @@
 """Client for communicating with OpenAI-compatible VLM/LLM APIs."""
 
 import base64
+import json
 import logging
 import time
+from datetime import datetime
+from pathlib import Path
 from typing import cast
 
 import requests
@@ -12,6 +15,7 @@ from config import (
     API_BASE_URL,
     API_KEY,
     DEFAULT_MODEL,
+    GLOBAL_PROMPT_LOG_DIR,
     MAX_TOKENS,
     PROVIDER,
     REQUEST_TIMEOUT,
@@ -60,6 +64,61 @@ class VLMClient:
         else:
             self.chat_endpoint = f"{self.base_url}/chat/completions"
 
+    def _log_request(
+        self,
+        endpoint: str,
+        headers: dict[str, str],
+        payload: dict,
+        response: "requests.Response",
+    ) -> None:
+        """
+        Write a request/response log file to GLOBAL_PROMPT_LOG_DIR.
+
+        Sensitive header values (x-api-key, authorization) are masked before
+        writing so that API keys are never stored in plaintext.
+
+        Args:
+            endpoint (str): The URL the request was sent to
+            headers (dict[str, str]): Request headers (will be masked before logging)
+            payload (dict): Request body sent to the API
+            response (requests.Response): The HTTP response received
+        """
+        log_dir = Path(GLOBAL_PROMPT_LOG_DIR)
+        log_dir.mkdir(parents=True, exist_ok=True)
+
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
+        log_path = log_dir / f"{timestamp}-request.log"
+
+        # Mask sensitive header values
+        safe_headers = {
+            k: ("***" if k.lower() in ("x-api-key", "authorization") else v)
+            for k, v in headers.items()
+        }
+
+        try:
+            response_body = json.dumps(response.json(), indent=2)
+        except Exception:
+            response_body = str(response.text)
+
+        log_content = "\n".join([
+            f"=== VLM Request Log: {timestamp} ===",
+            f"Endpoint: {endpoint}",
+            "Headers:",
+            json.dumps(safe_headers, indent=2),
+            "Payload:",
+            json.dumps(payload, indent=2),
+            "--- Response ---",
+            f"Status: {response.status_code}",
+            "Body:",
+            response_body,
+        ])
+
+        try:
+            log_path.write_text(log_content, encoding="utf-8")
+            logger.debug("Request logged to %s", log_path)
+        except OSError as e:
+            logger.warning("Failed to write request log: %s", e)
+
     def _build_headers(self) -> dict[str, str]:
         """
         Build request headers, including auth if API key is set.
@@ -88,13 +147,16 @@ class VLMClient:
         Returns:
             dict: Request payload structure for the API
         """
-        # Text-only message format is identical for all providers
-        return {
+        payload: dict = {
             "model": self.model,
             "messages": [{"role": "user", "content": prompt}],
             "max_tokens": max_tokens,
             "temperature": self.temperature,
         }
+        # Anthropic automatic prompt caching: cache up to the last cacheable block
+        if self.provider == "anthropic":
+            payload["cache_control"] = {"type": "ephemeral"}
+        return payload
 
     def _extract_response_text(self, response_data: dict) -> str:
         """
@@ -131,12 +193,16 @@ class VLMClient:
         try:
             # Retry loop for rate limiting
             for attempt in range(MAX_RETRIES):
+                _headers = self._build_headers()
                 response = requests.post(
                     self.chat_endpoint,
                     json=payload,
-                    headers=self._build_headers(),
+                    headers=_headers,
                     timeout=self.timeout,
                 )
+
+                # log the raw request and response for debugging
+                self._log_request(self.chat_endpoint, _headers, payload, response)
 
                 # Handle rate limiting
                 if response.status_code == 429:
@@ -239,12 +305,16 @@ class VLMClient:
                 {"type": "image_url", "image_url": {"url": image_data_url}},
             ]
 
-        return {
+        payload: dict = {
             "model": self.model,
             "messages": [{"role": "user", "content": message_content}],
             "max_tokens": max_tokens,
             "temperature": self.temperature,
         }
+        # Anthropic automatic prompt caching
+        if self.provider == "anthropic":
+            payload["cache_control"] = {"type": "ephemeral"}
+        return payload
 
     def query_multimodal(
         self, prompt: str, image_bytes: bytes, max_tokens: int = MAX_TOKENS
@@ -273,12 +343,16 @@ class VLMClient:
 
             # Retry loop for rate limiting
             for attempt in range(MAX_RETRIES):
+                _headers = self._build_headers()
                 response = requests.post(
                     self.chat_endpoint,
                     json=payload,
-                    headers=self._build_headers(),
+                    headers=_headers,
                     timeout=self.timeout,
                 )
+
+                # log the raw request and response for debugging
+                self._log_request(self.chat_endpoint, _headers, payload, response)
 
                 # Handle rate limiting
                 if response.status_code == 429:
@@ -383,12 +457,16 @@ class VLMClient:
         # Append main prompt as final text block
         message_content.append({"type": "text", "text": prompt})
 
-        return {
+        payload: dict = {
             "model": self.model,
             "messages": [{"role": "user", "content": message_content}],
             "max_tokens": max_tokens,
             "temperature": self.temperature,
         }
+        # Anthropic automatic prompt caching
+        if self.provider == "anthropic":
+            payload["cache_control"] = {"type": "ephemeral"}
+        return payload
 
     def query_multimodal_multi_image(
         self,
@@ -426,12 +504,16 @@ class VLMClient:
 
             # Retry loop for rate limiting
             for attempt in range(MAX_RETRIES):
+                _headers = self._build_headers()
                 response = requests.post(
                     self.chat_endpoint,
                     json=payload,
-                    headers=self._build_headers(),
+                    headers=_headers,
                     timeout=self.timeout,
                 )
+
+                # log the raw request and response for debugging
+                self._log_request(self.chat_endpoint, _headers, payload, response)
 
                 # Handle rate limiting
                 if response.status_code == 429:
