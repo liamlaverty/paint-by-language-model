@@ -37,6 +37,7 @@ load_dotenv()
 PROJECT_ROOT = Path(__file__).parent.parent
 ARTISTS_FILE = PROJECT_ROOT / "datafiles" / "artists.json"
 OUTPUT_DIR = PROJECT_ROOT / "output"
+GLOBAL_PROMPT_LOG_DIR = PROJECT_ROOT / "prompt_logs"
 
 
 # ============================================================================
@@ -62,10 +63,14 @@ LMSTUDIO_EVALUATION_VLM_MODEL = "lmistralai/ministral-3-3b"
 # Anthropic API settings
 ANTHROPIC_BASE_URL = "https://api.anthropic.com/v1"
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
-ANTHROPIC_DEFAULT_MODEL = "claude-sonnet-4-6"
-ANTHROPIC_VLM_MODEL = "claude-sonnet-4-6"
-ANTHROPIC_EVALUATION_VLM_MODEL = "claude-sonnet-4-6"
-ANTHROPIC_PLANNER_MODEL = "claude-sonnet-4-6"
+# ANTHROPIC_DEFAULT_MODEL = "claude-sonnet-4-6"
+# ANTHROPIC_VLM_MODEL = "claude-sonnet-4-6"
+# ANTHROPIC_EVALUATION_VLM_MODEL = "claude-sonnet-4-6"
+# ANTHROPIC_PLANNER_MODEL = "claude-sonnet-4-6"
+ANTHROPIC_DEFAULT_MODEL = "claude-opus-4-6"
+ANTHROPIC_VLM_MODEL = "claude-opus-4-6"
+ANTHROPIC_EVALUATION_VLM_MODEL = "claude-opus-4-6"
+ANTHROPIC_PLANNER_MODEL = "claude-opus-4-6"
 ANTHROPIC_VERSION = "2023-06-01"
 
 # Planner LLM Settings
