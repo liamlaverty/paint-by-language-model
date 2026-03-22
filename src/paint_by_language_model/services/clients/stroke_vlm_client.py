@@ -201,9 +201,7 @@ class StrokeVLMClient:
 
         # Query VLM
         try:
-            images: list[tuple[bytes, str]] = [
-                (canvas_image, "Current canvas"),
-            ]
+            images: list[tuple[bytes, str]] = []
             allowed_lower = (
                 [t.lower() for t in self.allowed_stroke_types]
                 if self.allowed_stroke_types
@@ -212,6 +210,7 @@ class StrokeVLMClient:
             for stroke_type, sample_bytes in self._stroke_samples.items():
                 if allowed_lower is None or stroke_type.lower() in allowed_lower:
                     images.append((sample_bytes, f"{stroke_type.upper()} stroke sample"))
+            images.append((canvas_image, "Current canvas"))
             logger.debug(
                 f"Attaching {len(images) - 1} stroke sample image(s) "
                 f"(allowed: {self.allowed_stroke_types or 'all'})"
