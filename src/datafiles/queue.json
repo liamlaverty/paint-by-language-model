@@ -111,11 +111,11 @@
     "isComplete": true,
     "stroke-types": "line,arc,polyline,circle,splatter,dry-brush,chalk,wet-brush,burn,dodge"
   },
-    {
+  {
     "artist": "Children's book illustration",
     "subject": "A patchwork elephant walking through a lush jungle, its body made of colourful fabric pieces, surrounded by oversized tropical leaves and friendly jungle animals peeking through the foliage",
     "output-id": "patchwork-elephant-line-arc-polyline-circle-claude-opus-4-6",
-    "isComplete": false,
+    "isComplete": true,
     "stroke-types": "line,arc,polyline,circle,chalk"
-  },
+  }
 ]

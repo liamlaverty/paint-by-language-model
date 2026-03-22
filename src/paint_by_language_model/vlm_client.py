@@ -100,18 +100,20 @@ class VLMClient:
         except Exception:
             response_body = str(response.text)
 
-        log_content = "\n".join([
-            f"=== VLM Request Log: {timestamp} ===",
-            f"Endpoint: {endpoint}",
-            "Headers:",
-            json.dumps(safe_headers, indent=2),
-            "Payload:",
-            json.dumps(payload, indent=2),
-            "--- Response ---",
-            f"Status: {response.status_code}",
-            "Body:",
-            response_body,
-        ])
+        log_content = "\n".join(
+            [
+                f"=== VLM Request Log: {timestamp} ===",
+                f"Endpoint: {endpoint}",
+                "Headers:",
+                json.dumps(safe_headers, indent=2),
+                "Payload:",
+                json.dumps(payload, indent=2),
+                "--- Response ---",
+                f"Status: {response.status_code}",
+                "Body:",
+                response_body,
+            ]
+        )
 
         try:
             log_path.write_text(log_content, encoding="utf-8")
@@ -147,15 +149,18 @@ class VLMClient:
         Returns:
             dict: Request payload structure for the API
         """
-        payload: dict = {
-            "model": self.model,
-            "messages": [{"role": "user", "content": prompt}],
-            "max_tokens": max_tokens,
-            "temperature": self.temperature,
-        }
+
+        payload: dict = {}
+
+        payload["model"] = self.model
         # Anthropic automatic prompt caching: cache up to the last cacheable block
         if self.provider == "anthropic":
             payload["cache_control"] = {"type": "ephemeral"}
+
+        payload["messages"] = [{"role": "user", "content": prompt}]
+        payload["max_tokens"] = max_tokens
+        payload["temperature"] = self.temperature
+
         return payload
 
     def _extract_response_text(self, response_data: dict) -> str:
@@ -286,6 +291,7 @@ class VLMClient:
             base64_image = base64.b64encode(image_bytes).decode("utf-8")
             # Image block comes BEFORE text block (Anthropic best practice)
             message_content = [
+                {"type": "text", "text": prompt},
                 {
                     "type": "image",
                     "source": {
@@ -294,7 +300,6 @@ class VLMClient:
                         "data": base64_image,
                     },
                 },
-                {"type": "text", "text": prompt},
             ]
         else:
             # OpenAI-compatible format uses data URL
@@ -305,15 +310,15 @@ class VLMClient:
                 {"type": "image_url", "image_url": {"url": image_data_url}},
             ]
 
-        payload: dict = {
-            "model": self.model,
-            "messages": [{"role": "user", "content": message_content}],
-            "max_tokens": max_tokens,
-            "temperature": self.temperature,
-        }
+        payload: dict = {}
+        payload["model"] = self.model
         # Anthropic automatic prompt caching
         if self.provider == "anthropic":
             payload["cache_control"] = {"type": "ephemeral"}
+        payload["max_tokens"] = max_tokens
+        payload["temperature"] = self.temperature
+        payload["messages"] = [{"role": "user", "content": message_content}]
+
         return payload
 
     def query_multimodal(
@@ -457,15 +462,16 @@ class VLMClient:
         # Append main prompt as final text block
         message_content.append({"type": "text", "text": prompt})
 
-        payload: dict = {
-            "model": self.model,
-            "messages": [{"role": "user", "content": message_content}],
-            "max_tokens": max_tokens,
-            "temperature": self.temperature,
-        }
+        payload: dict = {}
+        payload["model"] = self.model
         # Anthropic automatic prompt caching
         if self.provider == "anthropic":
             payload["cache_control"] = {"type": "ephemeral"}
+
+        payload["max_tokens"] = max_tokens
+        payload["temperature"] = self.temperature
+        payload["messages"] = [{"role": "user", "content": message_content}]
+
         return payload
 
     def query_multimodal_multi_image(
