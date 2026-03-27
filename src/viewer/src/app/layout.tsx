@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import Script from 'next/script';
+import Link from 'next/link';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -41,6 +42,15 @@ export default function RootLayout({
             strategy="afterInteractive"
           />
         )}
+        <nav className="nav-header">
+          <Link href="/" className="nav-logo">
+            Paint by Language Model
+          </Link>
+          <div className="nav-links">
+            <Link href="/">Gallery</Link>
+            <Link href="/draw">Draw</Link>
+          </div>
+        </nav>
         <main>{children}</main>
       </body>
     </html>

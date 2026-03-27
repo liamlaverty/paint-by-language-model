@@ -9,7 +9,7 @@
  */
 
 import { useRef } from 'react';
-import { STROKE_TYPES, STROKE_DEFAULTS, type DrawStrokeType } from '@/lib/draw-types';
+import { STROKE_TYPES, STROKE_DEFAULTS, STROKE_INTERACTION, type DrawStrokeType } from '@/lib/draw-types';
 import type { EnrichedStroke } from '@/lib/types';
 
 /**
@@ -25,10 +25,6 @@ import type { EnrichedStroke } from '@/lib/types';
  * @property {(value: number) => void} onThicknessChange - Callback when thickness changes
  * @property {Partial<EnrichedStroke>} typeParams - Current type-specific parameter overrides
  * @property {(params: Partial<EnrichedStroke>) => void} onTypeParamsChange - Callback when type-specific params change
- * @property {boolean} canUndo - Whether an undo operation is available
- * @property {boolean} canRedo - Whether a redo operation is available
- * @property {() => void} onUndo - Callback to trigger undo
- * @property {() => void} onRedo - Callback to trigger redo
  * @property {() => void} onClear - Callback to clear the canvas
  * @property {() => void} onDownload - Callback to download the drawing as JSON
  * @property {(json: string) => void} onUpload - Callback receiving uploaded JSON file text
@@ -44,10 +40,6 @@ interface DrawToolbarProps {
   onThicknessChange: (value: number) => void;
   typeParams: Partial<EnrichedStroke>;
   onTypeParamsChange: (params: Partial<EnrichedStroke>) => void;
-  canUndo: boolean;
-  canRedo: boolean;
-  onUndo: () => void;
-  onRedo: () => void;
   onClear: () => void;
   onDownload: () => void;
   onUpload: (json: string) => void;
@@ -58,7 +50,7 @@ interface DrawToolbarProps {
  *
  * Renders a horizontal bar with stroke-type buttons, common paint controls
  * (colour, opacity, thickness), type-specific advanced parameters, and
- * action buttons (undo, redo, clear, download, upload JSON).
+ * action buttons (clear, download, upload JSON).
  *
  * @param {DrawToolbarProps} props - Component props
  * @returns {React.JSX.Element} The rendered toolbar
@@ -74,10 +66,6 @@ export default function DrawToolbar({
   onThicknessChange,
   typeParams,
   onTypeParamsChange,
-  canUndo,
-  canRedo,
-  onUndo,
-  onRedo,
   onClear,
   onDownload,
   onUpload,
@@ -101,15 +89,18 @@ export default function DrawToolbar({
   const activeDefaults = STROKE_DEFAULTS[activeType];
   const hasAdvancedParams = Object.keys(activeDefaults).length > 0;
 
+  const interactionMode = STROKE_INTERACTION[activeType];
+
   return (
-    <div className="draw-toolbar">
-      {/* Stroke-type selection buttons */}
+    <div className="draw-toolbar side-panel">
+      {/* ── Stroke Type ── */}
+      <h3>Stroke Type</h3>
       <div className="draw-toolbar-types">
-        {STROKE_TYPES.map((type) => (
+        {STROKE_TYPES.filter((t) => t !== 'burn' && t !== 'dodge' && t !== 'wet-brush').map((type) => (
           <button
             key={type}
             type="button"
-            className={`draw-toolbar-type-btn${type === activeType ? ' active' : ''}`}
+            className={`button draw-toolbar-type-btn${type === activeType ? ' active' : ''}`}
             onClick={() => onTypeChange(type)}
           >
             {type}
@@ -117,6 +108,8 @@ export default function DrawToolbar({
         ))}
       </div>
 
+      {/* ── Stroke Config ── */}
+      <h3>Stroke Config</h3>
       {/* Common controls: colour, opacity, thickness */}
       <div className="draw-toolbar-controls">
         <label className="draw-toolbar-control">
@@ -334,7 +327,7 @@ export default function DrawToolbar({
                   type="range"
                   min="10"
                   max="100"
-                  value={typeParams.grain_density ?? activeDefaults.grain_density ?? 40}
+                  value={typeParams.grain_density ?? activeDefaults.grain_density ?? 10}
                   onChange={(e) =>
                     onTypeParamsChange({
                       ...typeParams,
@@ -398,33 +391,37 @@ export default function DrawToolbar({
         </div>
       )}
 
+      {/* ── Instructions ── */}
+      <h3>Instructions</h3>
+      <ul className="draw-toolbar-instructions">
+        {interactionMode === 'two-point' && (
+          <li>Click to place the <strong>start point</strong>, then click again to place the <strong>end point</strong>.</li>
+        )}
+        {interactionMode === 'center-radius' && (
+          <li>Click to place the <strong>centre</strong>, then click again to set the <strong>radius</strong>.</li>
+        )}
+        {interactionMode === 'multi-point' && (
+          <>
+            <li>Click to add points to the stroke.</li>
+            <li><strong>Double-click</strong> to finish and commit the stroke.</li>
+          </>
+        )}
+        <li>Click outside the canvas to <strong>dismiss</strong> an in-progress stroke.</li>
+      </ul>
+
+      {/* ── Canvas Tools ── */}
+      <h3>Canvas Tools</h3>
       {/* Action buttons */}
       <div className="draw-toolbar-actions">
-        <button
-          type="button"
-          className="draw-toolbar-action-btn"
-          disabled={!canUndo}
-          onClick={onUndo}
-        >
-          Undo
-        </button>
-        <button
-          type="button"
-          className="draw-toolbar-action-btn"
-          disabled={!canRedo}
-          onClick={onRedo}
-        >
-          Redo
-        </button>
-        <button type="button" className="draw-toolbar-action-btn" onClick={onClear}>
+        <button type="button" className="button" onClick={onClear}>
           Clear
         </button>
-        <button type="button" className="draw-toolbar-action-btn" onClick={onDownload}>
+        <button type="button" className="button" onClick={onDownload}>
           Download JSON
         </button>
         <button
           type="button"
-          className="draw-toolbar-action-btn"
+          className="button"
           onClick={() => fileInputRef.current?.click()}
         >
           Upload JSON
