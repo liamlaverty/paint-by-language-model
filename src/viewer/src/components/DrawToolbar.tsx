@@ -462,7 +462,7 @@ export default function DrawToolbar({
         <button type="button" className="button" onClick={() => fileInputRef.current?.click()}>
           Upload JSON
         </button>
-        <Link href='/draw/api' className="button">
+        <Link href="/draw/api" className="button">
           API Docs
         </Link>
         <input
