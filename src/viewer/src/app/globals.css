@@ -891,7 +891,7 @@ body {
   padding: var(--button-y-padding) var(--button-x-padding);
   position: relative;
   text-decoration: none;
-  text-transform: uppercase;
+  text-transform: capitalize;
 }
 .button,
 .button:hover {
@@ -906,4 +906,177 @@ body {
 }
 .button:active {
   transform: scale(99%);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Navigation Header
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── Nav Header ───────────────────────────────────────────────────────── */
+.nav-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem 1rem;
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-element-background);
+}
+
+.nav-logo {
+  font-weight: var(--font-bold);
+}
+
+.nav-links {
+  display: flex;
+  gap: 1rem;
+}
+
+.nav-header a,
+.nav-links a {
+  color: var(--color-link);
+  text-decoration: none;
+}
+
+.nav-header a:hover,
+.nav-links a:hover {
+  text-decoration: underline;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Draw Page
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── Draw Page Layout ─────────────────────────────────────────────────── */
+.draw-page {
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+/* ── Draw Toolbar ─────────────────────────────────────────────────────── */
+.draw-toolbar {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  background: var(--color-element-background);
+}
+
+/* ── Type Selection Buttons Row ───────────────────────────────────────── */
+.draw-toolbar-types,
+.draw-toolbar-type-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+}
+
+.draw-toolbar-type-btn.active,
+.draw-toolbar-type-btn.active:hover {
+  background: var(--color-highlight);
+  color: var(--color-highlight-text);
+  border-color: var(--color-highlight);
+  filter: drop-shadow(
+    var(--color-highlight) var(--button-border-width) var(--button-border-width) 0
+  );
+}
+
+/* ── Common Controls (colour, opacity, thickness) ─────────────────────── */
+.draw-toolbar-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  align-items: center;
+}
+
+.draw-toolbar-control {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: var(--size-step-00);
+}
+
+.draw-toolbar-control input[type='range'] {
+  accent-color: var(--color-highlight);
+}
+
+.draw-toolbar-control span {
+  font-family: var(--font-mono);
+  font-size: var(--size-step-000);
+  min-width: 2.5ch;
+}
+
+/* ── Action Buttons (undo, redo, clear, download, upload) ─────────────── */
+.draw-toolbar-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+/* ── Instructions ─────────────────────────────────────────────────────── */
+.draw-toolbar-instructions {
+  margin: 0;
+  padding-left: 1.25rem;
+  font-size: var(--size-step-00);
+  color: var(--color-text-muted, var(--color-text));
+  line-height: 1.5;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.draw-toolbar-instructions li {
+  margin: 0;
+}
+
+/* ── Advanced Parameters Panel ────────────────────────────────────────── */
+.draw-toolbar-advanced,
+.draw-advanced-params {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  padding: 0.5rem;
+  background: var(--color-card-background);
+  border-radius: var(--radius-s);
+}
+
+.draw-toolbar-advanced-param {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: var(--size-step-00);
+}
+
+.draw-toolbar-advanced-param input[type='range'] {
+  accent-color: var(--color-highlight);
+}
+
+.draw-toolbar-advanced-param span {
+  font-family: var(--font-mono);
+  font-size: var(--size-step-000);
+  min-width: 2.5ch;
+}
+
+/* ── Canvas Container ─────────────────────────────────────────────────── */
+.draw-canvas-container {
+  position: relative;
+  display: inline-block;
+  box-sizing: content-box;
+  border: 1px solid var(--color-border);
+}
+
+.draw-canvas-main {
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+.draw-canvas-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  cursor: crosshair;
 }
