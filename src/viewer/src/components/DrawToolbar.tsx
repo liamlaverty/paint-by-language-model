@@ -46,6 +46,8 @@ const STROKE_DESCRIPTIONS: Record<DrawStrokeType, string> = {
  * @property {(params: Partial<EnrichedStroke>) => void} onTypeParamsChange - Callback when type-specific params change
  * @property {() => void} onClear - Callback to clear the canvas
  * @property {() => void} onDownload - Callback to download the drawing as JSON
+ * @property {() => void} onDownloadJPG - Callback to download the canvas as a JPEG image
+ * @property {boolean} canDownloadJPG - Whether the JPEG download button should be enabled (true when strokes exist)
  * @property {(json: string) => void} onUpload - Callback receiving uploaded JSON file text
  */
 interface DrawToolbarProps {
@@ -61,6 +63,8 @@ interface DrawToolbarProps {
   onTypeParamsChange: (params: Partial<EnrichedStroke>) => void;
   onClear: () => void;
   onDownload: () => void;
+  onDownloadJPG: () => void;
+  canDownloadJPG: boolean;
   onUpload: (json: string) => void;
 }
 
@@ -87,6 +91,8 @@ export default function DrawToolbar({
   onTypeParamsChange,
   onClear,
   onDownload,
+  onDownloadJPG,
+  canDownloadJPG,
   onUpload,
 }: DrawToolbarProps): React.JSX.Element {
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -448,6 +454,9 @@ export default function DrawToolbar({
         </button>
         <button type="button" className="button" onClick={onDownload}>
           Download JSON
+        </button>
+        <button type="button" className="button" onClick={onDownloadJPG} disabled={!canDownloadJPG}>
+          Download JPG
         </button>
         <button type="button" className="button" onClick={() => fileInputRef.current?.click()}>
           Upload JSON
