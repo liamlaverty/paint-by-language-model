@@ -18,8 +18,9 @@ import {
   exportDrawingJSON,
   importDrawingJSON,
 } from '@/lib/draw-persistence';
+import { usePaintWindowApi } from '@/hooks/usePaintWindowApi';
 import DrawToolbar from './DrawToolbar';
-import DrawCanvas from './DrawCanvas';
+import DrawCanvas, { type DrawCanvasHandle } from './DrawCanvas';
 
 /**
  * Orchestrator component for the interactive draw page.
@@ -42,8 +43,8 @@ export default function DrawPage(): React.JSX.Element {
   const [thickness, setThickness] = useState(4);
   const [typeParams, setTypeParams] = useState<Partial<EnrichedStroke>>({});
 
-  /** Ref to the main canvas element in DrawCanvas, used for JPEG export. */
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+  /** Ref to the DrawCanvasHandle exposed by DrawCanvas. */
+  const canvasRef = useRef<DrawCanvasHandle | null>(null);
 
   /** True when there is at least one committed stroke; enables the Download JPG button. */
   const canDownloadJPG = strokes.length > 0;
@@ -81,12 +82,12 @@ export default function DrawPage(): React.JSX.Element {
   /**
    * Download the current canvas as a JPEG file.
    *
-   * Reads the main canvas element via canvasRef, encodes it as a JPEG data URL
-   * (quality 0.92), then triggers a browser file-download via a temporary anchor
-   * element. The canvas background is always white, so no compositing is needed.
+   * Reads the main canvas element via canvasRef.current.mainCanvas, encodes it as a
+   * JPEG data URL (quality 0.92), then triggers a browser file-download via a temporary
+   * anchor element. The canvas background is always white, so no compositing is needed.
    */
   function handleDownloadJPG(): void {
-    const canvas = canvasRef.current;
+    const canvas = canvasRef.current?.mainCanvas;
     if (!canvas) return;
     const dataUrl = canvas.toDataURL('image/jpeg', 0.92);
     const a = document.createElement('a');
@@ -95,6 +96,17 @@ export default function DrawPage(): React.JSX.Element {
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
+  }
+
+  /**
+   * Programmatically clear the canvas without showing a confirmation dialog.
+   *
+   * Called by the window.paintByLanguageModel.clearCanvas() API method.
+   * The toolbar Clear button uses handleClear() which prompts the user first.
+   */
+  function handleClearProgrammatic(): void {
+    setStrokes([]);
+    clearDrawing();
   }
 
   /**
@@ -135,6 +147,26 @@ export default function DrawPage(): React.JSX.Element {
     URL.revokeObjectURL(url);
   }
 
+  // Wire the window.paintByLanguageModel API
+  usePaintWindowApi({
+    setActiveType,
+    setColor,
+    setOpacity,
+    setThickness,
+    setTypeParams,
+    getActiveType: () => activeType,
+    getColor: () => color,
+    getOpacity: () => opacity,
+    getThickness: () => thickness,
+    getStrokes: () => strokes,
+    getTypeParams: () => typeParams,
+    canvasRef,
+    onClear: handleClearProgrammatic,
+    onDownload: handleDownload,
+    onDownloadJPG: handleDownloadJPG,
+    onLoadStrokes: (json: string) => handleUploadFromApi(json),
+  });
+
   /**
    * Import a drawing from uploaded JSON text.
    *
@@ -144,6 +176,20 @@ export default function DrawPage(): React.JSX.Element {
    *
    * @param {string} json - Raw JSON text from the uploaded file
    */
+  function handleUploadFromApi(json: string): void {
+    const result = importDrawingJSON(json);
+    if (result !== null) {
+      setStrokes(result.strokes);
+      saveDrawing({
+        version: 1,
+        canvas_width: CANVAS_WIDTH,
+        canvas_height: CANVAS_HEIGHT,
+        background_color: BACKGROUND_COLOR,
+        strokes: result.strokes,
+      });
+    }
+  }
+
   function handleUpload(json: string): void {
     const result = importDrawingJSON(json);
     if (result !== null) {

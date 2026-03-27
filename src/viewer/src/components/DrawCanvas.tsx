@@ -20,6 +20,24 @@ import { STROKE_INTERACTION, STROKE_DEFAULTS } from '@/lib/draw-types';
 import type { DrawStrokeType } from '@/lib/draw-types';
 
 /**
+ * Imperative handle exposed to parent components via the forwarded ref.
+ *
+ * Provides access to the main canvas element and three imperative methods
+ * for programmatic stroke control (used by the window.paintByLanguageModel API).
+ *
+ * @property {HTMLCanvasElement} mainCanvas - The committed-strokes canvas element
+ * @property {() => void} cancelStroke - Discard any in-progress stroke and clear the overlay
+ * @property {(x: number, y: number) => void} simulateClick - Simulate a canvas click at logical pixel coordinates
+ * @property {(x: number, y: number) => void} simulateDoubleClick - Simulate a canvas double-click at logical pixel coordinates
+ */
+export interface DrawCanvasHandle {
+  mainCanvas: HTMLCanvasElement;
+  cancelStroke: () => void;
+  simulateClick: (x: number, y: number) => void;
+  simulateDoubleClick: (x: number, y: number) => void;
+}
+
+/**
  * Props for the DrawCanvas dual-canvas drawing component.
  *
  * @property {EnrichedStroke[]} strokes - Committed strokes rendered on the main canvas
@@ -199,11 +217,11 @@ function drawCrosshair(ctx: CanvasRenderingContext2D, x: number, y: number): voi
  * sits on top and captures all mouse events.
  *
  * @param {DrawCanvasProps} props - Component props
- * @param {React.Ref<HTMLCanvasElement>} ref - Forwarded ref attached to the main canvas element,
- *   allowing parent components to access the committed-stroke canvas for image export.
+ * @param {React.Ref<DrawCanvasHandle>} ref - Forwarded ref exposing the DrawCanvasHandle
+ *   (mainCanvas element plus imperative methods for programmatic stroke control).
  * @returns {React.JSX.Element} Rendered dual-canvas drawing surface
  */
-const DrawCanvas = forwardRef<HTMLCanvasElement, DrawCanvasProps>(function DrawCanvas(
+const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function DrawCanvas(
   {
     strokes,
     canvasWidth,
@@ -222,8 +240,29 @@ const DrawCanvas = forwardRef<HTMLCanvasElement, DrawCanvasProps>(function DrawC
   const overlayRef = useRef<HTMLCanvasElement>(null);
   const pendingRef = useRef<{ points: [number, number][] }>({ points: [] });
 
-  // Expose the main canvas element (committed strokes) to parent consumers via the forwarded ref
-  useImperativeHandle(ref, () => mainRef.current!, []);
+  // Expose the DrawCanvasHandle (main canvas + imperative methods) to parent consumers
+  useImperativeHandle(
+    ref,
+    () => ({
+      get mainCanvas() {
+        return mainRef.current!;
+      },
+      cancelStroke() {
+        pendingRef.current.points = [];
+        const canvas = overlayRef.current;
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+        if (ctx) ctx.clearRect(0, 0, canvas.width, canvas.height);
+      },
+      simulateClick(x: number, y: number) {
+        coreHandleClick(x, y);
+      },
+      simulateDoubleClick(_x: number, _y: number) {
+        coreHandleDoubleClick(false);
+      },
+    }),
+    []
+  );
 
   // Redraw main canvas whenever strokes or canvas dimensions/background change
   useEffect(() => {
@@ -284,11 +323,8 @@ const DrawCanvas = forwardRef<HTMLCanvasElement, DrawCanvasProps>(function DrawC
     if (ctx) ctx.clearRect(0, 0, canvas.width, canvas.height);
   };
 
-  const handleClick = (event: React.MouseEvent<HTMLCanvasElement>): void => {
-    const canvas = overlayRef.current;
-    if (!canvas) return;
-
-    const { x, y } = canvasCoords(event, canvas);
+  /** Shared click logic, reused by both the mouse event handler and simulateClick. */
+  const coreHandleClick = (x: number, y: number): void => {
     const mode = STROKE_INTERACTION[activeType];
     const pending = pendingRef.current;
 
@@ -303,23 +339,42 @@ const DrawCanvas = forwardRef<HTMLCanvasElement, DrawCanvasProps>(function DrawC
     }
   };
 
-  const handleDoubleClick = (_event: React.MouseEvent<HTMLCanvasElement>): void => {
+  /**
+   * Shared double-click logic, reused by both the mouse event handler and simulateDoubleClick.
+   *
+   * @param {boolean} [deduplicate=false] - When true, slices off the last point before committing
+   *   (handles the browser behaviour where double-click fires two click events first).
+   */
+  const coreHandleDoubleClick = (deduplicate = false): void => {
     const canvas = overlayRef.current;
-    if (!canvas) return;
-
     const mode = STROKE_INTERACTION[activeType];
     if (mode !== 'multi-point') return;
 
-    // The double-click fires two click events first, so the last point is a duplicate.
-    // Slice it off before committing.
-    const pts = pendingRef.current.points.slice(0, -1);
+    const pts = deduplicate
+      ? pendingRef.current.points.slice(0, -1)
+      : pendingRef.current.points.slice();
     if (pts.length >= 2) {
       commitStroke(pts);
     } else {
       pendingRef.current.points = [];
-      const ctx = canvas.getContext('2d');
-      if (ctx) ctx.clearRect(0, 0, canvas.width, canvas.height);
+      if (canvas) {
+        const ctx = canvas.getContext('2d');
+        if (ctx) ctx.clearRect(0, 0, canvas.width, canvas.height);
+      }
     }
+  };
+
+  const handleClick = (event: React.MouseEvent<HTMLCanvasElement>): void => {
+    const canvas = overlayRef.current;
+    if (!canvas) return;
+    const { x, y } = canvasCoords(event, canvas);
+    coreHandleClick(x, y);
+  };
+
+  const handleDoubleClick = (_event: React.MouseEvent<HTMLCanvasElement>): void => {
+    if (!overlayRef.current) return;
+    // Pass deduplicate=true because the browser fires two click events before the dblclick
+    coreHandleDoubleClick(true);
   };
 
   const handleMouseMove = (event: React.MouseEvent<HTMLCanvasElement>): void => {
