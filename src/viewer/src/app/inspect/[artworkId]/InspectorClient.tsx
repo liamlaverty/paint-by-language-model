@@ -9,12 +9,14 @@
  */
 
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { useSearchParams } from 'next/navigation';
 import StrokeCanvas from '@/components/StrokeCanvas';
 import Toolbar from '@/components/Toolbar';
 import Timeline from '@/components/Timeline';
 import SidePanel from '@/components/SidePanel';
 import EmptyState from '@/components/EmptyState';
 import type { ViewerData, EnrichedStroke } from '@/lib/types';
+import type { DrawingData } from '@/lib/draw-types';
 import { getPublicUrl } from '@/lib/basePath';
 
 /**
@@ -31,11 +33,17 @@ interface InspectorClientProps {
  *
  * Loads artwork data and provides stroke-by-stroke playback controls, timeline
  * scrubbing, hover/click inspection, and keyboard shortcuts for navigation.
+ * Reads the optional `?stroke=N` query param via useSearchParams() to support
+ * deep-linking to a specific stroke count on load.
  *
  * @param {InspectorClientProps} props - Component props
  * @returns {React.ReactElement} The rendered inspector interface
  */
 export default function InspectorClient({ artworkId }: InspectorClientProps): React.ReactElement {
+  const searchParams = useSearchParams();
+  const initialStroke = searchParams.get('stroke')
+    ? parseInt(searchParams.get('stroke')!, 10)
+    : null;
   // State management
   const [viewerData, setViewerData] = useState<ViewerData | null>(null);
   const [visibleCount, setVisibleCount] = useState<number>(0);
@@ -197,6 +205,53 @@ export default function InspectorClient({ artworkId }: InspectorClientProps): Re
   }, [navigateTo, viewerData]);
 
   /**
+   * Copy a deep-link URL for the current stroke count to the clipboard.
+   *
+   * Builds a URL with a `?stroke=<visibleCount>` query param and writes it
+   * to the clipboard. Falls back to a temporary input element if the
+   * Clipboard API is unavailable.
+   */
+  function handleCopyUrl(): void {
+    const url = new URL(window.location.href);
+    url.searchParams.set('stroke', String(visibleCount));
+    navigator.clipboard.writeText(url.toString()).catch(() => {
+      const input = document.createElement('input');
+      input.value = url.toString();
+      document.body.appendChild(input);
+      input.select();
+      document.execCommand('copy');
+      document.body.removeChild(input);
+    });
+  }
+
+  /**
+   * Download the strokes visible at the current frame as a DrawingData v1 JSON file.
+   *
+   * The exported file contains exactly `visibleCount` strokes and is directly
+   * importable by the draw page's "Upload JSON" feature.
+   */
+  function handleDownloadJSON(): void {
+    if (!viewerData) return;
+    const data: DrawingData = {
+      version: 1,
+      canvas_width: viewerData.metadata.canvas_width,
+      canvas_height: viewerData.metadata.canvas_height,
+      background_color: viewerData.metadata.background_color,
+      strokes: viewerData.strokes.slice(0, visibleCount),
+    };
+    const json = JSON.stringify(data, null, 2);
+    const blob = new Blob([json], { type: 'application/json' });
+    const blobUrl = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = blobUrl;
+    a.download = `${viewerData.metadata.artwork_id}-stroke-${visibleCount}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(blobUrl);
+  }
+
+  /**
    * Handle stroke hover.
    *
    * @param {number} index - Stroke index (-1 for none)
@@ -267,8 +322,13 @@ export default function InspectorClient({ artworkId }: InspectorClientProps): Re
 
         const data: ViewerData = await response.json();
         setViewerData(data);
-        // Show all strokes initially (matching vanilla viewer behavior)
-        setVisibleCount(data.strokes.length);
+        // Apply deep-link stroke count if provided, otherwise show all strokes
+        if (initialStroke !== null && initialStroke !== undefined) {
+          const clamped = Math.max(0, Math.min(initialStroke, data.strokes.length));
+          setVisibleCount(clamped);
+        } else {
+          setVisibleCount(data.strokes.length);
+        }
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : 'Unknown error';
         setError(errorMessage);
@@ -377,6 +437,8 @@ export default function InspectorClient({ artworkId }: InspectorClientProps): Re
             infoText={infoText}
             highlightEnabled={highlightEnabled}
             onToggleHighlight={setHighlightEnabled}
+            onCopyUrl={handleCopyUrl}
+            onDownloadJSON={handleDownloadJSON}
           />
 
           <div className="canvas-container">
