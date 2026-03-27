@@ -557,8 +557,12 @@ def test_build_multimodal_payload_anthropic_image_block() -> None:
     message_content = payload["messages"][0]["content"]
     assert len(message_content) == 2
 
-    image_block = message_content[0]
-    text_block = message_content[1]
+    text_block = message_content[0]
+    image_block = message_content[1]
+
+    # Text block is first
+    assert text_block["type"] == "text"
+    assert text_block["text"] == "describe this"
 
     # Image block uses type=image (not image_url)
     assert image_block["type"] == "image"
@@ -575,13 +579,9 @@ def test_build_multimodal_payload_anthropic_image_block() -> None:
     decoded = base64.b64decode(source["data"])
     assert decoded == test_image
 
-    # Text block is second (image before text)
-    assert text_block["type"] == "text"
-    assert text_block["text"] == "describe this"
-
 
 def test_build_multimodal_payload_anthropic_image_before_text() -> None:
-    """Image block appears before the text block in Anthropic payload."""
+    """Text block appears before the image block in Anthropic payload."""
     client = VLMClient(
         provider="anthropic",
         base_url="https://api.anthropic.com/v1",
@@ -589,8 +589,8 @@ def test_build_multimodal_payload_anthropic_image_before_text() -> None:
     payload = client._build_multimodal_payload("prompt text", b"img", max_tokens=100)
     content = payload["messages"][0]["content"]
 
-    assert content[0]["type"] == "image"
-    assert content[1]["type"] == "text"
+    assert content[0]["type"] == "text"
+    assert content[1]["type"] == "image"
 
 
 def test_extract_response_text_anthropic_format() -> None:
@@ -655,11 +655,11 @@ def test_query_multimodal_anthropic_mock_http(mocker: Any) -> None:
     payload = call_kwargs["json"]
     content = payload["messages"][0]["content"]
 
-    # Image block first, text block second
-    assert content[0]["type"] == "image"
-    assert content[0]["source"]["type"] == "base64"
-    assert content[0]["source"]["media_type"] == "image/png"
-    assert content[1]["type"] == "text"
+    # Text block first, image block second
+    assert content[0]["type"] == "text"
+    assert content[1]["type"] == "image"
+    assert content[1]["source"]["type"] == "base64"
+    assert content[1]["source"]["media_type"] == "image/png"
 
 
 def test_query_anthropic_rate_limit_retries(mocker: Any) -> None:
