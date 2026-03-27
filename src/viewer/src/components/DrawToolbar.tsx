@@ -92,17 +92,29 @@ export default function DrawToolbar({
   }
 
   const activeDefaults = STROKE_DEFAULTS[activeType];
-  const hasAdvancedParams = Object.keys(activeDefaults).length > 0;
+  const hasAdvancedParams = Object.keys(activeDefaults).length > 0 || activeType === 'arc';
 
   const interactionMode = STROKE_INTERACTION[activeType];
+
+  const STROKE_DESCRIPTIONS: Record<DrawStrokeType, string> = {
+    line: 'Draw a straight line between two points.',
+    arc: 'Draw a curved arc within a bounding rectangle.',
+    polyline: 'Draw a freeform path through multiple points.',
+    circle: 'Draw a circle defined by a centre point and radius.',
+    splatter: 'Scatter paint droplets around a centre point.',
+    'dry-brush': 'Apply a multi-line stroke with multiple bristles, mimicking a dry brush.',
+    chalk: 'Draw a textured chalk stroke with grain and soft edges.',
+    'wet-brush': 'Paint with a soft, bleeding edge that simulates wet paint.',
+    burn: 'Darken a circular region of the canvas.',
+    dodge: 'Lighten a circular region of the canvas.',
+  };
 
   return (
     <div className="draw-toolbar side-panel">
       {/* ── Stroke Type ── */}
       <h3>Stroke Type</h3>
       <div className="draw-toolbar-types">
-        {STROKE_TYPES.filter((t) => t !== 'burn' && t !== 'dodge' && t !== 'wet-brush').map(
-          (type) => (
+        {STROKE_TYPES.map((type) => (
             <button
               key={type}
               type="button"
@@ -401,6 +413,7 @@ export default function DrawToolbar({
       {/* ── Instructions ── */}
       <h3>Instructions</h3>
       <ul className="draw-toolbar-instructions">
+        <li>{STROKE_DESCRIPTIONS[activeType]}</li>
         {interactionMode === 'two-point' && (
           <li>
             Click to place the <strong>start point</strong>, then click again to place the{' '}

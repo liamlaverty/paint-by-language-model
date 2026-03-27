@@ -8,8 +8,8 @@
  * a semi-transparent preview of the in-progress stroke and a crosshair cursor indicator.
  *
  * Supports three interaction modes determined by the active stroke type:
- * - `two-point`: click start, click end (line, arc, burn, dodge)
- * - `center-radius`: click centre, click edge (circle, splatter)
+ * - `two-point`: click start, click end (line, arc)
+ * - `center-radius`: click centre, click edge (circle, splatter, burn, dodge)
  * - `multi-point`: click to accumulate points, double-click to commit (polyline, chalk, etc.)
  */
 
@@ -109,8 +109,6 @@ function buildStroke(
 
   switch (type) {
     case 'line':
-    case 'burn':
-    case 'dodge':
       return {
         ...base,
         start_x: points[0][0],
@@ -118,9 +116,25 @@ function buildStroke(
         end_x: points[1][0],
         end_y: points[1][1],
       };
-    case 'arc':
+    case 'burn':
+    case 'dodge':
       return {
         ...base,
+        center_x: points[0][0],
+        center_y: points[0][1],
+        radius: Math.hypot(points[1][0] - points[0][0], points[1][1] - points[0][1]),
+      };
+    case 'arc': {
+      // If the user dragged downward, flip to the upper half (n shape) by using
+      // 180°–360°. If they dragged upward or sideways, use the lower half (U shape)
+      // with 0°–180°. Explicit typeParams overrides always win.
+      const draggingDown = points[1][1] > points[0][1];
+      const startAngle = typeParams.arc_start_angle ?? (draggingDown ? 180 : 0);
+      const endAngle = typeParams.arc_end_angle ?? (draggingDown ? 360 : 180);
+      return {
+        ...base,
+        arc_start_angle: startAngle,
+        arc_end_angle: endAngle,
         arc_bbox: [
           Math.min(points[0][0], points[1][0]),
           Math.min(points[0][1], points[1][1]),
@@ -128,6 +142,7 @@ function buildStroke(
           Math.max(points[0][1], points[1][1]),
         ],
       };
+    }
     case 'polyline':
     case 'dry-brush':
     case 'chalk':

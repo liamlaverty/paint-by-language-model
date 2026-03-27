@@ -72,8 +72,8 @@ export const STROKE_INTERACTION: Record<DrawStrokeType, InteractionMode> = {
   'dry-brush': 'multi-point',
   chalk: 'multi-point',
   'wet-brush': 'multi-point',
-  burn: 'two-point',
-  dodge: 'two-point',
+  burn: 'center-radius',
+  dodge: 'center-radius',
 };
 
 /**
@@ -84,7 +84,7 @@ export const STROKE_INTERACTION: Record<DrawStrokeType, InteractionMode> = {
  */
 export const STROKE_DEFAULTS: Record<DrawStrokeType, Partial<EnrichedStroke>> = {
   line: {},
-  arc: { arc_start_angle: 0, arc_end_angle: 180 },
+  arc: {},
   polyline: {},
   circle: { fill: true },
   splatter: { splatter_count: 30, dot_size_min: 1, dot_size_max: 4 },
