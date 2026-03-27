@@ -1032,8 +1032,6 @@ body {
   margin: 0;
 }
 
-
-
 /* ── Advanced Parameters Panel ────────────────────────────────────────── */
 .draw-toolbar-advanced,
 .draw-advanced-params {
@@ -1072,5 +1070,3 @@ body {
 .draw-canvas-container canvas {
   border: 1px solid var(--color-border);
 }
-
-

@@ -9,7 +9,12 @@
  */
 
 import { useRef } from 'react';
-import { STROKE_TYPES, STROKE_DEFAULTS, STROKE_INTERACTION, type DrawStrokeType } from '@/lib/draw-types';
+import {
+  STROKE_TYPES,
+  STROKE_DEFAULTS,
+  STROKE_INTERACTION,
+  type DrawStrokeType,
+} from '@/lib/draw-types';
 import type { EnrichedStroke } from '@/lib/types';
 
 /**
@@ -96,16 +101,18 @@ export default function DrawToolbar({
       {/* ── Stroke Type ── */}
       <h3>Stroke Type</h3>
       <div className="draw-toolbar-types">
-        {STROKE_TYPES.filter((t) => t !== 'burn' && t !== 'dodge' && t !== 'wet-brush').map((type) => (
-          <button
-            key={type}
-            type="button"
-            className={`button draw-toolbar-type-btn${type === activeType ? ' active' : ''}`}
-            onClick={() => onTypeChange(type)}
-          >
-            {type}
-          </button>
-        ))}
+        {STROKE_TYPES.filter((t) => t !== 'burn' && t !== 'dodge' && t !== 'wet-brush').map(
+          (type) => (
+            <button
+              key={type}
+              type="button"
+              className={`button draw-toolbar-type-btn${type === activeType ? ' active' : ''}`}
+              onClick={() => onTypeChange(type)}
+            >
+              {type}
+            </button>
+          )
+        )}
       </div>
 
       {/* ── Stroke Config ── */}
@@ -395,18 +402,28 @@ export default function DrawToolbar({
       <h3>Instructions</h3>
       <ul className="draw-toolbar-instructions">
         {interactionMode === 'two-point' && (
-          <li>Click to place the <strong>start point</strong>, then click again to place the <strong>end point</strong>.</li>
+          <li>
+            Click to place the <strong>start point</strong>, then click again to place the{' '}
+            <strong>end point</strong>.
+          </li>
         )}
         {interactionMode === 'center-radius' && (
-          <li>Click to place the <strong>centre</strong>, then click again to set the <strong>radius</strong>.</li>
+          <li>
+            Click to place the <strong>centre</strong>, then click again to set the{' '}
+            <strong>radius</strong>.
+          </li>
         )}
         {interactionMode === 'multi-point' && (
           <>
             <li>Click to add points to the stroke.</li>
-            <li><strong>Double-click</strong> to finish and commit the stroke.</li>
+            <li>
+              <strong>Double-click</strong> to finish and commit the stroke.
+            </li>
           </>
         )}
-        <li>Click outside the canvas to <strong>dismiss</strong> an in-progress stroke.</li>
+        <li>
+          Click outside the canvas to <strong>dismiss</strong> an in-progress stroke.
+        </li>
       </ul>
 
       {/* ── Canvas Tools ── */}
@@ -419,11 +436,7 @@ export default function DrawToolbar({
         <button type="button" className="button" onClick={onDownload}>
           Download JSON
         </button>
-        <button
-          type="button"
-          className="button"
-          onClick={() => fileInputRef.current?.click()}
-        >
+        <button type="button" className="button" onClick={() => fileInputRef.current?.click()}>
           Upload JSON
         </button>
         <input
