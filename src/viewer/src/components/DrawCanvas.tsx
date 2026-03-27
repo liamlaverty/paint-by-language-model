@@ -13,7 +13,7 @@
  * - `multi-point`: click to accumulate points, double-click to commit (polyline, chalk, etc.)
  */
 
-import { useRef, useEffect } from 'react';
+import { useRef, useEffect, forwardRef, useImperativeHandle } from 'react';
 import type { EnrichedStroke } from '@/lib/types';
 import { renderStroke } from '@/lib/renderers';
 import { STROKE_INTERACTION, STROKE_DEFAULTS } from '@/lib/draw-types';
@@ -199,23 +199,31 @@ function drawCrosshair(ctx: CanvasRenderingContext2D, x: number, y: number): voi
  * sits on top and captures all mouse events.
  *
  * @param {DrawCanvasProps} props - Component props
+ * @param {React.Ref<HTMLCanvasElement>} ref - Forwarded ref attached to the main canvas element,
+ *   allowing parent components to access the committed-stroke canvas for image export.
  * @returns {React.JSX.Element} Rendered dual-canvas drawing surface
  */
-export default function DrawCanvas({
-  strokes,
-  canvasWidth,
-  canvasHeight,
-  backgroundColor,
-  activeType,
-  color,
-  opacity,
-  thickness,
-  typeParams,
-  onStrokeCommit,
-}: DrawCanvasProps): React.JSX.Element {
+const DrawCanvas = forwardRef<HTMLCanvasElement, DrawCanvasProps>(function DrawCanvas(
+  {
+    strokes,
+    canvasWidth,
+    canvasHeight,
+    backgroundColor,
+    activeType,
+    color,
+    opacity,
+    thickness,
+    typeParams,
+    onStrokeCommit,
+  }: DrawCanvasProps,
+  ref
+): React.JSX.Element {
   const mainRef = useRef<HTMLCanvasElement>(null);
   const overlayRef = useRef<HTMLCanvasElement>(null);
   const pendingRef = useRef<{ points: [number, number][] }>({ points: [] });
+
+  // Expose the main canvas element (committed strokes) to parent consumers via the forwarded ref
+  useImperativeHandle(ref, () => mainRef.current!, []);
 
   // Redraw main canvas whenever strokes or canvas dimensions/background change
   useEffect(() => {
@@ -377,4 +385,6 @@ export default function DrawCanvas({
       />
     </div>
   );
-}
+});
+
+export default DrawCanvas;
