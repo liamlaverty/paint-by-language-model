@@ -35,7 +35,6 @@ describe('Toolbar', () => {
     it('should render all control buttons', () => {
       render(<Toolbar {...defaultProps} />);
 
-      expect(screen.getByText('Home')).toBeInTheDocument();
       expect(screen.getByText('⏮ Reset')).toBeInTheDocument();
       expect(screen.getByText('▶️ Play')).toBeInTheDocument();
       expect(screen.getByText('⏮ Step Back')).toBeInTheDocument();
@@ -54,13 +53,6 @@ describe('Toolbar', () => {
       render(<Toolbar {...defaultProps} />);
 
       expect(screen.getByText('test-artwork · 42/70 strokes')).toBeInTheDocument();
-    });
-
-    it('should render Home link', () => {
-      render(<Toolbar {...defaultProps} />);
-
-      const homeLink = screen.getByRole('link', { name: /home/i });
-      expect(homeLink).toHaveAttribute('href', '/');
     });
   });
 
@@ -90,9 +82,6 @@ describe('Toolbar', () => {
       expect(screen.getByText('⏭ Step Forward')).toBeDisabled();
       expect(screen.getByText('⏩ Fin')).toBeDisabled();
       expect(screen.getByRole('slider')).toBeDisabled();
-
-      // Home link should not be disabled
-      expect(screen.getByRole('link', { name: /home/i })).not.toHaveAttribute('disabled');
     });
 
     it('should disable Reset, Step Back, Step Forward, and Fin when playing', () => {
