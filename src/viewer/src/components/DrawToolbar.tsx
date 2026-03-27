@@ -115,16 +115,15 @@ export default function DrawToolbar({
       <h3>Stroke Type</h3>
       <div className="draw-toolbar-types">
         {STROKE_TYPES.map((type) => (
-            <button
-              key={type}
-              type="button"
-              className={`button draw-toolbar-type-btn${type === activeType ? ' active' : ''}`}
-              onClick={() => onTypeChange(type)}
-            >
-              {type}
-            </button>
-          )
-        )}
+          <button
+            key={type}
+            type="button"
+            className={`button draw-toolbar-type-btn${type === activeType ? ' active' : ''}`}
+            onClick={() => onTypeChange(type)}
+          >
+            {type}
+          </button>
+        ))}
       </div>
 
       {/* ── Stroke Config ── */}
