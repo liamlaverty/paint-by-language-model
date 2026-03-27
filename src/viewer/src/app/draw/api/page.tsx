@@ -151,9 +151,7 @@ function MethodCard({ name, doc }: { name: string; doc: ApiMethodDoc }): React.J
       }}
     >
       {/* Signature */}
-      <h4 style={{ fontFamily: 'monospace', fontSize: '1rem', marginBottom: '0.5rem' }}>
-        {name}
-      </h4>
+      <h4 style={{ fontFamily: 'monospace', fontSize: '1rem', marginBottom: '0.5rem' }}>{name}</h4>
       <pre
         style={{
           background: '#f0f0f0',
@@ -184,9 +182,21 @@ function MethodCard({ name, doc }: { name: string; doc: ApiMethodDoc }): React.J
           >
             <thead>
               <tr style={{ background: '#e8e8e8' }}>
-                <th style={{ textAlign: 'left', padding: '0.3rem 0.5rem', border: '1px solid #ccc' }}>Name</th>
-                <th style={{ textAlign: 'left', padding: '0.3rem 0.5rem', border: '1px solid #ccc' }}>Type</th>
-                <th style={{ textAlign: 'left', padding: '0.3rem 0.5rem', border: '1px solid #ccc' }}>Description</th>
+                <th
+                  style={{ textAlign: 'left', padding: '0.3rem 0.5rem', border: '1px solid #ccc' }}
+                >
+                  Name
+                </th>
+                <th
+                  style={{ textAlign: 'left', padding: '0.3rem 0.5rem', border: '1px solid #ccc' }}
+                >
+                  Type
+                </th>
+                <th
+                  style={{ textAlign: 'left', padding: '0.3rem 0.5rem', border: '1px solid #ccc' }}
+                >
+                  Description
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -312,8 +322,7 @@ export default function ApiDocsPage(): React.JSX.Element {
         <p>
           This API allows a language model or external script to programmatically paint on the
           canvas by calling methods on <code>window.paintByLanguageModel</code> in the browser
-          console, or in a Playwright / Puppeteer script aimed at the{' '}
-          <code>/draw</code> page.
+          console, or in a Playwright / Puppeteer script aimed at the <code>/draw</code> page.
         </p>
         <p>
           The object is registered when the draw page mounts and removed when it unmounts. Every
@@ -322,10 +331,9 @@ export default function ApiDocsPage(): React.JSX.Element {
         </p>
         <p>
           Multi-point stroke types (<code>polyline</code>, <code>dry-brush</code>,{' '}
-          <code>chalk</code>, <code>wet-brush</code>) require at least two{' '}
-          <code>click()</code> calls followed by a single <code>doubleClick()</code> to commit the
-          stroke. All other stroke types commit automatically after the required number of{' '}
-          <code>click()</code> calls.
+          <code>chalk</code>, <code>wet-brush</code>) require at least two <code>click()</code>{' '}
+          calls followed by a single <code>doubleClick()</code> to commit the stroke. All other
+          stroke types commit automatically after the required number of <code>click()</code> calls.
         </p>
       </section>
 
@@ -376,8 +384,8 @@ export default function ApiDocsPage(): React.JSX.Element {
       <section style={{ marginBottom: '3rem' }}>
         <h2 style={{ fontSize: '1.25rem', marginBottom: '0.5rem' }}>Worked Example — Sunset</h2>
         <p style={{ marginBottom: '0.75rem', color: '#555' }}>
-          A complete script that paints a recognisable sunset scene. Copy-paste it into the
-          DevTools console while the <code>/draw</code> page is open.
+          A complete script that paints a recognisable sunset scene. Copy-paste it into the DevTools
+          console while the <code>/draw</code> page is open.
         </p>
         <pre
           style={{

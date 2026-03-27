@@ -121,12 +121,24 @@ export function usePaintWindowApi({
   const getColorRef = useRef(getColor);
   const getOpacityRef = useRef(getOpacity);
   const getThicknessRef = useRef(getThickness);
-  useEffect(() => { getStrokesRef.current = getStrokes; }, [getStrokes]);
-  useEffect(() => { getTypeParamsRef.current = getTypeParams; }, [getTypeParams]);
-  useEffect(() => { getActiveTypeRef.current = getActiveType; }, [getActiveType]);
-  useEffect(() => { getColorRef.current = getColor; }, [getColor]);
-  useEffect(() => { getOpacityRef.current = getOpacity; }, [getOpacity]);
-  useEffect(() => { getThicknessRef.current = getThickness; }, [getThickness]);
+  useEffect(() => {
+    getStrokesRef.current = getStrokes;
+  }, [getStrokes]);
+  useEffect(() => {
+    getTypeParamsRef.current = getTypeParams;
+  }, [getTypeParams]);
+  useEffect(() => {
+    getActiveTypeRef.current = getActiveType;
+  }, [getActiveType]);
+  useEffect(() => {
+    getColorRef.current = getColor;
+  }, [getColor]);
+  useEffect(() => {
+    getOpacityRef.current = getOpacity;
+  }, [getOpacity]);
+  useEffect(() => {
+    getThicknessRef.current = getThickness;
+  }, [getThickness]);
 
   // Keep the latest state setters in refs too
   const setActiveTypeRef = useRef(setActiveType);
@@ -139,15 +151,33 @@ export function usePaintWindowApi({
   const onDownloadJPGRef = useRef(onDownloadJPG);
   const onLoadStrokesRef = useRef(onLoadStrokes);
 
-  useEffect(() => { setActiveTypeRef.current = setActiveType; }, [setActiveType]);
-  useEffect(() => { setColorRef.current = setColor; }, [setColor]);
-  useEffect(() => { setOpacityRef.current = setOpacity; }, [setOpacity]);
-  useEffect(() => { setThicknessRef.current = setThickness; }, [setThickness]);
-  useEffect(() => { setTypeParamsRef.current = setTypeParams; }, [setTypeParams]);
-  useEffect(() => { onClearRef.current = onClear; }, [onClear]);
-  useEffect(() => { onDownloadRef.current = onDownload; }, [onDownload]);
-  useEffect(() => { onDownloadJPGRef.current = onDownloadJPG; }, [onDownloadJPG]);
-  useEffect(() => { onLoadStrokesRef.current = onLoadStrokes; }, [onLoadStrokes]);
+  useEffect(() => {
+    setActiveTypeRef.current = setActiveType;
+  }, [setActiveType]);
+  useEffect(() => {
+    setColorRef.current = setColor;
+  }, [setColor]);
+  useEffect(() => {
+    setOpacityRef.current = setOpacity;
+  }, [setOpacity]);
+  useEffect(() => {
+    setThicknessRef.current = setThickness;
+  }, [setThickness]);
+  useEffect(() => {
+    setTypeParamsRef.current = setTypeParams;
+  }, [setTypeParams]);
+  useEffect(() => {
+    onClearRef.current = onClear;
+  }, [onClear]);
+  useEffect(() => {
+    onDownloadRef.current = onDownload;
+  }, [onDownload]);
+  useEffect(() => {
+    onDownloadJPGRef.current = onDownloadJPG;
+  }, [onDownloadJPG]);
+  useEffect(() => {
+    onLoadStrokesRef.current = onLoadStrokes;
+  }, [onLoadStrokes]);
 
   useEffect(() => {
     // Guard against SSR environments

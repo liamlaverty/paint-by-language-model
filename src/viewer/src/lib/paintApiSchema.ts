@@ -226,7 +226,6 @@ export const PAINT_API_SCHEMA: Record<string, ApiMethodDoc> = {
       },
     ],
     returns: 'Record of parameter key → default value for the given stroke type',
-    example:
-      'const schema = window.paintByLanguageModel.getTypeParamSchema("splatter");',
+    example: 'const schema = window.paintByLanguageModel.getTypeParamSchema("splatter");',
   },
 };
