@@ -1,5 +1,6 @@
 import type React from 'react';
 import { PAINT_API_SCHEMA, type ApiMethodDoc } from '@/lib/paintApiSchema';
+import { getPublicUrl } from '@/lib/basePath';
 
 export const metadata = {
   title: 'Programmer API — Paint by Language Model',
@@ -333,7 +334,7 @@ export default function ApiDocsPage(): React.JSX.Element {
         Paint by Language Model — Programmer API
       </h1>
       <p style={{ color: '#555', marginBottom: '2rem' }}>
-        <a href="/draw" style={{ color: '#0070f3' }}>
+        <a href={getPublicUrl('/draw')} style={{ color: '#0070f3' }}>
           ← Back to Draw
         </a>
       </p>
