@@ -357,10 +357,7 @@ export default function DrawCanvas({
   };
 
   return (
-    <div
-      className="draw-canvas-container"
-      style={{ width: canvasWidth, height: canvasHeight }}
-    >
+    <div className="draw-canvas-container" style={{ width: canvasWidth, height: canvasHeight }}>
       {/* Main canvas — renders committed strokes with background fill */}
       <canvas
         ref={mainRef}
