@@ -8,7 +8,7 @@
  * and restores it on mount.
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import type { EnrichedStroke } from '@/lib/types';
 import { STROKE_DEFAULTS, type DrawStrokeType, type DrawingData } from '@/lib/draw-types';
 import {
@@ -42,6 +42,12 @@ export default function DrawPage(): React.JSX.Element {
   const [thickness, setThickness] = useState(4);
   const [typeParams, setTypeParams] = useState<Partial<EnrichedStroke>>({});
 
+  /** Ref to the main canvas element in DrawCanvas, used for JPEG export. */
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  /** True when there is at least one committed stroke; enables the Download JPG button. */
+  const canDownloadJPG = strokes.length > 0;
+
   // Initialisation effect — restore the drawing stored in localStorage on mount.
   useEffect(() => {
     const loaded = loadDrawing();
@@ -70,6 +76,25 @@ export default function DrawPage(): React.JSX.Element {
       background_color: BACKGROUND_COLOR,
       strokes: newStrokes,
     });
+  }
+
+  /**
+   * Download the current canvas as a JPEG file.
+   *
+   * Reads the main canvas element via canvasRef, encodes it as a JPEG data URL
+   * (quality 0.92), then triggers a browser file-download via a temporary anchor
+   * element. The canvas background is always white, so no compositing is needed.
+   */
+  function handleDownloadJPG(): void {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const dataUrl = canvas.toDataURL('image/jpeg', 0.92);
+    const a = document.createElement('a');
+    a.href = dataUrl;
+    a.download = 'drawing.jpg';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
   }
 
   /**
@@ -141,6 +166,7 @@ export default function DrawPage(): React.JSX.Element {
         <div className="left-panel">
           <div className="canvas-container">
             <DrawCanvas
+              ref={canvasRef}
               strokes={strokes}
               canvasWidth={CANVAS_WIDTH}
               canvasHeight={CANVAS_HEIGHT}
@@ -168,6 +194,8 @@ export default function DrawPage(): React.JSX.Element {
             onTypeParamsChange={setTypeParams}
             onClear={handleClear}
             onDownload={handleDownload}
+            onDownloadJPG={handleDownloadJPG}
+            canDownloadJPG={canDownloadJPG}
             onUpload={handleUpload}
           />
         </div>

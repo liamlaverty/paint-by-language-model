@@ -40,22 +40,27 @@ export async function generateStaticParams(): Promise<{ artworkId: string }[]> {
 }
 
 /**
+ * Inspector page props.
+ *
+ * @property {Promise<object>} params - Route parameters (async in Next.js 15+)
+ * @property {string} params.artworkId - Artwork ID from the URL
+ */
+interface PageProps {
+  params: Promise<{ artworkId: string }>;
+}
+
+/**
  * Inspector page component.
  *
  * Server component wrapper that renders the interactive InspectorClient
- * with the artwork ID from the route parameters.
+ * with the artwork ID from the route parameters. The optional `?stroke=N`
+ * deep-link param is read client-side inside InspectorClient via
+ * useSearchParams(), keeping this page fully statically renderable.
  *
- * @param {object} props - Page props
- * @param {Promise<object>} props.params - Route parameters (async in Next.js 15+)
- * @param {string} props.params.artworkId - Artwork ID from the URL
- *
+ * @param {PageProps} props - Page props
  * @returns {Promise<React.ReactElement>} The rendered inspector page
  */
-export default async function InspectorPage({
-  params,
-}: {
-  params: Promise<{ artworkId: string }>;
-}): Promise<React.ReactElement> {
+export default async function InspectorPage({ params }: PageProps): Promise<React.ReactElement> {
   const { artworkId } = await params;
   return <InspectorClient artworkId={artworkId} />;
 }

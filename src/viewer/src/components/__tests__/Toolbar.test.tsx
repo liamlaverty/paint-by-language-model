@@ -23,6 +23,8 @@ describe('Toolbar', () => {
     infoText: 'test-artwork · 42/70 strokes',
     highlightEnabled: false,
     onToggleHighlight: jest.fn(),
+    onCopyUrl: jest.fn(),
+    onDownloadJSON: jest.fn(),
   };
 
   beforeEach(() => {

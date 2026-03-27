@@ -18,6 +18,8 @@ import Link from 'next/link';
  * @property {string} infoText - Artwork info text for the toolbar (e.g. "cubist-mary-001 · 42/70 strokes")
  * @property {boolean} highlightEnabled - Whether the stroke highlight overlay is enabled during playback
  * @property {(enabled: boolean) => void} onToggleHighlight - Callback to toggle the highlight state
+ * @property {() => void} onCopyUrl - Copy a deep-link URL for the current stroke count to the clipboard
+ * @property {() => void} onDownloadJSON - Download the currently-visible strokes as a DrawingData v1 JSON file
  */
 interface ToolbarProps {
   onReset: () => void;
@@ -33,6 +35,8 @@ interface ToolbarProps {
   infoText: string;
   highlightEnabled: boolean;
   onToggleHighlight: (enabled: boolean) => void;
+  onCopyUrl: () => void;
+  onDownloadJSON: () => void;
 }
 
 /**
@@ -59,14 +63,16 @@ export default function Toolbar({
   infoText,
   highlightEnabled,
   onToggleHighlight,
+  onCopyUrl,
+  onDownloadJSON,
 }: ToolbarProps): React.ReactElement {
   return (
     <div className="toolbar">
-      <Link href="/">
+      {/* <Link href="/">
         <button type="button" className="button">
           Home
         </button>
-      </Link>
+      </Link> */}
 
       <div className="sep" />
 
@@ -155,6 +161,28 @@ export default function Toolbar({
         />
         Highlight strokes
       </label>
+
+      <div className="sep" />
+
+      <button
+        type="button"
+        className="button"
+        onClick={onCopyUrl}
+        disabled={!isLoaded}
+        title="Copy a deep-link URL for the current stroke to the clipboard"
+      >
+        Share
+      </button>
+
+      <button
+        type="button"
+        className="button"
+        onClick={onDownloadJSON}
+        disabled={!isLoaded}
+        title="Download visible strokes as ax JSON file"
+      >
+        Get JSON
+      </button>
 
       <div className="info">{infoText}</div>
     </div>
