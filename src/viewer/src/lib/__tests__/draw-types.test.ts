@@ -2,18 +2,10 @@
  * Unit tests for draw-types.ts - Stroke type constants and mappings
  */
 
-import {
-  STROKE_TYPES,
-  STROKE_INTERACTION,
-  STROKE_DEFAULTS,
-} from '@/lib/draw-types';
+import { STROKE_TYPES, STROKE_INTERACTION, STROKE_DEFAULTS } from '@/lib/draw-types';
 import type { InteractionMode } from '@/lib/draw-types';
 
-const VALID_INTERACTION_MODES: InteractionMode[] = [
-  'two-point',
-  'center-radius',
-  'multi-point',
-];
+const VALID_INTERACTION_MODES: InteractionMode[] = ['two-point', 'center-radius', 'multi-point'];
 
 describe('STROKE_TYPES', () => {
   it('contains exactly 10 entries', () => {
