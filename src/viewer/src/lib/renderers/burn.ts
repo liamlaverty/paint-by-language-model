@@ -32,6 +32,8 @@ export function renderBurn(
   const radius = stroke.radius!;
   const intensity = stroke.intensity ?? 0.5;
 
+  if (!isFinite(cx) || !isFinite(cy) || !isFinite(radius) || radius <= 0) return;
+
   if (isHit) {
     // Hit detection: solid filled circle with index colour
     drawFilledCircle(ctx, cx, cy, radius, strokeIndexToColor(stroke.index));
