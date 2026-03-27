@@ -17,7 +17,6 @@ import {
 } from '@/lib/draw-types';
 import type { EnrichedStroke } from '@/lib/types';
 import Link from 'next/link';
-import { getPublicUrl } from '@/lib/basePath';
 
 /** Human-readable description for each stroke type, shown alongside the type selector. */
 const STROKE_DESCRIPTIONS: Record<DrawStrokeType, string> = {
@@ -463,7 +462,7 @@ export default function DrawToolbar({
         <button type="button" className="button" onClick={() => fileInputRef.current?.click()}>
           Upload JSON
         </button>
-        <Link href={getPublicUrl('/draw/api')} className="button">
+        <Link href='/draw/api' className="button">
           API Docs
         </Link>
         <input
