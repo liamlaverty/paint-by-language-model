@@ -4,6 +4,8 @@ A Python application that uses Vision Language Models (VLMs) to iteratively crea
 
 The project includes a Next.js viewer application for interactively exploring generated artworks, viewing stroke-by-stroke creation timelines, and examining metadata and evaluation scores. See output here: https://www.liamlaverty.com/paint-by-language-model/
 
+<img width="808" height="608" alt="image" src="https://github.com/user-attachments/assets/d48d3393-6b0c-4db7-ab4d-ee83e14875c6" />
+
 <img width="1620" height="1225" alt="image" src="https://github.com/user-attachments/assets/706bb419-43ef-4fdb-a0e0-4325599bdbf7" />
 
 ## Prerequisites
