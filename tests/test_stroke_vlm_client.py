@@ -108,13 +108,13 @@ def test_suggest_strokes_sends_sample_images() -> None:
         f"Expected 11 images (1 canvas + 10 samples), got {len(images)}"
     )
 
-    # First entry must be the current canvas
-    assert images[0][1] == "Current canvas", (
-        f"First image label should be 'Current canvas', got '{images[0][1]}'"
+    # Last entry must be the current canvas
+    assert images[-1][1] == "Current canvas", (
+        f"Last image label should be 'Current canvas', got '{images[-1][1]}'"
     )
 
-    # Remaining 5 labels must be the stroke sample labels
-    sample_labels = {label for _, label in images[1:]}
+    # First 10 labels must be the stroke sample labels
+    sample_labels = {label for _, label in images[:-1]}
     assert sample_labels == _EXPECTED_SAMPLE_LABELS, (
         f"Sample labels mismatch. Expected {_EXPECTED_SAMPLE_LABELS}, got {sample_labels}"
     )
@@ -251,11 +251,11 @@ def test_suggest_strokes_filters_samples_to_allowed_type() -> None:
     assert len(images) == 2, (
         f"Expected 2 images (1 canvas + 1 allowed sample), got {len(images)}"
     )
-    assert images[0][1] == "Current canvas", (
-        f"First image label should be 'Current canvas', got '{images[0][1]}'"
+    assert images[0][1] == "LINE stroke sample", (
+        f"First image label should be 'LINE stroke sample', got '{images[0][1]}'"
     )
-    assert images[1][1] == "LINE stroke sample", (
-        f"Second image label should be 'LINE stroke sample', got '{images[1][1]}'"
+    assert images[-1][1] == "Current canvas", (
+        f"Last image label should be 'Current canvas', got '{images[-1][1]}'"
     )
 
 
@@ -288,7 +288,7 @@ def test_suggest_strokes_sends_all_samples_when_allowed_none() -> None:
     assert len(images) == 11, (
         f"Expected 11 images (1 canvas + 10 samples), got {len(images)}"
     )
-    sample_labels = {label for _, label in images[1:]}
+    sample_labels = {label for _, label in images[:-1]}
     assert sample_labels == _EXPECTED_SAMPLE_LABELS, (
         f"Sample labels mismatch. Expected {_EXPECTED_SAMPLE_LABELS}, got {sample_labels}"
     )

@@ -5,6 +5,7 @@
  * the interactive InspectorClient component with the artwork ID.
  */
 
+import { Suspense } from 'react';
 import { promises as fs, existsSync } from 'fs';
 import path from 'path';
 import InspectorClient from './InspectorClient';
@@ -62,5 +63,9 @@ interface PageProps {
  */
 export default async function InspectorPage({ params }: PageProps): Promise<React.ReactElement> {
   const { artworkId } = await params;
-  return <InspectorClient artworkId={artworkId} />;
+  return (
+    <Suspense>
+      <InspectorClient artworkId={artworkId} />
+    </Suspense>
+  );
 }
