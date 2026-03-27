@@ -1062,11 +1062,21 @@ body {
 
 /* ── Canvas Container ─────────────────────────────────────────────────── */
 .draw-canvas-container {
-  display: flex;
-  justify-content: center;
-  overflow: auto;
+  position: relative;
+  display: inline-block;
+  box-sizing: content-box;
+  border: 1px solid var(--color-border);
 }
 
-.draw-canvas-container canvas {
-  border: 1px solid var(--color-border);
+.draw-canvas-main {
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+.draw-canvas-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  cursor: crosshair;
 }

@@ -77,7 +77,7 @@ function canvasCoords(
  * Geometry fields are set according to the stroke type.
  *
  * @param {DrawStrokeType} type - Stroke type
- * @param {[number, number][]} points - Click points accumulated during the gesture
+ * @param {[number, number][]} points - Click points accumulated during the gesture; must contain at least 2 entries for non-multi-point types
  * @param {string} color - Stroke colour hex string
  * @param {number} opacity - Stroke opacity (0.0–1.0)
  * @param {number} thickness - Stroke thickness in pixels
@@ -94,6 +94,9 @@ function buildStroke(
   typeParams: Partial<EnrichedStroke>,
   index: number
 ): EnrichedStroke {
+  if (points.length < 2) {
+    throw new Error(`buildStroke: at least 2 points required, got ${points.length}`);
+  }
   const base: EnrichedStroke = {
     index,
     iteration: 0,
@@ -210,8 +213,6 @@ export default function DrawCanvas({
   typeParams,
   onStrokeCommit,
 }: DrawCanvasProps): React.JSX.Element {
-  const canvasContainerWidth = canvasWidth + 2;
-  const canvasContainerHeight = canvasHeight + 2;
   const mainRef = useRef<HTMLCanvasElement>(null);
   const overlayRef = useRef<HTMLCanvasElement>(null);
   const pendingRef = useRef<{ points: [number, number][] }>({ points: [] });
@@ -358,12 +359,7 @@ export default function DrawCanvas({
   return (
     <div
       className="draw-canvas-container"
-      style={{
-        position: 'relative',
-        width: canvasContainerWidth,
-        height: canvasContainerHeight,
-        display: 'inline-block',
-      }}
+      style={{ width: canvasWidth, height: canvasHeight }}
     >
       {/* Main canvas — renders committed strokes with background fill */}
       <canvas
@@ -371,7 +367,6 @@ export default function DrawCanvas({
         className="draw-canvas-main"
         width={canvasWidth}
         height={canvasHeight}
-        style={{ position: 'absolute', top: 0, left: 0 }}
       />
       {/* Overlay canvas — renders in-progress preview; captures all mouse events */}
       <canvas
@@ -379,7 +374,6 @@ export default function DrawCanvas({
         className="draw-canvas-overlay"
         width={canvasWidth}
         height={canvasHeight}
-        style={{ position: 'absolute', top: 0, left: 0, cursor: 'crosshair' }}
         onClick={handleClick}
         onDoubleClick={handleDoubleClick}
         onMouseMove={handleMouseMove}

@@ -17,6 +17,20 @@ import {
 } from '@/lib/draw-types';
 import type { EnrichedStroke } from '@/lib/types';
 
+/** Human-readable description for each stroke type, shown alongside the type selector. */
+const STROKE_DESCRIPTIONS: Record<DrawStrokeType, string> = {
+  line: 'Draw a straight line between two points.',
+  arc: 'Draw a curved arc within a bounding rectangle.',
+  polyline: 'Draw a freeform path through multiple points.',
+  circle: 'Draw a circle defined by a centre point and radius.',
+  splatter: 'Scatter paint droplets around a centre point.',
+  'dry-brush': 'Apply a multi-line stroke with multiple bristles, mimicking a dry brush.',
+  chalk: 'Draw a textured chalk stroke with grain and soft edges.',
+  'wet-brush': 'Paint with a soft, bleeding edge that simulates wet paint.',
+  burn: 'Darken a circular region of the canvas.',
+  dodge: 'Lighten a circular region of the canvas.',
+};
+
 /**
  * Props for the DrawToolbar component.
  *
@@ -95,19 +109,6 @@ export default function DrawToolbar({
   const hasAdvancedParams = Object.keys(activeDefaults).length > 0 || activeType === 'arc';
 
   const interactionMode = STROKE_INTERACTION[activeType];
-
-  const STROKE_DESCRIPTIONS: Record<DrawStrokeType, string> = {
-    line: 'Draw a straight line between two points.',
-    arc: 'Draw a curved arc within a bounding rectangle.',
-    polyline: 'Draw a freeform path through multiple points.',
-    circle: 'Draw a circle defined by a centre point and radius.',
-    splatter: 'Scatter paint droplets around a centre point.',
-    'dry-brush': 'Apply a multi-line stroke with multiple bristles, mimicking a dry brush.',
-    chalk: 'Draw a textured chalk stroke with grain and soft edges.',
-    'wet-brush': 'Paint with a soft, bleeding edge that simulates wet paint.',
-    burn: 'Darken a circular region of the canvas.',
-    dodge: 'Lighten a circular region of the canvas.',
-  };
 
   return (
     <div className="draw-toolbar side-panel">

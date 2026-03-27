@@ -4,11 +4,11 @@
  * DrawPage orchestrator component for the interactive drawing page.
  *
  * Owns all drawing state and connects DrawToolbar and DrawCanvas.
- * Persists the current drawing to localStorage automatically on every change,
+ * Persists the current drawing to localStorage on every committed stroke,
  * and restores it on mount.
  */
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import type { EnrichedStroke } from '@/lib/types';
 import { STROKE_DEFAULTS, type DrawStrokeType, type DrawingData } from '@/lib/draw-types';
 import {
@@ -25,11 +25,15 @@ import DrawCanvas from './DrawCanvas';
  * Orchestrator component for the interactive draw page.
  *
  * Manages all drawing state (strokes, tool settings) and wires together
- * DrawToolbar and DrawCanvas. Persists drawings to localStorage automatically
- * whenever the stroke list or canvas settings change.
+ * DrawToolbar and DrawCanvas. Persists the drawing to localStorage on every
+ * committed stroke via handleStrokeCommit.
  *
  * @returns {React.JSX.Element} The complete draw page layout
  */
+const CANVAS_WIDTH = 800;
+const CANVAS_HEIGHT = 600;
+const BACKGROUND_COLOR = '#FFFFFF';
+
 export default function DrawPage(): React.JSX.Element {
   const [strokes, setStrokes] = useState<EnrichedStroke[]>([]);
   const [activeType, setActiveType] = useState<DrawStrokeType>('line');
@@ -37,27 +41,6 @@ export default function DrawPage(): React.JSX.Element {
   const [opacity, setOpacity] = useState(1.0);
   const [thickness, setThickness] = useState(4);
   const [typeParams, setTypeParams] = useState<Partial<EnrichedStroke>>({});
-  const [canvasWidth] = useState(800);
-  const [canvasHeight] = useState(600);
-  const [backgroundColor] = useState('#FFFFFF');
-
-  // Tracks whether the initialisation effect has run. Declared as a ref so
-  // changes do not trigger re-renders.
-  const hasInitialised = useRef(false);
-
-  // Auto-save effect — MUST be declared before the init effect so that on the
-  // very first render cycle this effect runs with hasInitialised.current === false
-  // and can safely skip saving an empty canvas before loadDrawing has been called.
-  useEffect(() => {
-    if (!hasInitialised.current && strokes.length === 0) return;
-    saveDrawing({
-      version: 1,
-      canvas_width: canvasWidth,
-      canvas_height: canvasHeight,
-      background_color: backgroundColor,
-      strokes,
-    });
-  }, [strokes, canvasWidth, canvasHeight, backgroundColor]);
 
   // Initialisation effect — restore the drawing stored in localStorage on mount.
   useEffect(() => {
@@ -65,7 +48,6 @@ export default function DrawPage(): React.JSX.Element {
     if (loaded !== null) {
       setStrokes(loaded.strokes);
     }
-    hasInitialised.current = true;
   }, []);
 
   // Reset type-specific parameter overrides whenever the active stroke type changes.
@@ -83,9 +65,9 @@ export default function DrawPage(): React.JSX.Element {
     setStrokes(newStrokes);
     saveDrawing({
       version: 1,
-      canvas_width: canvasWidth,
-      canvas_height: canvasHeight,
-      background_color: backgroundColor,
+      canvas_width: CANVAS_WIDTH,
+      canvas_height: CANVAS_HEIGHT,
+      background_color: BACKGROUND_COLOR,
       strokes: newStrokes,
     });
   }
@@ -111,9 +93,9 @@ export default function DrawPage(): React.JSX.Element {
   function handleDownload(): void {
     const data: DrawingData = {
       version: 1,
-      canvas_width: canvasWidth,
-      canvas_height: canvasHeight,
-      background_color: backgroundColor,
+      canvas_width: CANVAS_WIDTH,
+      canvas_height: CANVAS_HEIGHT,
+      background_color: BACKGROUND_COLOR,
       strokes,
     };
     const json = exportDrawingJSON(data);
@@ -143,9 +125,9 @@ export default function DrawPage(): React.JSX.Element {
       setStrokes(result.strokes);
       saveDrawing({
         version: 1,
-        canvas_width: canvasWidth,
-        canvas_height: canvasHeight,
-        background_color: backgroundColor,
+        canvas_width: CANVAS_WIDTH,
+        canvas_height: CANVAS_HEIGHT,
+        background_color: BACKGROUND_COLOR,
         strokes: result.strokes,
       });
     } else {
@@ -160,9 +142,9 @@ export default function DrawPage(): React.JSX.Element {
           <div className="canvas-container">
             <DrawCanvas
               strokes={strokes}
-              canvasWidth={canvasWidth}
-              canvasHeight={canvasHeight}
-              backgroundColor={backgroundColor}
+              canvasWidth={CANVAS_WIDTH}
+              canvasHeight={CANVAS_HEIGHT}
+              backgroundColor={BACKGROUND_COLOR}
               activeType={activeType}
               color={color}
               opacity={opacity}
