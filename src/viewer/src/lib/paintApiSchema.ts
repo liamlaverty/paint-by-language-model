@@ -33,7 +33,12 @@ export const PAINT_API_SCHEMA: Record<string, ApiMethodDoc> = {
   selectStrokeType: {
     signature: 'selectStrokeType(type: string): void',
     description:
-      'Set the active stroke type. Changes take effect immediately and are reflected in the toolbar UI.',
+      'Set the active stroke type. Changes are reflected in the toolbar UI. ' +
+      'IMPORTANT for scripted / Playwright contexts: this call triggers a React state update, ' +
+      'which is asynchronous. If you call click() or doubleClick() in the same synchronous block ' +
+      'the clicks may fire against the previously-active stroke type. ' +
+      'Always set ALL tool properties first, then await sleep(50) before placing clicks. ' +
+      'sleep(0) / setTimeout(0) is NOT reliable — React may not have re-rendered the canvas by then.',
     params: [
       {
         name: 'type',
@@ -42,7 +47,8 @@ export const PAINT_API_SCHEMA: Record<string, ApiMethodDoc> = {
           'One of: "line", "arc", "polyline", "circle", "splatter", "dry-brush", "chalk", "wet-brush", "burn", "dodge"',
       },
     ],
-    example: 'window.paintByLanguageModel.selectStrokeType("circle");',
+    example:
+      '// Correct pattern in a script:\nconst sleep = (ms) => new Promise(r => setTimeout(r, ms));\napi.selectStrokeType("circle");\napi.setColor("#ffe066");\napi.setThickness(3);\nawait sleep(50); // wait ~3 render frames for ALL setters to flush\napi.click(400, 300); // centre\napi.click(440, 300); // radius',
   },
 
   setColor: {
@@ -109,7 +115,11 @@ export const PAINT_API_SCHEMA: Record<string, ApiMethodDoc> = {
   click: {
     signature: 'click(x: number, y: number): void',
     description:
-      'Simulate a canvas click at logical pixel coordinates (x, y). For two-point and center-radius strokes this places the first or second point; for multi-point strokes it appends a point.',
+      'Simulate a canvas click at logical pixel coordinates (x, y). ' +
+      'The number of clicks required to commit a stroke depends on the active type:\n' +
+      '• line, arc, burn, dodge — 2 clicks (start → end)\n' +
+      '• circle, splatter — 2 clicks (centre → radius point)\n' +
+      '• polyline, dry-brush, chalk, wet-brush — ≥2 clicks (add points) then doubleClick() to commit',
     params: [
       { name: 'x', type: 'number', description: 'X coordinate in canvas pixels' },
       { name: 'y', type: 'number', description: 'Y coordinate in canvas pixels' },

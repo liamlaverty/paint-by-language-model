@@ -240,6 +240,13 @@ const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function DrawCa
   const overlayRef = useRef<HTMLCanvasElement>(null);
   const pendingRef = useRef<{ points: [number, number][] }>({ points: [] });
 
+  // Refs that always point to the latest coreHandleClick / coreHandleDoubleClick.
+  // useImperativeHandle uses [] deps so the handle object is created only once; without
+  // these refs, simulateClick and simulateDoubleClick would capture stale closures from
+  // the initial render and never see updated strokes or callbacks.
+  const coreHandleClickRef = useRef<(x: number, y: number) => void>(() => {});
+  const coreHandleDoubleClickRef = useRef<(deduplicate?: boolean) => void>(() => {});
+
   // Expose the DrawCanvasHandle (main canvas + imperative methods) to parent consumers
   useImperativeHandle(
     ref,
@@ -255,10 +262,10 @@ const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function DrawCa
         if (ctx) ctx.clearRect(0, 0, canvas.width, canvas.height);
       },
       simulateClick(x: number, y: number) {
-        coreHandleClick(x, y);
+        coreHandleClickRef.current(x, y);
       },
       simulateDoubleClick(_x: number, _y: number) {
-        coreHandleDoubleClick(false);
+        coreHandleDoubleClickRef.current(false);
       },
     }),
     []
@@ -363,6 +370,12 @@ const DrawCanvas = forwardRef<DrawCanvasHandle, DrawCanvasProps>(function DrawCa
       }
     }
   };
+
+  // Keep the imperative-handle refs current on every render so that simulateClick /
+  // simulateDoubleClick (which live inside a [] useImperativeHandle) always dispatch
+  // to the latest version of these handlers and never hold stale closures.
+  coreHandleClickRef.current = coreHandleClick;
+  coreHandleDoubleClickRef.current = coreHandleDoubleClick;
 
   const handleClick = (event: React.MouseEvent<HTMLCanvasElement>): void => {
     const canvas = overlayRef.current;

@@ -38,97 +38,147 @@ const CATEGORIES: { title: string; methods: string[] }[] = [
 const QUICK_START_SNIPPET = `// Open /draw in the browser, then paste this into the DevTools console:
 
 const api = window.paintByLanguageModel;
+const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
-// 1. Configure the tool
-api.setColor("#1a1a1a");
-api.setThickness(4);
-api.selectStrokeType("line");
+// All tool-setting calls (selectStrokeType, setColor, setThickness, etc.) trigger
+// async React state updates. Call all setters first, then await sleep(0) to let
+// React flush them, then place your clicks.
 
-// 2. Draw a line — click start point, then end point
-api.click(100, 300);
-api.click(700, 300);
+await (async () => {
+  // 1. Configure the tool
+  api.selectStrokeType("line");
+  api.setColor("#1a1a1a");
+  api.setThickness(4);
+  await sleep(50); // wait for all setters to flush before clicking
 
-// Done! A horizontal line is now on the canvas.`;
+  // 2. Draw a line — click start point, then end point
+  api.click(100, 300);
+  api.click(700, 300);
+
+  // Done! A horizontal line is now on the canvas.
+})();`;
 
 /** Worked example painted at the bottom of the page. */
 const WORKED_EXAMPLE_SNIPPET = `// Sunset scene — horizon line, sun circle, sky splatters
 // Canvas: 800 × 600 px  |  (0, 0) = top-left
+//
+// Tool-setting calls (selectStrokeType, setColor, setOpacity, setThickness) all
+// trigger React state updates that are asynchronous. The correct pattern is:
+//   1. Call all setters for a section
+//   2. await sleep(50)  ← wait ~3 render frames for React to flush all queued state
+//   3. Then place clicks
+//
+// sleep(0) / setTimeout(0) is NOT sufficient — React schedules renders via its
+// own internal scheduler and may not have re-rendered the canvas component by
+// the time a setTimeout(0) resolves. Use sleep(50) for reliable results.
+//
+// Two-click stroke types (line, arc, circle, splatter, burn, dodge) also need
+// await sleep(50) between consecutive strokes of the same type, because the
+// first stroke's commit triggers a React state update that must settle before
+// the next stroke's first click can register correctly.
 
 const api = window.paintByLanguageModel;
+const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
-// ── Sky background gradient effect (wide splatters) ──────────────────────────
-api.selectStrokeType("splatter");
-api.setColor("#ffb347");      // warm orange
-api.setOpacity(0.6);
-api.setThickness(1);
-api.setTypeParam("splatter_count", 80);
-api.setTypeParam("dot_size_min", 3);
-api.setTypeParam("dot_size_max", 10);
-api.click(400, 100);          // upper-centre sky
+await (async () => {
 
-api.setColor("#ff6b6b");      // coral/red
-api.setOpacity(0.4);
-api.setTypeParam("splatter_count", 60);
-api.click(200, 180);
-api.click(600, 180);
+  // ── Sky background gradient effect (wide splatters) ────────────────────────
+  // splatter = 2 clicks: centre point, then radius point
+  api.selectStrokeType("splatter");
+  api.setColor("#ffb347");      // warm orange
+  api.setOpacity(0.6);
+  api.setThickness(1);
+  api.setTypeParam("splatter_count", 80);
+  api.setTypeParam("dot_size_min", 3);
+  api.setTypeParam("dot_size_max", 10);
+  await sleep(50);
+  api.click(400, 100);          // centre
+  api.click(440, 100);          // radius point → commits splatter
 
-// ── Sun — filled yellow circle near horizon ───────────────────────────────────
-api.selectStrokeType("circle");
-api.setColor("#ffe066");       // bright yellow
-api.setOpacity(1.0);
-api.setThickness(3);
-api.setTypeParam("fill", true);
-api.click(400, 310);           // centre of sun
-api.click(450, 310);           // radius point (50 px radius)
+  api.setColor("#ff6b6b");      // coral/red
+  api.setOpacity(0.4);
+  api.setTypeParam("splatter_count", 60);
+  await sleep(50);               // flush colour change + wait for previous commit to settle
+  api.click(200, 180);          // centre
+  api.click(240, 180);          // radius point → commits splatter
 
-// ── Horizon line ──────────────────────────────────────────────────────────────
-api.selectStrokeType("line");
-api.setColor("#cc3300");       // deep red horizon
-api.setOpacity(0.9);
-api.setThickness(3);
-api.click(0, 360);             // left edge
-api.click(800, 360);           // right edge
+  await sleep(50);
+  api.click(600, 180);          // centre
+  api.click(640, 180);          // radius point → commits splatter
 
-// ── Water / sea — horizontal wet-brush strokes below horizon ─────────────────
-api.selectStrokeType("wet-brush");
-api.setColor("#1a3a5c");       // dark ocean blue
-api.setOpacity(0.8);
-api.setThickness(12);
-api.setTypeParam("softness", 4);
-api.setTypeParam("flow", 0.7);
-// wet-brush is multi-point: click to add points, doubleClick to commit
-api.click(0, 400);
-api.click(200, 395);
-api.click(400, 400);
-api.click(600, 395);
-api.doubleClick(800, 400);     // commits the stroke
+  // ── Sun — filled yellow circle near horizon ─────────────────────────────────
+  // circle = 2 clicks: centre point, then radius point
+  api.selectStrokeType("circle");
+  api.setColor("#ffe066");       // bright yellow
+  api.setOpacity(1.0);
+  api.setThickness(3);
+  api.setTypeParam("fill", true);
+  await sleep(50);
+  api.click(400, 310);           // centre of sun
+  api.click(450, 310);           // radius point (50 px radius)
 
-api.setOpacity(0.5);
-api.click(0, 430);
-api.click(300, 425);
-api.click(600, 430);
-api.doubleClick(800, 430);
+  // ── Horizon line ────────────────────────────────────────────────────────────
+  // line = 2 clicks: start point, then end point
+  api.selectStrokeType("line");
+  api.setColor("#cc3300");       // deep red horizon
+  api.setOpacity(0.9);
+  api.setThickness(3);
+  await sleep(50);
+  api.click(0, 360);             // left edge
+  api.click(800, 360);           // right edge → commits line
 
-// ── Sun reflection on water ───────────────────────────────────────────────────
-api.selectStrokeType("line");
-api.setColor("#ffe066");
-api.setOpacity(0.7);
-api.setThickness(2);
-api.click(380, 365);
-api.click(380, 480);
-api.click(400, 365);
-api.click(400, 490);
-api.click(420, 365);
-api.click(420, 480);
+  // ── Water / sea — horizontal wet-brush strokes below horizon ────────────────
+  // wet-brush = multi-point: ≥2 clicks to add points, then doubleClick() to commit
+  api.selectStrokeType("wet-brush");
+  api.setColor("#1a3a5c");       // dark ocean blue
+  api.setOpacity(0.8);
+  api.setThickness(12);
+  api.setTypeParam("softness", 4);
+  api.setTypeParam("flow", 0.7);
+  await sleep(50);
+  api.click(0, 400);
+  api.click(200, 395);
+  api.click(400, 400);
+  api.click(600, 395);
+  api.doubleClick(800, 400);     // commits the stroke
 
-// ── Atmospheric haze with burn ────────────────────────────────────────────────
-api.selectStrokeType("burn");
-api.setThickness(80);
-api.setTypeParam("intensity", 0.15);
-api.click(400, 360);           // darken at exact horizon
+  api.setOpacity(0.5);
+  await sleep(50);
+  api.click(0, 430);
+  api.click(300, 425);
+  api.click(600, 430);
+  api.doubleClick(800, 430);
 
-// Done — a simple sunset is painted on the canvas.
-// Call window.paintByLanguageModel.getCanvasImageDataUrl() to export it.`;
+  // ── Sun reflection on water — three short vertical lines ────────────────────
+  // Each line is 2 clicks. await sleep(0) between pairs so each commit settles
+  // before the next stroke's first click fires.
+  api.selectStrokeType("line");
+  api.setColor("#ffe066");
+  api.setOpacity(0.7);
+  api.setThickness(2);
+  await sleep(50);
+  api.click(380, 365);
+  api.click(380, 480);           // commits line 1
+  await sleep(50);
+  api.click(400, 365);
+  api.click(400, 490);           // commits line 2
+  await sleep(50);
+  api.click(420, 365);
+  api.click(420, 480);           // commits line 3
+
+  // ── Atmospheric haze with burn ───────────────────────────────────────────────
+  // burn = 2 clicks: start point, then end point
+  api.selectStrokeType("burn");
+  api.setThickness(80);
+  api.setTypeParam("intensity", 0.15);
+  await sleep(50);
+  api.click(200, 360);           // left of horizon
+  api.click(600, 360);           // right of horizon → commits burn
+
+  // Done — a simple sunset is painted on the canvas.
+  // Call window.paintByLanguageModel.getCanvasImageDataUrl() to export it.
+
+})();`;
 
 /**
  * Renders a single method's documentation card.
@@ -325,16 +375,68 @@ export default function ApiDocsPage(): React.JSX.Element {
           console, or in a Playwright / Puppeteer script aimed at the <code>/draw</code> page.
         </p>
         <p>
-          The object is registered when the draw page mounts and removed when it unmounts. Every
-          method takes effect immediately — tool-setting calls update the React state that backs the
-          toolbar UI, so changes are reflected visually in real time.
+          The object is registered when the draw page mounts and removed when it unmounts.
+          Tool-setting calls update the React state that backs the toolbar UI, so changes are
+          reflected visually in real time.
         </p>
         <p>
-          Multi-point stroke types (<code>polyline</code>, <code>dry-brush</code>,{' '}
-          <code>chalk</code>, <code>wet-brush</code>) require at least two <code>click()</code>{' '}
-          calls followed by a single <code>doubleClick()</code> to commit the stroke. All other
-          stroke types commit automatically after the required number of <code>click()</code> calls.
+          <strong>Scripted / Playwright contexts — async state:</strong> Tool-setting methods such
+          as <code>selectStrokeType()</code>, <code>setColor()</code>, and{' '}
+          <code>setThickness()</code> trigger React state updates, which are <em>asynchronous</em>.
+          Always set all tool properties first, then <code>await sleep(50)</code> before placing
+          clicks. <code>sleep(0)</code> is NOT reliable — React schedules renders via its own
+          internal scheduler and may not have re-rendered the canvas component by the time a{' '}
+          <code>setTimeout(0)</code> resolves. Use{' '}
+          <code>{'const sleep = (ms) => new Promise(r => setTimeout(r, ms))'}</code> and{' '}
+          <code>await sleep(50)</code> for consistent results.
         </p>
+        <p>
+          <strong>Clicks required per stroke type:</strong>
+        </p>
+        <table
+          style={{
+            width: '100%',
+            borderCollapse: 'collapse',
+            marginBottom: '1rem',
+            fontSize: '0.875rem',
+          }}
+        >
+          <thead>
+            <tr style={{ background: '#e8e8e8' }}>
+              <th style={{ textAlign: 'left', padding: '0.3rem 0.5rem', border: '1px solid #ccc' }}>
+                Stroke type
+              </th>
+              <th style={{ textAlign: 'left', padding: '0.3rem 0.5rem', border: '1px solid #ccc' }}>
+                Commits after
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {(
+              [
+                ['line, arc, burn, dodge', '2 clicks (start → end)'],
+                ['circle, splatter', '2 clicks (centre → radius point)'],
+                [
+                  'polyline, dry-brush, chalk, wet-brush',
+                  '≥2 clicks to add points, then doubleClick() to commit',
+                ],
+              ] as [string, string][]
+            ).map(([types, rule]) => (
+              <tr key={types}>
+                <td
+                  style={{
+                    padding: '0.3rem 0.5rem',
+                    border: '1px solid #ccc',
+                    fontFamily: 'monospace',
+                  }}
+                >
+                  {types}
+                </td>
+                <td style={{ padding: '0.3rem 0.5rem', border: '1px solid #ccc' }}>{rule}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </section>
 
       {/* ── Quick-start ───────────────────────────────────────────────────────── */}
