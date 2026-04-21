@@ -138,13 +138,17 @@ class VLMClient:
                 headers["Authorization"] = f"Bearer {self.api_key}"
         return headers
 
-    def _build_text_payload(self, prompt: str, max_tokens: int) -> dict:
+    def _build_text_payload(self, prompt: str, max_tokens: int, *, system_prompt: str) -> dict:
         """
         Build request payload for text-only query based on provider.
 
         Args:
             prompt (str): The text prompt to send
             max_tokens (int): Maximum tokens in the response
+            system_prompt (str): System-level instructions; provider-agnostic.
+                Anthropic: placed in top-level ``system`` field as a content block
+                array with block-level ``cache_control``. OpenAI-compatible
+                providers: prepended as a ``role: system`` message.
 
         Returns:
             dict: Request payload structure for the API
@@ -153,11 +157,22 @@ class VLMClient:
         payload: dict = {}
 
         payload["model"] = self.model
-        # Anthropic automatic prompt caching: cache up to the last cacheable block
-        if self.provider == "anthropic":
-            payload["cache_control"] = {"type": "ephemeral"}
 
-        payload["messages"] = [{"role": "user", "content": prompt}]
+        if self.provider == "anthropic":
+            payload["system"] = [
+                {
+                    "type": "text",
+                    "text": system_prompt,
+                    "cache_control": {"type": "ephemeral"},
+                }
+            ]
+            payload["messages"] = [{"role": "user", "content": prompt}]
+        else:
+            payload["messages"] = [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": prompt},
+            ]
+
         payload["max_tokens"] = max_tokens
         payload["temperature"] = self.temperature
 
@@ -178,13 +193,18 @@ class VLMClient:
         else:
             return cast(str, response_data["choices"][0]["message"]["content"])
 
-    def query(self, prompt: str, max_tokens: int = MAX_TOKENS) -> str:
+    def query(self, prompt: str, max_tokens: int = MAX_TOKENS, *, system_prompt: str) -> str:
         """
         Send a prompt to the VLM API and return the response.
 
         Args:
             prompt (str): The prompt to send to the LLM
             max_tokens (int): Maximum tokens in the response
+            system_prompt (str): System-level instructions sent to the model.
+                Required keyword-only argument. Anthropic: placed in the
+                top-level ``system`` field as a content block with
+                ``cache_control``. OpenAI-compatible providers: prepended as
+                the first ``role: system`` message.
 
         Returns:
             str: The LLM's response text
@@ -193,7 +213,7 @@ class VLMClient:
             ConnectionError: If the VLM API is not reachable or auth fails
             requests.RequestException: For other HTTP errors
         """
-        payload = self._build_text_payload(prompt, max_tokens)
+        payload = self._build_text_payload(prompt, max_tokens, system_prompt=system_prompt)
 
         try:
             # Retry loop for rate limiting
@@ -255,7 +275,7 @@ class VLMClient:
             if self.provider == "anthropic":
                 # Anthropic doesn't document GET /v1/models, so perform a minimal message call
                 logger.debug("Checking Anthropic API availability with minimal message call")
-                payload = self._build_text_payload("test", 1)
+                payload = self._build_text_payload("test", 1, system_prompt="")
                 response = requests.post(
                     self.chat_endpoint,
                     json=payload,
@@ -274,7 +294,9 @@ class VLMClient:
         except requests.RequestException:
             return False
 
-    def _build_multimodal_payload(self, prompt: str, image_bytes: bytes, max_tokens: int) -> dict:
+    def _build_multimodal_payload(
+        self, prompt: str, image_bytes: bytes, max_tokens: int, *, system_prompt: str
+    ) -> dict:
         """
         Build request payload for multimodal query based on provider.
 
@@ -282,6 +304,10 @@ class VLMClient:
             prompt (str): The text prompt to send with the image
             image_bytes (bytes): Image data as bytes
             max_tokens (int): Maximum tokens in the response
+            system_prompt (str): System-level instructions; provider-agnostic.
+                Anthropic: placed in top-level ``system`` field as a content
+                block array with block-level ``cache_control``. OpenAI-compatible
+                providers: prepended as a ``role: system`` message.
 
         Returns:
             dict: Request payload structure for the API
@@ -312,17 +338,29 @@ class VLMClient:
 
         payload: dict = {}
         payload["model"] = self.model
-        # Anthropic automatic prompt caching
+
         if self.provider == "anthropic":
-            payload["cache_control"] = {"type": "ephemeral"}
+            payload["system"] = [
+                {
+                    "type": "text",
+                    "text": system_prompt,
+                    "cache_control": {"type": "ephemeral"},
+                }
+            ]
+            payload["messages"] = [{"role": "user", "content": message_content}]
+        else:
+            payload["messages"] = [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": message_content},
+            ]
+
         payload["max_tokens"] = max_tokens
         payload["temperature"] = self.temperature
-        payload["messages"] = [{"role": "user", "content": message_content}]
 
         return payload
 
     def query_multimodal(
-        self, prompt: str, image_bytes: bytes, max_tokens: int = MAX_TOKENS
+        self, prompt: str, image_bytes: bytes, max_tokens: int = MAX_TOKENS, *, system_prompt: str
     ) -> str:
         """
         Send an image and text prompt to the VLM and return the response.
@@ -331,6 +369,11 @@ class VLMClient:
             prompt (str): The text prompt to send with the image
             image_bytes (bytes): Image data as bytes (PNG, JPEG, etc.)
             max_tokens (int): Maximum tokens in response (default from config)
+            system_prompt (str): System-level instructions sent to the model.
+                Required keyword-only argument. Anthropic: placed in the
+                top-level ``system`` field as a content block with
+                ``cache_control``. OpenAI-compatible providers: prepended as
+                the first ``role: system`` message.
 
         Returns:
             str: The VLM's response text
@@ -344,7 +387,9 @@ class VLMClient:
 
         try:
             # Build provider-specific multimodal payload
-            payload = self._build_multimodal_payload(prompt, image_bytes, max_tokens)
+            payload = self._build_multimodal_payload(
+                prompt, image_bytes, max_tokens, system_prompt=system_prompt
+            )
 
             # Retry loop for rate limiting
             for attempt in range(MAX_RETRIES):
@@ -422,6 +467,8 @@ class VLMClient:
         prompt: str,
         images: list[tuple[bytes, str]],
         max_tokens: int,
+        *,
+        system_prompt: str,
     ) -> dict:
         """
         Build request payload for a multi-image multimodal query.
@@ -433,6 +480,10 @@ class VLMClient:
             prompt (str): The main text prompt appended after all images
             images (list[tuple[bytes, str]]): List of (image_bytes, label) pairs
             max_tokens (int): Maximum tokens in the response
+            system_prompt (str): System-level instructions; provider-agnostic.
+                Anthropic: placed in top-level ``system`` field as a content
+                block array with block-level ``cache_control``. OpenAI-compatible
+                providers: prepended as a ``role: system`` message.
 
         Returns:
             dict: Request payload structure for the API
@@ -464,13 +515,24 @@ class VLMClient:
 
         payload: dict = {}
         payload["model"] = self.model
-        # Anthropic automatic prompt caching
+
         if self.provider == "anthropic":
-            payload["cache_control"] = {"type": "ephemeral"}
+            payload["system"] = [
+                {
+                    "type": "text",
+                    "text": system_prompt,
+                    "cache_control": {"type": "ephemeral"},
+                }
+            ]
+            payload["messages"] = [{"role": "user", "content": message_content}]
+        else:
+            payload["messages"] = [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": message_content},
+            ]
 
         payload["max_tokens"] = max_tokens
         payload["temperature"] = self.temperature
-        payload["messages"] = [{"role": "user", "content": message_content}]
 
         return payload
 
@@ -479,6 +541,8 @@ class VLMClient:
         prompt: str,
         images: list[tuple[bytes, str]],
         max_tokens: int = MAX_TOKENS,
+        *,
+        system_prompt: str,
     ) -> str:
         """
         Send multiple labelled images and a text prompt to the VLM in one request.
@@ -491,6 +555,11 @@ class VLMClient:
             prompt (str): The main text prompt sent after all images
             images (list[tuple[bytes, str]]): List of (image_bytes, label) pairs
             max_tokens (int): Maximum tokens in response (default from config)
+            system_prompt (str): System-level instructions sent to the model.
+                Required keyword-only argument. Anthropic: placed in the
+                top-level ``system`` field as a content block with
+                ``cache_control``. OpenAI-compatible providers: prepended as
+                the first ``role: system`` message.
 
         Returns:
             str: The VLM's response text
@@ -506,7 +575,9 @@ class VLMClient:
         )
 
         try:
-            payload = self._build_multi_image_payload(prompt, images, max_tokens)
+            payload = self._build_multi_image_payload(
+                prompt, images, max_tokens, system_prompt=system_prompt
+            )
 
             # Retry loop for rate limiting
             for attempt in range(MAX_RETRIES):

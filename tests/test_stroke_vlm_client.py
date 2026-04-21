@@ -73,6 +73,7 @@ def test_suggest_strokes_sends_sample_images() -> None:
         - The ``images`` argument contains exactly 11 entries (1 canvas + 10 samples)
     - The first image label is ``"Current canvas""
     - The remaining labels match the expected stroke sample names
+    - ``system_prompt`` keyword argument is passed
     """
     client = StrokeVLMClient()
 
@@ -98,10 +99,17 @@ def test_suggest_strokes_sends_sample_images() -> None:
     mock_multi.assert_called_once()
     mock_single.assert_not_called()
 
+    # system_prompt keyword arg must be present and non-empty
+    call_kwargs = mock_multi.call_args.kwargs
+    assert "system_prompt" in call_kwargs, (
+        "query_multimodal_multi_image must be called with system_prompt= kwarg"
+    )
+    assert isinstance(call_kwargs["system_prompt"], str)
+    assert len(call_kwargs["system_prompt"]) > 0
+
     # Inspect the images argument (passed as keyword argument)
-    call_kwargs = mock_multi.call_args
     images: list[tuple[bytes, str]] = (
-        call_kwargs.kwargs.get("images") or call_kwargs.args[1]
+        call_kwargs.get("images") or mock_multi.call_args.args[1]
     )
 
     assert len(images) == 11, (
@@ -121,14 +129,14 @@ def test_suggest_strokes_sends_sample_images() -> None:
 
 
 def test_prompt_references_samples() -> None:
-    """_build_stroke_prompt() includes visual sample references for every stroke type.
+    """_build_stroke_prompts() system prompt includes visual sample references for every stroke type.
 
-    Verifies that the returned prompt string contains the label strings that
+    Verifies that the returned system prompt string contains the label strings that
     match the images sent via ``query_multimodal_multi_image``.
     """
     client = StrokeVLMClient()
 
-    prompt = client._build_stroke_prompt(
+    system_prompt, _user_prompt = client._build_stroke_prompts(
         artist_name="Test Artist",
         subject="Test Subject",
         iteration=1,
@@ -137,7 +145,9 @@ def test_prompt_references_samples() -> None:
     )
 
     for label in _EXPECTED_SAMPLE_LABELS:
-        assert label in prompt, f"Prompt should contain '{label}' but it was not found"
+        assert label in system_prompt, (
+            f"System prompt should contain '{label}' but it was not found"
+        )
 
 
 # ============================================================================
@@ -291,4 +301,119 @@ def test_suggest_strokes_sends_all_samples_when_allowed_none() -> None:
     sample_labels = {label for _, label in images[:-1]}
     assert sample_labels == _EXPECTED_SAMPLE_LABELS, (
         f"Sample labels mismatch. Expected {_EXPECTED_SAMPLE_LABELS}, got {sample_labels}"
+    )
+
+
+# ============================================================================
+# Task 3: _build_stroke_prompts new tests
+# ============================================================================
+
+
+def test_build_stroke_prompts_returns_tuple() -> None:
+    """_build_stroke_prompts() returns a (system_prompt, user_prompt) tuple."""
+    client = StrokeVLMClient()
+    result = client._build_stroke_prompts(
+        artist_name="Test Artist",
+        subject="Test Subject",
+        iteration=1,
+        strategy_context="",
+        num_strokes=3,
+    )
+    assert isinstance(result, tuple), "_build_stroke_prompts must return a tuple"
+    assert len(result) == 2, "_build_stroke_prompts must return exactly 2 elements"
+    system_prompt, user_prompt = result
+    assert isinstance(system_prompt, str)
+    assert isinstance(user_prompt, str)
+
+
+def test_build_stroke_prompts_system_contains_artist_persona() -> None:
+    """System prompt contains artist persona line."""
+    client = StrokeVLMClient()
+    system_prompt, _user = client._build_stroke_prompts(
+        artist_name="Monet",
+        subject="Water Lilies",
+        iteration=1,
+        strategy_context="",
+        num_strokes=3,
+    )
+    assert "Monet" in system_prompt, "Artist name must appear in system prompt"
+
+
+def test_build_stroke_prompts_system_contains_stroke_type_definitions() -> None:
+    """System prompt contains stroke type definitions."""
+    client = StrokeVLMClient()
+    system_prompt, _user = client._build_stroke_prompts(
+        artist_name="Test Artist",
+        subject="Test Subject",
+        iteration=1,
+        strategy_context="",
+        num_strokes=3,
+    )
+    assert "AVAILABLE STROKE TYPES:" in system_prompt
+
+
+def test_build_stroke_prompts_user_contains_iteration() -> None:
+    """User prompt contains the iteration number."""
+    client = StrokeVLMClient()
+    _system, user_prompt = client._build_stroke_prompts(
+        artist_name="Test Artist",
+        subject="Test Subject",
+        iteration=42,
+        strategy_context="",
+        num_strokes=3,
+    )
+    assert "42" in user_prompt, "Iteration number must appear in user prompt"
+
+
+def test_build_stroke_prompts_user_contains_subject() -> None:
+    """User prompt contains the subject."""
+    client = StrokeVLMClient()
+    _system, user_prompt = client._build_stroke_prompts(
+        artist_name="Test Artist",
+        subject="A Sunny Meadow",
+        iteration=1,
+        strategy_context="",
+        num_strokes=3,
+    )
+    assert "A Sunny Meadow" in user_prompt
+
+
+def test_build_stroke_prompts_response_format_not_in_user_prompt() -> None:
+    """JSON RESPONSE FORMAT spec is NOT in the user prompt (it belongs in system)."""
+    client = StrokeVLMClient()
+    _system, user_prompt = client._build_stroke_prompts(
+        artist_name="Test Artist",
+        subject="Test Subject",
+        iteration=1,
+        strategy_context="",
+        num_strokes=3,
+    )
+    assert "RESPONSE FORMAT" not in user_prompt
+
+
+def test_system_prompt_byte_identical_across_consecutive_calls() -> None:
+    """System prompt is byte-identical across two consecutive _build_stroke_prompts calls.
+
+    Proves cacheability: for a fixed artist + stroke config the system content
+    must be deterministic so Anthropic's ephemeral cache can be hit on the second call.
+    """
+    client = StrokeVLMClient()
+
+    system1, _user1 = client._build_stroke_prompts(
+        artist_name="Rembrandt",
+        subject="Night Watch",
+        iteration=1,
+        strategy_context="",
+        num_strokes=5,
+    )
+    system2, _user2 = client._build_stroke_prompts(
+        artist_name="Rembrandt",
+        subject="Night Watch",
+        iteration=2,  # different iteration — user prompt differs, system must not
+        strategy_context="Add more shadows",
+        num_strokes=5,
+    )
+
+    assert system1 == system2, (
+        "System prompt must be byte-identical across calls for the same artist config"
     )

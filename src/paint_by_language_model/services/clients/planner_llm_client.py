@@ -175,7 +175,9 @@ class PlannerLLMClient:
 
         # Query LLM (text-only, no image) with sufficient max_tokens for detailed plans
         try:
-            response_text = self.client.query(prompt=prompt, max_tokens=PLANNER_MAX_TOKENS)
+            response_text = self.client.query(
+                prompt=prompt, max_tokens=PLANNER_MAX_TOKENS, system_prompt=""
+            )
 
             # Store raw response immediately so it is available even if parsing fails
             self.last_raw_response = response_text

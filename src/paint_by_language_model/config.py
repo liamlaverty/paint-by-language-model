@@ -51,8 +51,8 @@ PROVIDER = os.getenv("PROVIDER", "mistral")
 MISTRAL_BASE_URL = "https://api.mistral.ai/v1"
 MISTRAL_API_KEY = os.getenv("MISTRAL_API_KEY", "")
 MISTRAL_DEFAULT_MODEL = "mistral-small-latest"
-MISTRAL_VLM_MODEL = "mistral-large-2512"
-MISTRAL_EVALUATION_VLM_MODEL = "mistral-large-2512"
+MISTRAL_VLM_MODEL = "mistral-large-latest"
+MISTRAL_EVALUATION_VLM_MODEL = "mistral-large-latest"
 
 # LMStudio API settings (for local development)
 LMSTUDIO_BASE_URL = "http://localhost:1234/v1"
@@ -67,10 +67,10 @@ ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
 # ANTHROPIC_VLM_MODEL = "claude-sonnet-4-6"
 # ANTHROPIC_EVALUATION_VLM_MODEL = "claude-sonnet-4-6"
 # ANTHROPIC_PLANNER_MODEL = "claude-sonnet-4-6"
-ANTHROPIC_DEFAULT_MODEL = "claude-sonnet-4-6"
-ANTHROPIC_VLM_MODEL = "claude-sonnet-4-6"
-ANTHROPIC_EVALUATION_VLM_MODEL = "claude-sonnet-4-6"
-ANTHROPIC_PLANNER_MODEL = "claude-sonnet-4-6"
+ANTHROPIC_DEFAULT_MODEL = "claude-3-haiku-20240307"
+ANTHROPIC_VLM_MODEL = "claude-3-haiku-20240307"
+ANTHROPIC_EVALUATION_VLM_MODEL = "claude-3-haiku-20240307"
+ANTHROPIC_PLANNER_MODEL = "claude-3-haiku-20240307"
 ANTHROPIC_VERSION = "2023-06-01"
 
 # Planner LLM Settings

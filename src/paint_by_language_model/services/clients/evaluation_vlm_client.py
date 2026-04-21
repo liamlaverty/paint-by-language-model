@@ -102,7 +102,9 @@ class EvaluationVLMClient:
 
         # Query VLM
         try:
-            response_text = self.client.query_multimodal(prompt=prompt, image_bytes=canvas_image)
+            response_text = self.client.query_multimodal(
+                prompt=prompt, image_bytes=canvas_image, system_prompt=""
+            )
 
             # Store raw response immediately so it is available even if parsing fails
             self.last_raw_response = response_text

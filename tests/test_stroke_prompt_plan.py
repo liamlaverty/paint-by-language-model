@@ -79,7 +79,7 @@ class TestPlanContextInPrompt:
         """Test that prompt includes full plan JSON when painting_plan is provided."""
         current_layer = sample_plan["layers"][0]
 
-        prompt = stroke_client._build_stroke_prompt(
+        _system_prompt, user_prompt = stroke_client._build_stroke_prompts(
             artist_name="Test Artist",
             subject="Test Subject",
             iteration=1,
@@ -89,8 +89,8 @@ class TestPlanContextInPrompt:
             current_layer=current_layer,
         )
 
-        assert "=== PAINTING PLAN ===" in prompt
-        assert json.dumps(sample_plan, indent=2) in prompt
+        assert "=== PAINTING PLAN ===" in user_prompt
+        assert json.dumps(sample_plan, indent=2) in user_prompt
 
     def test_prompt_includes_current_focus_section(
         self, stroke_client: StrokeVLMClient, sample_plan: PaintingPlan
@@ -98,7 +98,7 @@ class TestPlanContextInPrompt:
         """Test that prompt includes 'CURRENT FOCUS' section with active layer details."""
         current_layer = sample_plan["layers"][0]
 
-        prompt = stroke_client._build_stroke_prompt(
+        _system_prompt, user_prompt = stroke_client._build_stroke_prompts(
             artist_name="Test Artist",
             subject="Test Subject",
             iteration=1,
@@ -108,8 +108,8 @@ class TestPlanContextInPrompt:
             current_layer=current_layer,
         )
 
-        assert "=== CURRENT FOCUS ===" in prompt
-        assert 'Layer 1: "Background"' in prompt
+        assert "=== CURRENT FOCUS ===" in user_prompt
+        assert 'Layer 1: "Background"' in user_prompt
 
     def test_prompt_includes_layer_description(
         self, stroke_client: StrokeVLMClient, sample_plan: PaintingPlan
@@ -117,7 +117,7 @@ class TestPlanContextInPrompt:
         """Test that prompt includes layer description."""
         current_layer = sample_plan["layers"][0]
 
-        prompt = stroke_client._build_stroke_prompt(
+        _system_prompt, user_prompt = stroke_client._build_stroke_prompts(
             artist_name="Test Artist",
             subject="Test Subject",
             iteration=1,
@@ -127,7 +127,7 @@ class TestPlanContextInPrompt:
             current_layer=current_layer,
         )
 
-        assert current_layer["description"] in prompt
+        assert current_layer["description"] in user_prompt
 
     def test_prompt_includes_layer_palette(
         self, stroke_client: StrokeVLMClient, sample_plan: PaintingPlan
@@ -135,7 +135,7 @@ class TestPlanContextInPrompt:
         """Test that prompt includes layer colour palette."""
         current_layer = sample_plan["layers"][0]
 
-        prompt = stroke_client._build_stroke_prompt(
+        _system_prompt, user_prompt = stroke_client._build_stroke_prompts(
             artist_name="Test Artist",
             subject="Test Subject",
             iteration=1,
@@ -146,7 +146,7 @@ class TestPlanContextInPrompt:
         )
 
         for color in current_layer["colour_palette"]:
-            assert color in prompt
+            assert color in user_prompt
 
     def test_prompt_includes_layer_techniques(
         self, stroke_client: StrokeVLMClient, sample_plan: PaintingPlan
@@ -154,7 +154,7 @@ class TestPlanContextInPrompt:
         """Test that prompt includes layer techniques."""
         current_layer = sample_plan["layers"][0]
 
-        prompt = stroke_client._build_stroke_prompt(
+        _system_prompt, user_prompt = stroke_client._build_stroke_prompts(
             artist_name="Test Artist",
             subject="Test Subject",
             iteration=1,
@@ -164,7 +164,7 @@ class TestPlanContextInPrompt:
             current_layer=current_layer,
         )
 
-        assert current_layer["techniques"] in prompt
+        assert current_layer["techniques"] in user_prompt
 
     def test_prompt_includes_layer_shapes(
         self, stroke_client: StrokeVLMClient, sample_plan: PaintingPlan
@@ -172,7 +172,7 @@ class TestPlanContextInPrompt:
         """Test that prompt includes layer shapes."""
         current_layer = sample_plan["layers"][0]
 
-        prompt = stroke_client._build_stroke_prompt(
+        _system_prompt, user_prompt = stroke_client._build_stroke_prompts(
             artist_name="Test Artist",
             subject="Test Subject",
             iteration=1,
@@ -182,7 +182,7 @@ class TestPlanContextInPrompt:
             current_layer=current_layer,
         )
 
-        assert current_layer["shapes"] in prompt
+        assert current_layer["shapes"] in user_prompt
 
     def test_prompt_includes_layer_highlights(
         self, stroke_client: StrokeVLMClient, sample_plan: PaintingPlan
@@ -190,7 +190,7 @@ class TestPlanContextInPrompt:
         """Test that prompt includes layer highlights."""
         current_layer = sample_plan["layers"][0]
 
-        prompt = stroke_client._build_stroke_prompt(
+        _system_prompt, user_prompt = stroke_client._build_stroke_prompts(
             artist_name="Test Artist",
             subject="Test Subject",
             iteration=1,
@@ -200,13 +200,13 @@ class TestPlanContextInPrompt:
             current_layer=current_layer,
         )
 
-        assert current_layer["highlights"] in prompt
+        assert current_layer["highlights"] in user_prompt
 
     def test_prompt_unchanged_when_plan_is_none(
         self, stroke_client: StrokeVLMClient
     ) -> None:
         """Test that prompt is unchanged when painting_plan is None."""
-        prompt = stroke_client._build_stroke_prompt(
+        _system_prompt, user_prompt = stroke_client._build_stroke_prompts(
             artist_name="Test Artist",
             subject="Test Subject",
             iteration=1,
@@ -216,8 +216,8 @@ class TestPlanContextInPrompt:
             current_layer=None,
         )
 
-        assert "=== PAINTING PLAN ===" not in prompt
-        assert "=== CURRENT FOCUS ===" not in prompt
+        assert "=== PAINTING PLAN ===" not in user_prompt
+        assert "=== CURRENT FOCUS ===" not in user_prompt
 
 
 class TestExpandedSubjectInPrompt:
@@ -229,7 +229,7 @@ class TestExpandedSubjectInPrompt:
         """Test that prompt includes 'Detailed description:' when expanded_subject is provided."""
         expanded = "A very detailed description of the painting"
 
-        prompt = stroke_client._build_stroke_prompt(
+        _system_prompt, user_prompt = stroke_client._build_stroke_prompts(
             artist_name="Test Artist",
             subject="Test Subject",
             iteration=1,
@@ -238,14 +238,14 @@ class TestExpandedSubjectInPrompt:
             expanded_subject=expanded,
         )
 
-        assert "Detailed description:" in prompt
-        assert expanded in prompt
+        assert "Detailed description:" in user_prompt
+        assert expanded in user_prompt
 
     def test_prompt_omits_expanded_subject_when_none(
         self, stroke_client: StrokeVLMClient
     ) -> None:
         """Test that prompt omits expanded subject when None."""
-        prompt = stroke_client._build_stroke_prompt(
+        _system_prompt, user_prompt = stroke_client._build_stroke_prompts(
             artist_name="Test Artist",
             subject="Test Subject",
             iteration=1,
@@ -254,7 +254,7 @@ class TestExpandedSubjectInPrompt:
             expanded_subject=None,
         )
 
-        assert "Detailed description:" not in prompt
+        assert "Detailed description:" not in user_prompt
 
 
 class TestLayerCompleteInPromptAndParsing:
@@ -266,7 +266,7 @@ class TestLayerCompleteInPromptAndParsing:
         """Test that prompt includes layer_complete field when current_layer is provided."""
         current_layer = sample_plan["layers"][0]
 
-        prompt = stroke_client._build_stroke_prompt(
+        system_prompt, _user_prompt = stroke_client._build_stroke_prompts(
             artist_name="Test Artist",
             subject="Test Subject",
             iteration=1,
@@ -276,13 +276,13 @@ class TestLayerCompleteInPromptAndParsing:
             current_layer=current_layer,
         )
 
-        assert "layer_complete" in prompt
+        assert "layer_complete" in system_prompt
 
     def test_stroke_prompt_excludes_layer_complete_when_no_layer(
         self, stroke_client: StrokeVLMClient, sample_plan: PaintingPlan
     ) -> None:
         """Test that prompt does NOT include layer_complete when current_layer is None."""
-        prompt = stroke_client._build_stroke_prompt(
+        system_prompt, _user_prompt = stroke_client._build_stroke_prompts(
             artist_name="Test Artist",
             subject="Test Subject",
             iteration=1,
@@ -292,13 +292,13 @@ class TestLayerCompleteInPromptAndParsing:
             current_layer=None,
         )
 
-        assert "layer_complete" not in prompt
+        assert "layer_complete" not in system_prompt
 
     def test_stroke_prompt_excludes_layer_complete_when_plan_provided_but_no_layer(
         self, stroke_client: StrokeVLMClient, sample_plan: PaintingPlan
     ) -> None:
         """Test that prompt does NOT include layer_complete when painting_plan is set but current_layer is None."""
-        prompt = stroke_client._build_stroke_prompt(
+        system_prompt, _user_prompt = stroke_client._build_stroke_prompts(
             artist_name="Test Artist",
             subject="Test Subject",
             iteration=1,
@@ -308,7 +308,7 @@ class TestLayerCompleteInPromptAndParsing:
             current_layer=None,
         )
 
-        assert "layer_complete" not in prompt
+        assert "layer_complete" not in system_prompt
 
     def test_parse_stroke_response_with_layer_complete_true(
         self, stroke_client: StrokeVLMClient
@@ -372,6 +372,20 @@ class TestLayerCompleteInPromptAndParsing:
 # ============================================================================
 
 
+def _build_system_prompt_for(allowed: list[str] | None) -> str:
+    """Build the system stroke prompt using a client limited to the given stroke types."""
+    client = StrokeVLMClient(allowed_stroke_types=allowed)
+    system_prompt, _user_prompt = client._build_stroke_prompts(
+        artist_name="Test Artist",
+        subject="Test Subject",
+        iteration=1,
+        strategy_context="",
+        num_strokes=3,
+    )
+    return system_prompt
+
+
+# Keep legacy helper for backward-compat tests that need the combined prompt
 def _build_prompt_for(allowed: list[str] | None) -> str:
     """Build a stroke prompt using a client limited to the given stroke types."""
     client = StrokeVLMClient(allowed_stroke_types=allowed)
@@ -387,32 +401,34 @@ def _build_prompt_for(allowed: list[str] | None) -> str:
 def test_consider_wet_brush_line_present_when_wet_brush_allowed() -> None:
     """Consider line for wet-brush is present when wet-brush is in allowed_stroke_types.
 
-    When ``allowed_stroke_types=["wet-brush"]`` is set, the prompt should contain
+    When ``allowed_stroke_types=["wet-brush"]`` is set, the system prompt should contain
     the wet-brush Consider line but not the dry-brush/chalk Consider line.
     """
-    prompt = _build_prompt_for(["wet-brush"])
+    system_prompt = _build_system_prompt_for(["wet-brush"])
 
-    assert "Use wet-brush for soft watercolour bleeds and ink-wash effects" in prompt, (
-        "wet-brush Consider line should appear when wet-brush is allowed"
-    )
-    assert "Use dry-brush and chalk for textured, painterly effects" not in prompt, (
-        "dry-brush/chalk Consider line should not appear when neither is allowed"
-    )
+    assert (
+        "Use wet-brush for soft watercolour bleeds and ink-wash effects"
+        in system_prompt
+    ), "wet-brush Consider line should appear when wet-brush is allowed"
+    assert (
+        "Use dry-brush and chalk for textured, painterly effects" not in system_prompt
+    ), "dry-brush/chalk Consider line should not appear when neither is allowed"
 
 
 def test_consider_lines_absent_when_only_line_allowed() -> None:
     """Both specialist Consider lines are absent when only 'line' is allowed.
 
     When ``allowed_stroke_types=["line"]``, neither the dry-brush/chalk nor the
-    wet-brush Consider lines should appear in the prompt.
+    wet-brush Consider lines should appear in the system prompt.
     """
-    prompt = _build_prompt_for(["line"])
+    system_prompt = _build_system_prompt_for(["line"])
 
-    assert "Use dry-brush and chalk for textured, painterly effects" not in prompt, (
-        "dry-brush/chalk Consider line should not appear when neither is allowed"
-    )
     assert (
-        "Use wet-brush for soft watercolour bleeds and ink-wash effects" not in prompt
+        "Use dry-brush and chalk for textured, painterly effects" not in system_prompt
+    ), "dry-brush/chalk Consider line should not appear when neither is allowed"
+    assert (
+        "Use wet-brush for soft watercolour bleeds and ink-wash effects"
+        not in system_prompt
     ), "wet-brush Consider line should not appear when wet-brush is not allowed"
 
 
@@ -420,16 +436,17 @@ def test_consider_lines_both_present_when_allowed_stroke_types_is_none() -> None
     """Both specialist Consider lines appear when allowed_stroke_types is None.
 
     Preserves backward-compatibility: omitting ``allowed_stroke_types`` must
-    keep both Consider lines in the prompt.
+    keep both Consider lines in the system prompt.
     """
-    prompt = _build_prompt_for(None)
+    system_prompt = _build_system_prompt_for(None)
 
-    assert "Use dry-brush and chalk for textured, painterly effects" in prompt, (
+    assert "Use dry-brush and chalk for textured, painterly effects" in system_prompt, (
         "dry-brush/chalk Consider line should appear when all types are allowed"
     )
-    assert "Use wet-brush for soft watercolour bleeds and ink-wash effects" in prompt, (
-        "wet-brush Consider line should appear when all types are allowed"
-    )
+    assert (
+        "Use wet-brush for soft watercolour bleeds and ink-wash effects"
+        in system_prompt
+    ), "wet-brush Consider line should appear when all types are allowed"
 
 
 # ============================================================================

@@ -67,6 +67,15 @@ logger = logging.getLogger(__name__)
 _STROKE_PROMPT_TEMPLATE_PATH = (
     Path(__file__).parent.parent.parent.parent / "datafiles" / "prompts" / "stroke_prompt.txt"
 )
+_STROKE_SYSTEM_PROMPT_TEMPLATE_PATH = (
+    Path(__file__).parent.parent.parent.parent
+    / "datafiles"
+    / "prompts"
+    / "stroke_system_prompt.txt"
+)
+_STROKE_USER_PROMPT_TEMPLATE_PATH = (
+    Path(__file__).parent.parent.parent.parent / "datafiles" / "prompts" / "stroke_user_prompt.txt"
+)
 
 
 class StrokeVLMClient:
@@ -133,6 +142,12 @@ class StrokeVLMClient:
         logger.info(f"Generated {len(self._stroke_samples)} stroke sample images")
 
         self._stroke_prompt_template: str = _STROKE_PROMPT_TEMPLATE_PATH.read_text(encoding="utf-8")
+        self._stroke_system_template: str = _STROKE_SYSTEM_PROMPT_TEMPLATE_PATH.read_text(
+            encoding="utf-8"
+        )
+        self._stroke_user_template: str = _STROKE_USER_PROMPT_TEMPLATE_PATH.read_text(
+            encoding="utf-8"
+        )
 
     def suggest_strokes(
         self,
@@ -186,8 +201,8 @@ class StrokeVLMClient:
 
         logger.info(f"Requesting {num_strokes} stroke suggestions for iteration {iteration}")
 
-        # Build prompt
-        prompt = self._build_stroke_prompt(
+        # Build prompts
+        system_prompt, user_prompt = self._build_stroke_prompts(
             artist_name=artist_name,
             subject=subject,
             iteration=iteration,
@@ -198,6 +213,9 @@ class StrokeVLMClient:
             expanded_subject=expanded_subject,
             layer_iteration_count=layer_iteration_count,
         )
+
+        # Keep combined prompt for logging/history (legacy compat)
+        prompt = system_prompt + "\n\n" + user_prompt
 
         # Query VLM
         try:
@@ -217,8 +235,9 @@ class StrokeVLMClient:
             )
 
             response_text = self.client.query_multimodal_multi_image(
-                prompt=prompt,
+                prompt=user_prompt,
                 images=images,
+                system_prompt=system_prompt,
             )
 
             # Store raw response immediately so it is always available,
@@ -365,6 +384,147 @@ class StrokeVLMClient:
             strategy_context=strategy_context,
             num_strokes=1,
         )
+
+    def _build_stroke_prompts(
+        self,
+        artist_name: str,
+        subject: str,
+        iteration: int,
+        strategy_context: str,
+        num_strokes: int,
+        painting_plan: "PaintingPlan | None" = None,
+        current_layer: "PlanLayer | None" = None,
+        expanded_subject: str | None = None,
+        layer_iteration_count: int = 0,
+    ) -> tuple[str, str]:
+        """
+        Build system and user prompts for multiple stroke suggestions.
+
+        Renders the static-per-run system template and the dynamic-per-iteration
+        user template separately, enabling provider-level prompt caching (e.g.
+        Anthropic ephemeral cache on the system block).
+
+        Args:
+            artist_name (str): Target artist name
+            subject (str): Subject being painted
+            iteration (int): Current iteration number
+            strategy_context (str): Recent strategic context
+            num_strokes (int): Number of strokes to request
+            painting_plan (PaintingPlan | None): Complete painting plan
+            current_layer (PlanLayer | None): Current layer information
+            expanded_subject (str | None): Detailed subject description
+            layer_iteration_count (int): Number of VLM iterations already completed
+                for the current layer, used to build the LAYER PROGRESS section.
+
+        Returns:
+            tuple[str, str]: A ``(system_prompt, user_prompt)`` pair where
+                *system_prompt* is the static artist/format context and
+                *user_prompt* is the dynamic per-iteration content.
+        """
+        # --- Static variables (go into system prompt) ---
+        stroke_types_section = self._build_stroke_types_section()
+
+        allowed_lower = (
+            [t.lower() for t in self.allowed_stroke_types] if self.allowed_stroke_types else None
+        )
+        dry_chalk_consider = ""
+        if allowed_lower is None or "dry-brush" in allowed_lower or "chalk" in allowed_lower:
+            dry_chalk_consider = "\n- Use dry-brush and chalk for textured, painterly effects"
+        wet_brush_consider = ""
+        if allowed_lower is None or "wet-brush" in allowed_lower:
+            wet_brush_consider = (
+                "\n- Use wet-brush for soft watercolour bleeds and ink-wash effects"
+            )
+
+        layer_complete_field = ""
+        if painting_plan and current_layer:
+            layer_complete_field = ',\n  "layer_complete": <boolean - true if this layer\'s objectives are sufficiently met, false otherwise>'
+
+        system_prompt = self._stroke_system_template.format_map(
+            {
+                "artist_name": artist_name,
+                "stroke_types_section": stroke_types_section,
+                "canvas_width": CANVAS_WIDTH,
+                "canvas_height": CANVAS_HEIGHT,
+                "min_stroke_thickness": MIN_STROKE_THICKNESS,
+                "max_stroke_thickness": MAX_STROKE_THICKNESS,
+                "min_stroke_opacity": MIN_STROKE_OPACITY,
+                "max_stroke_opacity": MAX_STROKE_OPACITY,
+                "dry_chalk_consider": dry_chalk_consider,
+                "wet_brush_consider": wet_brush_consider,
+                "layer_complete_field": layer_complete_field,
+            }
+        )
+
+        # --- Dynamic variables (go into user prompt) ---
+        subject_section = f"Subject: {subject}"
+        if expanded_subject:
+            subject_section += f"\nDetailed description: {expanded_subject}"
+
+        strategy_section = ""
+        if strategy_context:
+            strategy_section = f"\n\nRecent Strategy Context:\n{strategy_context}"
+
+        plan_section = ""
+        if painting_plan and current_layer:
+            import json
+
+            plan_section = f"""
+
+=== PAINTING PLAN ===
+{json.dumps(painting_plan, indent=2)}
+
+=== CURRENT FOCUS ===
+You are currently working on Layer {current_layer["layer_number"]}: "{current_layer["name"]}"
+Description: {current_layer["description"]}
+Recommended colour palette: {", ".join(current_layer["colour_palette"])}
+Recommended stroke types: {", ".join(current_layer["stroke_types"])}
+Techniques: {current_layer["techniques"]}
+Shapes: {current_layer["shapes"]}
+Highlights: {current_layer["highlights"]}
+
+Focus your strokes on this layer's objectives. Stay near the recommended palette
+(don't be rigidly bound by the exact colour hex values). Stay within the
+recommended techniques unless artistic judgement requires deviation.
+"""
+            plan_section += """
+
+Also assess whether this layer's objectives have been sufficiently met.
+If the layer goals are complete and it's time to move on, set "layer_complete" to true.
+Only signal completion when the layer's description, palette, shapes, and techniques
+have been adequately addressed on the canvas.
+"""
+
+            remaining = self.min_strokes_per_layer - layer_iteration_count
+            if layer_iteration_count >= self.min_strokes_per_layer:
+                progress_msg = (
+                    "You have completed the minimum iterations for this layer. "
+                    "You may signal layer_complete: true when the layer's objectives are met."
+                )
+            else:
+                progress_msg = (
+                    f"You must complete at least {remaining} more iteration(s) before this layer "
+                    f"can be marked complete. Do NOT set layer_complete to true yet."
+                )
+
+            plan_section += f"""
+=== LAYER PROGRESS ===
+You are currently on iteration {layer_iteration_count} of this layer.
+The minimum iterations per layer is {self.min_strokes_per_layer}.
+{progress_msg}
+"""
+
+        user_prompt = self._stroke_user_template.format_map(
+            {
+                "subject_section": subject_section,
+                "iteration": iteration,
+                "strategy_section": strategy_section,
+                "plan_section": plan_section,
+                "num_strokes": num_strokes,
+            }
+        )
+
+        return system_prompt, user_prompt
 
     def _build_stroke_prompt(
         self,
