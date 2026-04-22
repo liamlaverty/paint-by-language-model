@@ -137,7 +137,7 @@ def test_query_success(mocker: Any, mock_successful_response: MagicMock) -> None
         temperature=0.8,
         provider="mistral",
     )
-    result = client.query("test prompt", max_tokens=100)
+    result = client.query("test prompt", max_tokens=100, system_prompt="sys")
 
     assert result == "Test response"
 
@@ -145,7 +145,8 @@ def test_query_success(mocker: Any, mock_successful_response: MagicMock) -> None
     call_kwargs = mock_post.call_args[1]
     payload = call_kwargs["json"]
     assert payload["model"] == "test-model"
-    assert payload["messages"] == [{"role": "user", "content": "test prompt"}]
+    assert payload["messages"][0] == {"role": "system", "content": "sys"}
+    assert payload["messages"][1] == {"role": "user", "content": "test prompt"}
     assert payload["max_tokens"] == 100
     assert payload["temperature"] == 0.8
 
@@ -155,7 +156,7 @@ def test_query_sends_headers(mocker: Any, mock_successful_response: MagicMock) -
     mock_post = mocker.patch("requests.post", return_value=mock_successful_response)
 
     client = VLMClient(api_key="sk-test-key", provider="mistral")
-    client.query("test prompt")
+    client.query("test prompt", system_prompt="sys")
 
     # Verify headers were passed
     call_kwargs = mock_post.call_args[1]
@@ -171,7 +172,7 @@ def test_query_custom_temperature(
     mock_post = mocker.patch("requests.post", return_value=mock_successful_response)
 
     client = VLMClient(temperature=0.3, provider="mistral")
-    client.query("test")
+    client.query("test", system_prompt="sys")
 
     # Verify temperature matches client.temperature (not hardcoded 0.7)
     call_kwargs = mock_post.call_args[1]
@@ -187,14 +188,15 @@ def test_query_multimodal_success(
 
     client = VLMClient(provider="mistral")
     test_image = b"fake-image-data"
-    result = client.query_multimodal("describe this", test_image)
+    result = client.query_multimodal("describe this", test_image, system_prompt="sys")
 
     assert result == "Test response"
 
     # Verify payload contains image_url with data:image/png;base64, prefix
     call_kwargs = mock_post.call_args[1]
     payload = call_kwargs["json"]
-    message_content = payload["messages"][0]["content"]
+    # First message is system, second is user
+    message_content = payload["messages"][1]["content"]
 
     assert len(message_content) == 2
     assert message_content[0] == {"type": "text", "text": "describe this"}
@@ -215,7 +217,7 @@ def test_query_connection_error(mocker: Any) -> None:
 
     client = VLMClient()
     with pytest.raises(ConnectionError, match="Cannot connect to VLM API"):
-        client.query("test")
+        client.query("test", system_prompt="sys")
 
 
 def test_query_auth_error_401(
@@ -226,7 +228,7 @@ def test_query_auth_error_401(
 
     client = VLMClient()
     with pytest.raises(ConnectionError, match="Authentication failed"):
-        client.query("test")
+        client.query("test", system_prompt="sys")
 
 
 def test_query_auth_error_403(
@@ -237,7 +239,7 @@ def test_query_auth_error_403(
 
     client = VLMClient()
     with pytest.raises(ConnectionError, match="Authentication failed"):
-        client.query("test")
+        client.query("test", system_prompt="sys")
 
 
 def test_query_multimodal_connection_error(mocker: Any) -> None:
@@ -248,7 +250,7 @@ def test_query_multimodal_connection_error(mocker: Any) -> None:
 
     client = VLMClient()
     with pytest.raises(ConnectionError, match="Could not connect to VLM API"):
-        client.query_multimodal("test", b"image-data")
+        client.query_multimodal("test", b"image-data", system_prompt="sys")
 
 
 # ============================================================================
@@ -269,7 +271,7 @@ def test_query_rate_limit_retry_success(
     mock_sleep = mocker.patch("time.sleep")
 
     client = VLMClient(provider="mistral")
-    result = client.query("test")
+    result = client.query("test", system_prompt="sys")
 
     assert result == "Test response"
     assert mock_post.call_count == 2
@@ -288,7 +290,7 @@ def test_query_rate_limit_exhausted(
     with pytest.raises(
         requests.HTTPError, match=f"Rate limit exceeded after {MAX_RETRIES} retries"
     ):
-        client.query("test")
+        client.query("test", system_prompt="sys")
 
     # Verify sleep was called MAX_RETRIES-1 times (not on last attempt)
     assert mock_sleep.call_count == MAX_RETRIES - 1
@@ -304,7 +306,7 @@ def test_query_rate_limit_backoff_doubles(
 
     client = VLMClient()
     with pytest.raises(requests.HTTPError):
-        client.query("test")
+        client.query("test", system_prompt="sys")
 
     # Verify exponential backoff: 2.0, 4.0
     expected_sleeps = [RETRY_BACKOFF * (2**i) for i in range(MAX_RETRIES - 1)]
@@ -325,7 +327,7 @@ def test_query_multimodal_rate_limit_retry(
     mock_sleep = mocker.patch("time.sleep")
 
     client = VLMClient(provider="mistral")
-    result = client.query_multimodal("test", b"image-data")
+    result = client.query_multimodal("test", b"image-data", system_prompt="sys")
 
     assert result == "Test response"
     assert mock_post.call_count == 2
@@ -431,7 +433,7 @@ def test_full_query_workflow(mocker: Any, mock_successful_response: MagicMock) -
         provider="mistral",
     )
 
-    result = client.query("hello world", max_tokens=50)
+    result = client.query("hello world", max_tokens=50, system_prompt="sys")
 
     assert result == "Test response"
 
@@ -461,7 +463,9 @@ def test_full_multimodal_workflow(
     )
 
     test_image = b"image-bytes-data"
-    result = client.query_multimodal("what is this?", test_image, max_tokens=200)
+    result = client.query_multimodal(
+        "what is this?", test_image, max_tokens=200, system_prompt="sys"
+    )
 
     assert result == "Test response"
 
@@ -474,7 +478,8 @@ def test_full_multimodal_workflow(
     assert payload["temperature"] == 0.2
     assert payload["max_tokens"] == 200
 
-    message_content = payload["messages"][0]["content"]
+    # messages[0] = system, messages[1] = user with image content
+    message_content = payload["messages"][1]["content"]
     assert message_content[0]["text"] == "what is this?"
     assert "data:image/png;base64," in message_content[1]["image_url"]["url"]
 
@@ -531,7 +536,9 @@ def test_build_text_payload_anthropic_structure() -> None:
         temperature=0.5,
         base_url="https://api.anthropic.com/v1",
     )
-    payload = client._build_text_payload("hello world", max_tokens=512)
+    payload = client._build_text_payload(
+        "hello world", max_tokens=512, system_prompt="test system"
+    )
 
     assert payload["model"] == "claude-sonnet-4-6"
     assert payload["max_tokens"] == 512
@@ -551,7 +558,7 @@ def test_build_multimodal_payload_anthropic_image_block() -> None:
     )
     test_image = b"fake-image-data"
     payload = client._build_multimodal_payload(
-        "describe this", test_image, max_tokens=256
+        "describe this", test_image, max_tokens=256, system_prompt="sys"
     )
 
     message_content = payload["messages"][0]["content"]
@@ -586,7 +593,9 @@ def test_build_multimodal_payload_anthropic_image_before_text() -> None:
         provider="anthropic",
         base_url="https://api.anthropic.com/v1",
     )
-    payload = client._build_multimodal_payload("prompt text", b"img", max_tokens=100)
+    payload = client._build_multimodal_payload(
+        "prompt text", b"img", max_tokens=100, system_prompt="sys"
+    )
     content = payload["messages"][0]["content"]
 
     assert content[0]["type"] == "text"
@@ -619,7 +628,7 @@ def test_query_anthropic_mock_http(mocker: Any) -> None:
         model="claude-sonnet-4-6",
         api_key="sk-ant-test",
     )
-    result = client.query("test prompt", max_tokens=100)
+    result = client.query("test prompt", max_tokens=100, system_prompt="sys")
 
     assert result == "result"
 
@@ -647,12 +656,13 @@ def test_query_multimodal_anthropic_mock_http(mocker: Any) -> None:
         api_key="sk-ant-test",
     )
     test_image = b"png-bytes"
-    result = client.query_multimodal("what is shown?", test_image)
+    result = client.query_multimodal("what is shown?", test_image, system_prompt="sys")
 
     assert result == "image description"
 
     call_kwargs = mock_post.call_args[1]
     payload = call_kwargs["json"]
+    # Anthropic: messages[0] is the sole user message
     content = payload["messages"][0]["content"]
 
     # Text block first, image block second
@@ -680,7 +690,7 @@ def test_query_anthropic_rate_limit_retries(mocker: Any) -> None:
         base_url="https://api.anthropic.com/v1",
         api_key="sk-ant-test",
     )
-    result = client.query("prompt")
+    result = client.query("prompt", system_prompt="sys")
 
     assert result == "ok"
     assert mock_post.call_count == 2
@@ -699,7 +709,7 @@ def test_query_anthropic_auth_failure_401(mocker: Any) -> None:
         api_key="invalid-key",
     )
     with pytest.raises(ConnectionError, match="Authentication failed"):
-        client.query("test prompt")
+        client.query("test prompt", system_prompt="sys")
 
 
 # ============================================================================
@@ -720,8 +730,11 @@ def test_multi_image_payload_anthropic() -> None:
         (b"image-bytes-2", "Label Two"),
         (b"image-bytes-3", "Label Three"),
     ]
-    payload = client._build_multi_image_payload("main prompt", images, max_tokens=256)
+    payload = client._build_multi_image_payload(
+        "main prompt", images, max_tokens=256, system_prompt="sys"
+    )
 
+    # Anthropic: messages[0] is the sole user message
     content = payload["messages"][0]["content"]
 
     # 3 images × (1 label + 1 image) + 1 prompt = 7 blocks
@@ -755,9 +768,12 @@ def test_multi_image_payload_openai_compat() -> None:
         (b"image-bytes-2", "Label Two"),
         (b"image-bytes-3", "Label Three"),
     ]
-    payload = client._build_multi_image_payload("main prompt", images, max_tokens=256)
+    payload = client._build_multi_image_payload(
+        "main prompt", images, max_tokens=256, system_prompt="sys"
+    )
 
-    content = payload["messages"][0]["content"]
+    # OpenAI-compat: messages[0]=system, messages[1]=user with image content
+    content = payload["messages"][1]["content"]
 
     # 3 images × (1 label + 1 image_url) + 1 prompt = 7 blocks
     assert len(content) == 7
@@ -791,9 +807,10 @@ def test_multi_image_labels_present() -> None:
         (b"img-c", "Style target"),
     ]
     payload = client._build_multi_image_payload(
-        "describe differences", images, max_tokens=128
+        "describe differences", images, max_tokens=128, system_prompt="sys"
     )
-    content = payload["messages"][0]["content"]
+    # OpenAI-compat: user content is at messages[1]
+    content = payload["messages"][1]["content"]
 
     # Check that each label appears in the correct position
     assert content[0]["type"] == "text" and content[0]["text"] == "Canvas before stroke"
@@ -804,11 +821,270 @@ def test_multi_image_labels_present() -> None:
 def test_multi_image_empty_list() -> None:
     """_build_multi_image_payload() with empty images list produces only the prompt block."""
     client = VLMClient(provider="anthropic", base_url="https://api.anthropic.com/v1")
-    payload = client._build_multi_image_payload("just a prompt", [], max_tokens=64)
+    payload = client._build_multi_image_payload(
+        "just a prompt", [], max_tokens=64, system_prompt="sys"
+    )
 
+    # Anthropic: messages[0] is the sole user message
     content = payload["messages"][0]["content"]
 
     # Only 1 block: the prompt text
     assert len(content) == 1
     assert content[0]["type"] == "text"
     assert content[0]["text"] == "just a prompt"
+
+
+# ============================================================================
+# System Prompt Placement Tests
+# ============================================================================
+
+
+def test_anthropic_system_prompt_is_content_block_array() -> None:
+    """Anthropic: system_prompt is placed in payload['system'] as a content block list."""
+    client = VLMClient(
+        provider="anthropic",
+        base_url="https://api.anthropic.com/v1",
+        model="claude-sonnet-4-6",
+    )
+    payload = client._build_text_payload(
+        "user msg", max_tokens=100, system_prompt="Be helpful."
+    )
+
+    assert "system" in payload
+    system = payload["system"]
+    assert isinstance(system, list), "system must be a list of content blocks"
+    assert len(system) == 1
+    block = system[0]
+    assert block["type"] == "text"
+    assert block["text"] == "Be helpful."
+    assert block["cache_control"] == {"type": "ephemeral"}
+
+
+def test_anthropic_system_prompt_no_top_level_cache_control() -> None:
+    """Anthropic payload must NOT have a top-level cache_control key."""
+    client = VLMClient(
+        provider="anthropic",
+        base_url="https://api.anthropic.com/v1",
+    )
+    payload = client._build_text_payload("msg", max_tokens=50, system_prompt="sys")
+    assert "cache_control" not in payload
+
+
+def test_anthropic_system_prompt_messages_no_system_role() -> None:
+    """Anthropic: messages list must NOT contain a role=system entry."""
+    client = VLMClient(
+        provider="anthropic",
+        base_url="https://api.anthropic.com/v1",
+    )
+    payload = client._build_text_payload("msg", max_tokens=50, system_prompt="sys")
+    for msg in payload["messages"]:
+        assert msg.get("role") != "system", (
+            "Anthropic messages must not have role=system"
+        )
+
+
+def test_mistral_system_prompt_first_message() -> None:
+    """Mistral: first message in payload['messages'] is role=system with system_prompt."""
+    client = VLMClient(provider="mistral", base_url="https://api.mistral.ai/v1")
+    payload = client._build_text_payload(
+        "user question", max_tokens=100, system_prompt="You are an expert."
+    )
+
+    assert "system" not in payload, (
+        "Mistral payload must NOT have a top-level system field"
+    )
+    assert payload["messages"][0] == {
+        "role": "system",
+        "content": "You are an expert.",
+    }
+    assert payload["messages"][1] == {"role": "user", "content": "user question"}
+
+
+def test_lmstudio_system_prompt_first_message() -> None:
+    """LMStudio (OpenAI-compat): first message is role=system with system_prompt."""
+    client = VLMClient(provider="lmstudio", base_url="http://localhost:1234/v1")
+    payload = client._build_text_payload(
+        "user question", max_tokens=100, system_prompt="You are an expert."
+    )
+
+    assert "system" not in payload, (
+        "LMStudio payload must NOT have a top-level system field"
+    )
+    assert payload["messages"][0] == {
+        "role": "system",
+        "content": "You are an expert.",
+    }
+
+
+def test_anthropic_multimodal_image_on_user_message_not_system() -> None:
+    """Anthropic multimodal: image block is in the user message, not the system field."""
+    client = VLMClient(provider="anthropic", base_url="https://api.anthropic.com/v1")
+    payload = client._build_multimodal_payload(
+        "describe", b"imgbytes", max_tokens=100, system_prompt="sys"
+    )
+    # system field is a text-only list
+    for block in payload["system"]:
+        assert block["type"] == "text", "system content blocks must be text"
+    # user message contains the image
+    user_content = payload["messages"][0]["content"]
+    image_blocks = [b for b in user_content if b["type"] == "image"]
+    assert len(image_blocks) == 1
+
+
+def test_mistral_multimodal_image_on_user_message_not_system() -> None:
+    """Mistral multimodal: image block is in the user message, not the system message."""
+    client = VLMClient(provider="mistral", base_url="https://api.mistral.ai/v1")
+    payload = client._build_multimodal_payload(
+        "describe", b"imgbytes", max_tokens=100, system_prompt="sys"
+    )
+    # system message has plain string content
+    assert payload["messages"][0]["role"] == "system"
+    assert isinstance(payload["messages"][0]["content"], str)
+    # user message contains the image
+    user_content = payload["messages"][1]["content"]
+    image_blocks = [b for b in user_content if b["type"] == "image_url"]
+    assert len(image_blocks) == 1
+
+
+def test_anthropic_multi_image_image_on_user_message() -> None:
+    """Anthropic multi-image: image blocks are in the user message, not system."""
+    client = VLMClient(provider="anthropic", base_url="https://api.anthropic.com/v1")
+    images = [(b"img1", "Label 1"), (b"img2", "Label 2")]
+    payload = client._build_multi_image_payload(
+        "prompt", images, max_tokens=100, system_prompt="sys"
+    )
+    # system field is text-only
+    for block in payload["system"]:
+        assert block["type"] == "text"
+    # user message has image blocks
+    user_content = payload["messages"][0]["content"]
+    image_blocks = [b for b in user_content if b["type"] == "image"]
+    assert len(image_blocks) == 2
+
+
+# ============================================================================
+# cached_images Tests (Phase 27c)
+# ============================================================================
+
+
+def test_anthropic_cached_images_prepended_to_user_message() -> None:
+    """Anthropic: cached_images appear before dynamic images in the user message."""
+    client = VLMClient(provider="anthropic", base_url="https://api.anthropic.com/v1")
+    cached = [
+        (b"sample-1", "LINE stroke sample"),
+        (b"sample-2", "ARC stroke sample"),
+    ]
+    dynamic = [(b"canvas-bytes", "Current canvas")]
+    payload = client._build_multi_image_payload(
+        "user prompt",
+        dynamic,
+        max_tokens=100,
+        system_prompt="system text",
+        cached_images=cached,
+    )
+
+    content = payload["messages"][0]["content"]
+    # 2 cached × (label + image) + 1 dynamic × (label + image) + 1 prompt = 7 blocks
+    assert len(content) == 7
+    assert content[0] == {"type": "text", "text": "LINE stroke sample"}
+    assert content[1]["type"] == "image"
+    assert content[2] == {"type": "text", "text": "ARC stroke sample"}
+    assert content[3]["type"] == "image"
+    assert content[4] == {"type": "text", "text": "Current canvas"}
+    assert content[5]["type"] == "image"
+    assert content[6] == {"type": "text", "text": "user prompt"}
+
+
+def test_anthropic_cached_images_cache_control_on_last_cached_block() -> None:
+    """Anthropic: cache_control marker is on the last cached image block only."""
+    client = VLMClient(provider="anthropic", base_url="https://api.anthropic.com/v1")
+    cached = [
+        (b"s1", "L1"),
+        (b"s2", "L2"),
+        (b"s3", "L3"),
+    ]
+    payload = client._build_multi_image_payload(
+        "p",
+        [(b"canvas", "Current canvas")],
+        max_tokens=50,
+        system_prompt="sys",
+        cached_images=cached,
+    )
+
+    content = payload["messages"][0]["content"]
+    # Image blocks at indices 1, 3, 5 (cached) and 7 (canvas, dynamic)
+    cached_image_blocks = [content[1], content[3], content[5]]
+    dynamic_image_block = content[7]
+
+    # Only the LAST cached image block carries cache_control
+    assert "cache_control" not in cached_image_blocks[0]
+    assert "cache_control" not in cached_image_blocks[1]
+    assert cached_image_blocks[2]["cache_control"] == {"type": "ephemeral"}
+
+    # Dynamic canvas image must NOT carry cache_control
+    assert dynamic_image_block["type"] == "image"
+    assert "cache_control" not in dynamic_image_block
+
+
+def test_anthropic_cached_images_none_unchanged_behaviour() -> None:
+    """Anthropic: cached_images=None gives the original (dynamic-only) layout."""
+    client = VLMClient(provider="anthropic", base_url="https://api.anthropic.com/v1")
+    payload = client._build_multi_image_payload(
+        "prompt",
+        [(b"img", "label")],
+        max_tokens=100,
+        system_prompt="sys",
+        cached_images=None,
+    )
+
+    content = payload["messages"][0]["content"]
+    # Just label + image + prompt
+    assert len(content) == 3
+    assert content[0] == {"type": "text", "text": "label"}
+    assert content[1]["type"] == "image"
+    assert "cache_control" not in content[1]
+    assert content[2] == {"type": "text", "text": "prompt"}
+
+
+def test_openai_compat_cached_images_prepended_without_cache_control() -> None:
+    """Mistral/LMStudio: cached_images are prepended but carry no cache marker."""
+    client = VLMClient(provider="mistral", base_url="https://api.mistral.ai/v1")
+    cached = [(b"sample-1", "LINE stroke sample")]
+    payload = client._build_multi_image_payload(
+        "user prompt",
+        [(b"canvas", "Current canvas")],
+        max_tokens=100,
+        system_prompt="system text",
+        cached_images=cached,
+    )
+
+    # System lives in messages[0] for OpenAI-compat
+    assert payload["messages"][0]["role"] == "system"
+    assert payload["messages"][0]["content"] == "system text"
+
+    user_content = payload["messages"][1]["content"]
+    # cached label+image + dynamic label+image + prompt = 5 blocks
+    assert len(user_content) == 5
+    assert user_content[0] == {"type": "text", "text": "LINE stroke sample"}
+    assert user_content[1]["type"] == "image_url"
+    assert user_content[2] == {"type": "text", "text": "Current canvas"}
+    assert user_content[3]["type"] == "image_url"
+    assert user_content[4] == {"type": "text", "text": "user prompt"}
+
+    # OpenAI-compat image_url blocks have no cache_control field
+    for block in user_content:
+        assert "cache_control" not in block
+
+
+def test_anthropic_system_block_keeps_cache_control_with_cached_images() -> None:
+    """Anthropic: system block retains its own cache_control independent of cached_images."""
+    client = VLMClient(provider="anthropic", base_url="https://api.anthropic.com/v1")
+    payload = client._build_multi_image_payload(
+        "p",
+        [(b"c", "Current canvas")],
+        max_tokens=50,
+        system_prompt="sys",
+        cached_images=[(b"s", "Sample")],
+    )
+
+    assert payload["system"][0]["cache_control"] == {"type": "ephemeral"}

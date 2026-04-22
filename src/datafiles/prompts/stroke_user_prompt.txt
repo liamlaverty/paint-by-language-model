@@ -1,0 +1,5 @@
+Current Canvas: [Image attached]
+{subject_section}
+Iteration: {iteration}{strategy_section}{plan_section}
+
+Task: Suggest {num_strokes} stroke(s) to add to this canvas that evoke the artist's style.

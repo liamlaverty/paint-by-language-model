@@ -58,7 +58,7 @@ def test_layer_progress_below_minimum_blocks_completion() -> None:
     plan = _make_plan()
     layer = plan["layers"][0]
 
-    prompt = client._build_stroke_prompt(
+    _system_prompt, user_prompt = client._build_stroke_prompts(
         artist_name="Test Artist",
         subject="Test Subject",
         iteration=3,
@@ -69,7 +69,7 @@ def test_layer_progress_below_minimum_blocks_completion() -> None:
         layer_iteration_count=3,  # below MIN_STROKES_PER_LAYER
     )
 
-    assert "Do NOT set layer_complete to true yet" in prompt
+    assert "Do NOT set layer_complete to true yet" in user_prompt
 
 
 def test_layer_progress_at_minimum_allows_completion() -> None:
@@ -78,7 +78,7 @@ def test_layer_progress_at_minimum_allows_completion() -> None:
     plan = _make_plan()
     layer = plan["layers"][0]
 
-    prompt = client._build_stroke_prompt(
+    _system_prompt, user_prompt = client._build_stroke_prompts(
         artist_name="Test Artist",
         subject="Test Subject",
         iteration=MIN_STROKES_PER_LAYER,
@@ -89,8 +89,8 @@ def test_layer_progress_at_minimum_allows_completion() -> None:
         layer_iteration_count=MIN_STROKES_PER_LAYER,
     )
 
-    assert "You may signal layer_complete: true" in prompt
-    assert "Do NOT set layer_complete to true yet" not in prompt
+    assert "You may signal layer_complete: true" in user_prompt
+    assert "Do NOT set layer_complete to true yet" not in user_prompt
 
 
 def test_layer_progress_above_minimum_allows_completion() -> None:
@@ -99,7 +99,7 @@ def test_layer_progress_above_minimum_allows_completion() -> None:
     plan = _make_plan()
     layer = plan["layers"][0]
 
-    prompt = client._build_stroke_prompt(
+    _system_prompt, user_prompt = client._build_stroke_prompts(
         artist_name="Test Artist",
         subject="Test Subject",
         iteration=MIN_STROKES_PER_LAYER + 5,
@@ -110,8 +110,8 @@ def test_layer_progress_above_minimum_allows_completion() -> None:
         layer_iteration_count=MIN_STROKES_PER_LAYER + 5,
     )
 
-    assert "You may signal layer_complete: true" in prompt
-    assert "Do NOT set layer_complete to true yet" not in prompt
+    assert "You may signal layer_complete: true" in user_prompt
+    assert "Do NOT set layer_complete to true yet" not in user_prompt
 
 
 def test_layer_progress_shows_correct_iteration_number() -> None:
@@ -121,7 +121,7 @@ def test_layer_progress_shows_correct_iteration_number() -> None:
     layer = plan["layers"][0]
     count = 7
 
-    prompt = client._build_stroke_prompt(
+    _system_prompt, user_prompt = client._build_stroke_prompts(
         artist_name="Test Artist",
         subject="Test Subject",
         iteration=count,
@@ -132,14 +132,14 @@ def test_layer_progress_shows_correct_iteration_number() -> None:
         layer_iteration_count=count,
     )
 
-    assert f"You are currently on iteration {count} of this layer" in prompt
+    assert f"You are currently on iteration {count} of this layer" in user_prompt
 
 
 def test_no_layer_progress_section_without_plan() -> None:
     """Prompt must NOT include LAYER PROGRESS when no painting plan is active."""
     client = StrokeVLMClient()
 
-    prompt = client._build_stroke_prompt(
+    _system_prompt, user_prompt = client._build_stroke_prompts(
         artist_name="Test Artist",
         subject="Test Subject",
         iteration=1,
@@ -150,4 +150,4 @@ def test_no_layer_progress_section_without_plan() -> None:
         layer_iteration_count=0,
     )
 
-    assert "LAYER PROGRESS" not in prompt
+    assert "LAYER PROGRESS" not in user_prompt

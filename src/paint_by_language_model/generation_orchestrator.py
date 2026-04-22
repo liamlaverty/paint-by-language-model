@@ -530,9 +530,9 @@ class GenerationOrchestrator:
         # Condition 2: Target score achieved (after minimum iterations)
         if iteration >= MIN_ITERATIONS and evaluation["score"] >= self.target_style_score:
             logger.info(
-                f"Target score ({self.target_style_score}) reached with score {evaluation['score']:.1f}"
+                f"Target score ({self.target_style_score}) reached with score {evaluation['score']:.1f}, but continuing until max_iterations has been reached"
             )
-            return True
+            # return True
 
         # Condition 3: Score plateauing (optional, future enhancement)
         # Check if score hasn't improved significantly in recent iterations

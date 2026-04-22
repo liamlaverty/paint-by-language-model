@@ -91,8 +91,8 @@ class EvaluationVLMClient:
         """
         logger.info(f"Requesting style evaluation for iteration {iteration}")
 
-        # Build prompt
-        prompt = self._build_evaluation_prompt(
+        # Build prompts (system = static per-run, user = dynamic per-evaluation)
+        system_prompt, user_prompt = self._build_evaluation_prompts(
             artist_name=artist_name,
             subject=subject,
             iteration=iteration,
@@ -102,7 +102,11 @@ class EvaluationVLMClient:
 
         # Query VLM
         try:
-            response_text = self.client.query_multimodal(prompt=prompt, image_bytes=canvas_image)
+            response_text = self.client.query_multimodal(
+                prompt=user_prompt,
+                image_bytes=canvas_image,
+                system_prompt=system_prompt,
+            )
 
             # Store raw response immediately so it is available even if parsing fails
             self.last_raw_response = response_text
@@ -122,7 +126,7 @@ class EvaluationVLMClient:
                 iteration=iteration,
                 artist_name=artist_name,
                 subject=subject,
-                prompt=prompt,
+                prompt=user_prompt,
                 raw_response=response_text,
                 parsed_response=evaluation,
             )
@@ -130,7 +134,7 @@ class EvaluationVLMClient:
             if self.prompt_logger:
                 self.prompt_logger.log_interaction(
                     prompt_type="evaluation",
-                    prompt=prompt,
+                    prompt=user_prompt,
                     raw_response=response_text,
                     model=self.model,
                     provider=self.client.provider,
@@ -159,33 +163,36 @@ class EvaluationVLMClient:
             logger.error(f"Unexpected error during VLM evaluation: {e}")
             raise RuntimeError(f"VLM evaluation failed: {e}") from e
 
-    def _build_evaluation_prompt(
+    def _build_evaluation_prompts(
         self,
         artist_name: str,
         subject: str,
         iteration: int,
         painting_plan: PaintingPlan | None = None,
         current_layer: PlanLayer | None = None,
-    ) -> str:
+    ) -> tuple[str, str]:
         """
-        Build prompt for style evaluation.
+        Build system and user prompts for style evaluation.
+
+        The system prompt is stable within a run for a given artist (persona,
+        scoring rubric, scale definitions, JSON format spec) so Anthropic prompt
+        caching can engage across repeated evaluations. The user prompt is dynamic
+        per evaluation (canvas image reference, current subject, task line).
 
         Args:
             artist_name (str): Target artist name
             subject (str): Subject being painted
-            iteration (int): Current iteration number
+            iteration (int): Current iteration number (reserved for future use)
             painting_plan (PaintingPlan | None): Complete painting plan
             current_layer (PlanLayer | None): Current layer information
 
         Returns:
-            str: Formatted prompt
+            tuple[str, str]: A ``(system_prompt, user_prompt)`` pair where
+                ``system_prompt`` is the static art-critic persona, rubric, and
+                JSON format specification, and ``user_prompt`` is the dynamic
+                per-evaluation request referencing the attached canvas image.
         """
-        prompt = f"""You are an art critic evaluating artwork for stylistic similarity to {artist_name}.
-
-Current Canvas: [Image attached]
-Subject: {subject}
-
-Task: Rate how well this image embodies {artist_name}'s artistic style on a scale of 0-100.
+        system_prompt = f"""You are an art critic evaluating artwork for stylistic similarity to {artist_name}.
 
 Consider:
 - Color palette characteristic of {artist_name}
@@ -207,7 +214,12 @@ Respond in JSON format:
 
 IMPORTANT: Respond ONLY with valid JSON. Do not include any text before or after the JSON object."""
 
-        return prompt
+        user_prompt = f"""Current Canvas: [Image attached]
+Subject: {subject}
+
+Task: Rate how well this image embodies {artist_name}'s artistic style."""
+
+        return system_prompt, user_prompt
 
     def _parse_evaluation_response(
         self,
