@@ -165,8 +165,8 @@ class PlannerLLMClient:
         """
         logger.info(f"Generating painting plan for '{subject}' in style of {artist_name}")
 
-        # Build prompt
-        prompt = self._build_planning_prompt(
+        # Build prompts (system = static persona/format, user = dynamic per-run context)
+        system_prompt, user_prompt = self._build_planning_prompts(
             artist_name=artist_name,
             subject=subject,
             expanded_subject=expanded_subject,
@@ -176,7 +176,7 @@ class PlannerLLMClient:
         # Query LLM (text-only, no image) with sufficient max_tokens for detailed plans
         try:
             response_text = self.client.query(
-                prompt=prompt, max_tokens=PLANNER_MAX_TOKENS, system_prompt=""
+                prompt=user_prompt, max_tokens=PLANNER_MAX_TOKENS, system_prompt=system_prompt
             )
 
             # Store raw response immediately so it is available even if parsing fails
@@ -194,7 +194,7 @@ class PlannerLLMClient:
             self._record_interaction(
                 artist_name=artist_name,
                 subject=subject,
-                prompt=prompt,
+                prompt=user_prompt,
                 raw_response=response_text,
                 parsed_response=painting_plan,
                 layer_count=painting_plan["total_layers"],
@@ -203,7 +203,7 @@ class PlannerLLMClient:
             if self.prompt_logger:
                 self.prompt_logger.log_interaction(
                     prompt_type="plan",
-                    prompt=prompt,
+                    prompt=user_prompt,
                     raw_response=response_text,
                     model=self.model,
                     provider=self.client.provider,
@@ -234,7 +234,7 @@ class PlannerLLMClient:
                     subject=subject,
                     raw_response=response_text,
                     exception=e,
-                    prompt=prompt if "prompt" in locals() else "",
+                    prompt=user_prompt if "user_prompt" in locals() else "",
                 )
                 logger.error(f"Raw LLM response saved to: {log_path}")
             raise ValueError(f"LLM returned invalid JSON: {e}") from e
@@ -246,19 +246,23 @@ class PlannerLLMClient:
                     subject=subject,
                     raw_response=response_text,
                     exception=e,
-                    prompt=prompt if "prompt" in locals() else "",
+                    prompt=user_prompt if "user_prompt" in locals() else "",
                 )
             raise RuntimeError(f"LLM query failed: {e}") from e
 
-    def _build_planning_prompt(
+    def _build_planning_prompts(
         self,
         artist_name: str,
         subject: str,
         expanded_subject: str | None,
         stroke_types: list[str],
-    ) -> str:
+    ) -> tuple[str, str]:
         """
-        Build prompt for painting plan generation.
+        Build system and user prompts for painting plan generation.
+
+        The system prompt is stable (planner persona, layer planning rules, JSON
+        response format) while the user prompt supplies the dynamic per-run
+        context (artist name, subject, stroke types, canvas and layer constraints).
 
         Args:
             artist_name (str): Target artist whose style to emulate
@@ -267,24 +271,14 @@ class PlannerLLMClient:
             stroke_types (list[str]): Available stroke types for the painting
 
         Returns:
-            str: Formatted prompt
+            tuple[str, str]: A ``(system_prompt, user_prompt)`` pair where
+                ``system_prompt`` is the static planner persona and JSON format
+                specification, and ``user_prompt`` is the dynamic per-run task
+                with artist, subject, and stroke-type details.
         """
-        expanded_section = f"\nExpanded description: {expanded_subject}" if expanded_subject else ""
-
-        prompt = f"""You are an expert art director planning a painting in the style of {artist_name}.
-
-Subject: {subject}{expanded_section}
-
-Available stroke types: {", ".join(stroke_types)}
-Canvas dimensions: {CANVAS_WIDTH}x{CANVAS_HEIGHT} pixels
-Minimum iterations per layer: {self.min_strokes_per_layer} (each iteration applies up to
-{DEFAULT_STROKES_PER_QUERY} strokes, so each layer will contain at most
-{self.min_strokes_per_layer * DEFAULT_STROKES_PER_QUERY} individual strokes before it can be
-marked complete)
-
-Task: Create a step-by-step layer plan for painting this image. Each layer will be
-executed sequentially — the painter can only ADD onto the canvas, not remove or switch
-between layers. Earlier layers will be painted over by later ones.
+        system_prompt = """You are an expert art director tasked with creating detailed, layered painting plans.
+Your plans guide an AI painter to create artwork in a specific artist's style. Each painting plan
+consists of ordered layers that are painted sequentially — earlier layers are painted over by later ones.
 
 Plan for 4-8 layers total. Fewer, well-defined layers work better than many small ones.
 Common layer sequence: background → mid-ground → main subjects → details/highlights.
@@ -298,21 +292,14 @@ For each layer, specify:
 - shapes: Typical shapes and forms (e.g. "horizontal bands", "organic curves")
 - highlights: Guidance on emphasis, lighting, and texture in this layer
 
-Consider {artist_name}'s characteristic:
-- Colour choices and palette
-- Brushwork and mark-making style
-- Compositional approach
-- Treatment of light and shadow
-- Overall mood and atmosphere
-
 RESPONSE FORMAT (JSON only):
-{{
-  "artist_name": "{artist_name}",
-  "subject": "{subject}",
-  "expanded_subject": {json.dumps(expanded_subject)},
+{
+  "artist_name": "<artist name>",
+  "subject": "<subject>",
+  "expanded_subject": "<expanded subject string or null>",
   "total_layers": <int>,
   "layers": [
-    {{
+    {
       "layer_number": 1,
       "name": "...",
       "description": "...",
@@ -321,15 +308,36 @@ RESPONSE FORMAT (JSON only):
       "techniques": "...",
       "shapes": "...",
       "highlights": "..."
-    }}
+    }
     // ... more layers
   ],
   "overall_notes": "..."
-}}
+}
 
 IMPORTANT: Respond ONLY with valid JSON. Do not include markdown formatting."""
 
-        return prompt
+        expanded_section = f"\nExpanded description: {expanded_subject}" if expanded_subject else ""
+
+        user_prompt = f"""Create a step-by-step layer plan for painting this image.
+
+Artist: {artist_name}
+Subject: {subject}{expanded_section}
+
+Available stroke types: {", ".join(stroke_types)}
+Canvas dimensions: {CANVAS_WIDTH}x{CANVAS_HEIGHT} pixels
+Minimum iterations per layer: {self.min_strokes_per_layer} (each iteration applies up to
+{DEFAULT_STROKES_PER_QUERY} strokes, so each layer will contain at most
+{self.min_strokes_per_layer * DEFAULT_STROKES_PER_QUERY} individual strokes before it can be
+marked complete)
+
+Consider {artist_name}'s characteristic:
+- Colour choices and palette
+- Brushwork and mark-making style
+- Compositional approach
+- Treatment of light and shadow
+- Overall mood and atmosphere"""
+
+        return system_prompt, user_prompt
 
     def _parse_plan_response(
         self, response_text: str, allowed_stroke_types: list[str] | None = None

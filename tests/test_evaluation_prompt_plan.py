@@ -88,16 +88,17 @@ class TestLayerContextInPrompt:
         """Layer number and name are no longer injected into the evaluation prompt."""
         current_layer = sample_plan["layers"][1]
 
-        prompt = eval_client._build_evaluation_prompt(
+        system_prompt, user_prompt = eval_client._build_evaluation_prompts(
             artist_name="Test Artist",
             subject="Test Subject",
             iteration=10,
             painting_plan=sample_plan,
             current_layer=current_layer,
         )
+        combined = system_prompt + user_prompt
 
-        assert f"Layer {current_layer['layer_number']}" not in prompt
-        assert current_layer["name"] not in prompt
+        assert f"Layer {current_layer['layer_number']}" not in combined
+        assert current_layer["name"] not in combined
 
     def test_prompt_does_not_include_total_layers_count(
         self, eval_client: EvaluationVLMClient, sample_plan: PaintingPlan
@@ -105,15 +106,16 @@ class TestLayerContextInPrompt:
         """Total layer count is no longer injected into the evaluation prompt."""
         current_layer = sample_plan["layers"][1]
 
-        prompt = eval_client._build_evaluation_prompt(
+        system_prompt, user_prompt = eval_client._build_evaluation_prompts(
             artist_name="Test Artist",
             subject="Test Subject",
             iteration=10,
             painting_plan=sample_plan,
             current_layer=current_layer,
         )
+        combined = system_prompt + user_prompt
 
-        assert f"{sample_plan['total_layers']} layers" not in prompt
+        assert f"{sample_plan['total_layers']} layers" not in combined
 
     def test_prompt_does_not_include_layer_description(
         self, eval_client: EvaluationVLMClient, sample_plan: PaintingPlan
@@ -121,15 +123,16 @@ class TestLayerContextInPrompt:
         """Layer description is no longer injected into the evaluation prompt."""
         current_layer = sample_plan["layers"][1]
 
-        prompt = eval_client._build_evaluation_prompt(
+        system_prompt, user_prompt = eval_client._build_evaluation_prompts(
             artist_name="Test Artist",
             subject="Test Subject",
             iteration=10,
             painting_plan=sample_plan,
             current_layer=current_layer,
         )
+        combined = system_prompt + user_prompt
 
-        assert current_layer["description"] not in prompt
+        assert current_layer["description"] not in combined
 
     def test_prompt_does_not_include_expected_palette(
         self, eval_client: EvaluationVLMClient, sample_plan: PaintingPlan
@@ -137,17 +140,18 @@ class TestLayerContextInPrompt:
         """Expected palette is no longer injected into the evaluation prompt."""
         current_layer = sample_plan["layers"][1]
 
-        prompt = eval_client._build_evaluation_prompt(
+        system_prompt, user_prompt = eval_client._build_evaluation_prompts(
             artist_name="Test Artist",
             subject="Test Subject",
             iteration=10,
             painting_plan=sample_plan,
             current_layer=current_layer,
         )
+        combined = system_prompt + user_prompt
 
-        assert "Expected palette:" not in prompt
+        assert "Expected palette:" not in combined
         for color in current_layer["colour_palette"]:
-            assert color not in prompt
+            assert color not in combined
 
     def test_prompt_does_not_include_expected_techniques(
         self, eval_client: EvaluationVLMClient, sample_plan: PaintingPlan
@@ -155,16 +159,17 @@ class TestLayerContextInPrompt:
         """Expected techniques are no longer injected into the evaluation prompt."""
         current_layer = sample_plan["layers"][1]
 
-        prompt = eval_client._build_evaluation_prompt(
+        system_prompt, user_prompt = eval_client._build_evaluation_prompts(
             artist_name="Test Artist",
             subject="Test Subject",
             iteration=10,
             painting_plan=sample_plan,
             current_layer=current_layer,
         )
+        combined = system_prompt + user_prompt
 
-        assert "Expected techniques:" not in prompt
-        assert current_layer["techniques"] not in prompt
+        assert "Expected techniques:" not in combined
+        assert current_layer["techniques"] not in combined
 
     def test_prompt_does_not_request_layer_complete_field(
         self, eval_client: EvaluationVLMClient, sample_plan: PaintingPlan
@@ -172,32 +177,52 @@ class TestLayerContextInPrompt:
         """Test that prompt does NOT request layer_complete field in response format."""
         current_layer = sample_plan["layers"][1]
 
-        prompt = eval_client._build_evaluation_prompt(
+        system_prompt, user_prompt = eval_client._build_evaluation_prompts(
             artist_name="Test Artist",
             subject="Test Subject",
             iteration=10,
             painting_plan=sample_plan,
             current_layer=current_layer,
         )
+        combined = system_prompt + user_prompt
 
-        assert "layer_complete" not in prompt
+        assert "layer_complete" not in combined
 
     def test_prompt_unchanged_when_layer_is_none(
         self, eval_client: EvaluationVLMClient
     ) -> None:
         """Test that prompt is unchanged when current_layer is None."""
-        prompt = eval_client._build_evaluation_prompt(
+        system_prompt, user_prompt = eval_client._build_evaluation_prompts(
             artist_name="Test Artist",
             subject="Test Subject",
             iteration=10,
             painting_plan=None,
             current_layer=None,
         )
+        combined = system_prompt + user_prompt
 
         assert (
-            "Layer" not in prompt or "Iteration" in prompt
+            "Layer" not in combined or "Iteration" in combined
         )  # "Iteration" has "Layer" substring
-        assert "layer_complete" not in prompt
+        assert "layer_complete" not in combined
+
+    def test_system_prompt_is_byte_identical_across_calls(
+        self, eval_client: EvaluationVLMClient
+    ) -> None:
+        """The system prompt must be byte-identical on repeated calls for the same artist."""
+        kwargs: dict = {
+            "artist_name": "Monet",
+            "subject": "Water Lilies",
+            "iteration": 1,
+            "painting_plan": None,
+            "current_layer": None,
+        }
+        system_prompt_1, _ = eval_client._build_evaluation_prompts(**kwargs)
+        system_prompt_2, _ = eval_client._build_evaluation_prompts(**kwargs)
+
+        assert system_prompt_1 == system_prompt_2, (
+            "System prompt must be byte-identical across calls to enable Anthropic prompt caching"
+        )
 
 
 class TestEvaluationResponseParsing:

@@ -58,6 +58,10 @@ class VLMClient:
         self.temperature = temperature
         self.provider = provider
 
+        # Stores the raw ``usage`` dict from the most recent successful API
+        # response so callers can inspect token counts (e.g. for caching tests).
+        self.last_usage: dict | None = None
+
         # Set endpoint based on provider
         if self.provider == "anthropic":
             self.chat_endpoint = f"{self.base_url}/messages"
@@ -255,6 +259,7 @@ class VLMClient:
             response.raise_for_status()
 
             data = response.json()
+            self.last_usage = data.get("usage")
             content: str = self._extract_response_text(data)
             return content
 
@@ -431,6 +436,7 @@ class VLMClient:
 
             # Extract response text using provider-specific parsing
             response_data = response.json()
+            self.last_usage = response_data.get("usage")
             response_text: str = self._extract_response_text(response_data)
 
             logger.info(f"Received VLM response ({len(response_text)} characters)")

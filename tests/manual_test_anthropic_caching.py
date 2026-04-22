@@ -1,9 +1,10 @@
 """Manual integration test for Anthropic prompt caching.
 
-Verifies that prompt caching works correctly by inspecting the `usage` fields
-in the API response. Sends two identical requests and asserts that the first
-writes to cache (cache_creation_input_tokens > 0) and the second reads from
-cache (cache_read_input_tokens > 0).
+Verifies that prompt caching works correctly by inspecting the ``usage`` fields
+in the API response. Sends two identical requests via the production
+``VLMClient`` and asserts that the first writes to cache
+(cache_creation_input_tokens > 0) and the second reads from cache
+(cache_read_input_tokens > 0).
 
 Usage:
     conda activate paint-by-language-model
@@ -14,11 +15,12 @@ Prerequisites:
     - Ensure the paint-by-language-model conda environment is active.
 
 Notes:
-    - Uses claude-3-haiku-20240307 (cheapest available model).
-    - Requires a system prompt >= 2048 tokens to meet Haiku 3's caching minimum.
-      Below this threshold caching is silently skipped with no error returned.
-    - The 5-minute cache TTL means the second request must arrive within 5 minutes
-      of the first for a cache hit to register.
+    - Uses the model configured via ``config.ANTHROPIC_VLM_MODEL``.
+    - Requires a system prompt >= 4096 tokens (Haiku 4.5) or >= 2048 tokens
+      (Haiku 3) to meet the model's caching minimum. Below this threshold
+      caching is silently skipped with no error returned.
+    - The 5-minute cache TTL means the second request must arrive within 5
+      minutes of the first for a cache hit to register.
 """
 
 import json
@@ -32,8 +34,9 @@ sys.path.insert(
     0, str(Path(__file__).parent.parent / "src" / "paint_by_language_model")
 )
 
-import requests
+import config
 from dotenv import load_dotenv
+from vlm_client import VLMClient
 
 load_dotenv(Path(__file__).parent.parent / ".env")
 
@@ -41,9 +44,6 @@ load_dotenv(Path(__file__).parent.parent / ".env")
 # Constants
 # ---------------------------------------------------------------------------
 
-ANTHROPIC_API_URL = "https://api.anthropic.com/v1/messages"
-ANTHROPIC_API_VERSION = "2023-06-01"
-MODEL = "claude-haiku-4-5"
 USER_MESSAGE = "mary had a little"
 
 # How long to wait between Request 1 and Request 2 (seconds).
@@ -53,89 +53,11 @@ INTER_REQUEST_WAIT_SECONDS = 2
 
 
 # ---------------------------------------------------------------------------
-# Standalone helper functions (copied/adapted from vlm_client.py)
-# ---------------------------------------------------------------------------
-
-
-def build_headers(api_key: str) -> dict[str, str]:
-    """
-    Build Anthropic request headers.
-
-    Args:
-        api_key (str): Anthropic API key for authentication.
-
-    Returns:
-        dict[str, str]: HTTP headers for the Anthropic Messages API.
-    """
-    return {
-        "Content-Type": "application/json",
-        "x-api-key": api_key,
-        "anthropic-version": ANTHROPIC_API_VERSION,
-    }
-
-
-def build_payload(system_prompt: str) -> dict:
-    """
-    Build the request payload with block-level cache_control on the system prompt.
-
-    Anthropic prompt caching requires ``cache_control`` to be placed on the
-    specific content block to be cached, not at the top level of the payload.
-    The ``system`` field must be an array of content blocks; adding
-    ``cache_control: {"type": "ephemeral"}`` to a block tells Anthropic to
-    cache up to and including that block.
-
-    Args:
-        system_prompt (str): The large static system prompt to cache.
-
-    Returns:
-        dict: Request payload ready to POST to the Anthropic Messages API.
-    """
-    return {
-        "model": MODEL,
-        "system": [
-            {
-                "type": "text",
-                "text": system_prompt,
-                "cache_control": {"type": "ephemeral"},
-            }
-        ],
-        "messages": [{"role": "user", "content": USER_MESSAGE}],
-        "max_tokens": 50,
-        "temperature": 0.0,
-    }
-
-
-def send_request(api_key: str, payload: dict) -> dict:
-    """
-    POST the payload to the Anthropic Messages API and return the full JSON response.
-
-    Args:
-        api_key (str): Anthropic API key.
-        payload (dict): Request body to send.
-
-    Returns:
-        dict: Full JSON response from the API.
-
-    Raises:
-        requests.HTTPError: If the API returns a non-2xx status code.
-    """
-    headers = build_headers(api_key)
-    response = requests.post(
-        ANTHROPIC_API_URL,
-        headers=headers,
-        json=payload,
-        timeout=60,
-    )
-    response.raise_for_status()
-    return response.json()  # type: ignore[no-any-return]
-
-
-# ---------------------------------------------------------------------------
 # System prompt generator
 # ---------------------------------------------------------------------------
 
 # A single block of art-analysis instructional text (~150 words / ~200 tokens).
-# Repeated enough times to exceed the 2048-token minimum for Claude Haiku 3.
+# Repeated enough times to exceed the 4096-token minimum for Claude Haiku 4.5.
 _INSTRUCTION_BLOCK = (
     "You are an expert art analyst and historian with deep knowledge of painting "
     "techniques, art movements, and the lives of famous artists. Your role is to "
@@ -169,9 +91,27 @@ def generate_padding_system_prompt() -> str:
     between Request 1 and Request 2.
 
     Returns:
-        str: Static instructional text of approximately 3200 tokens.
+        str: Static instructional text of approximately 5600 tokens.
     """
     return _INSTRUCTION_BLOCK * _REPEAT_COUNT
+
+
+def _make_anthropic_client() -> VLMClient:
+    """
+    Build a VLMClient configured for the Anthropic provider.
+
+    Forces ``provider="anthropic"`` regardless of the ``PROVIDER`` value in
+    ``.env`` so the caching test always targets the Anthropic Messages API.
+
+    Returns:
+        VLMClient: Client pointing at the Anthropic Messages API.
+    """
+    return VLMClient(
+        provider="anthropic",
+        base_url=config.ANTHROPIC_BASE_URL,
+        model=config.ANTHROPIC_VLM_MODEL,
+        api_key=config.ANTHROPIC_API_KEY,
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -181,30 +121,34 @@ def generate_padding_system_prompt() -> str:
 
 def test_cache_write_then_read(api_key: str) -> bool:
     """
-    Prove Anthropic prompt caching works end-to-end.
+    Prove Anthropic prompt caching works end-to-end via ``VLMClient``.
 
-    Sends two identical requests. Asserts that the first request writes content
-    to the cache (cache_creation_input_tokens > 0) and the second request reads
-    that content from the cache (cache_read_input_tokens > 0).
+    Sends two identical requests through the production ``VLMClient.query``
+    path. Asserts that the first request writes content to the cache
+    (cache_creation_input_tokens > 0) and the second request reads that
+    content from the cache (cache_read_input_tokens > 0).
+
+    The ``usage`` block is retrieved via ``VLMClient.last_usage`` which is
+    populated after each successful API call.
 
     Args:
-        api_key (str): Anthropic API key.
+        api_key (str): Anthropic API key (validated by the caller; not used
+            directly here — the client reads from ``config.ANTHROPIC_API_KEY``).
 
     Returns:
         bool: True if both assertions pass, False otherwise.
     """
     print("\n=== Test: cache_write_then_read ===")
 
-    system_prompt = generate_padding_system_prompt()
-    estimated_words = len(system_prompt.split())
+    padding = generate_padding_system_prompt()
+    estimated_words = len(padding.split())
     # Rough token estimate: English averages ~0.75 words per token
     estimated_tokens = int(estimated_words / 0.75)
     print(f"System prompt length: ~{estimated_tokens} tokens ({estimated_words} words)")
 
-    payload = build_payload(system_prompt)
-
-    print(f"Payload keys: {', '.join(payload.keys())}")
-    print(f'System prompt preview: "{system_prompt[:100]}..."')
+    client = _make_anthropic_client()
+    print(f"Model: {client.model}")
+    print(f'System prompt preview: "{padding[:100]}..."')
 
     passed = True
 
@@ -213,12 +157,12 @@ def test_cache_write_then_read(api_key: str) -> bool:
     # ------------------------------------------------------------------
     print("\nRequest 1 (expect cache WRITE):")
     try:
-        resp1 = send_request(api_key, payload)
-    except requests.HTTPError as exc:
-        print(f"  ERROR: HTTP {exc.response.status_code} — {exc.response.text}")
+        client.query(prompt=USER_MESSAGE, max_tokens=50, system_prompt=padding)
+    except Exception as exc:
+        print(f"  ERROR: {exc}")
         return False
 
-    usage1 = resp1.get("usage", {})
+    usage1: dict = client.last_usage or {}
     print(f"  usage: {json.dumps(usage1)}")
 
     required_keys = {
@@ -239,8 +183,8 @@ def test_cache_write_then_read(api_key: str) -> bool:
     else:
         print(
             "  FAIL: cache_creation_input_tokens == 0 — cache was NOT written. "
-            "Check that the system prompt exceeds the 2048-token minimum and that "
-            "the top-level cache_control field is present in the payload."
+            "Check that the system prompt exceeds the model's minimum token threshold "
+            "and that block-level cache_control is present in the payload."
         )
         passed = False
 
@@ -262,12 +206,12 @@ def test_cache_write_then_read(api_key: str) -> bool:
     # ------------------------------------------------------------------
     print("Request 2 (expect cache READ):")
     try:
-        resp2 = send_request(api_key, payload)
-    except requests.HTTPError as exc:
-        print(f"  ERROR: HTTP {exc.response.status_code} — {exc.response.text}")
+        client.query(prompt=USER_MESSAGE, max_tokens=50, system_prompt=padding)
+    except Exception as exc:
+        print(f"  ERROR: {exc}")
         return False
 
-    usage2 = resp2.get("usage", {})
+    usage2: dict = client.last_usage or {}
     print(f"  usage: {json.dumps(usage2)}")
 
     creation2 = usage2.get("cache_creation_input_tokens", 0)
