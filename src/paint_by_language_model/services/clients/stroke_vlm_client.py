@@ -219,7 +219,12 @@ class StrokeVLMClient:
 
         # Query VLM
         try:
-            images: list[tuple[bytes, str]] = []
+            # Static stroke sample images: routed to ``cached_images`` so they
+            # form the cached prefix of the user message on Anthropic. These
+            # are byte-identical across all iterations of a run and are
+            # therefore ideal cache content. ``cache_control`` is placed by
+            # ``VLMClient`` on the last cached image block.
+            cached_images: list[tuple[bytes, str]] = []
             allowed_lower = (
                 [t.lower() for t in self.allowed_stroke_types]
                 if self.allowed_stroke_types
@@ -227,10 +232,13 @@ class StrokeVLMClient:
             )
             for stroke_type, sample_bytes in self._stroke_samples.items():
                 if allowed_lower is None or stroke_type.lower() in allowed_lower:
-                    images.append((sample_bytes, f"{stroke_type.upper()} stroke sample"))
-            images.append((canvas_image, "Current canvas"))
+                    cached_images.append((sample_bytes, f"{stroke_type.upper()} stroke sample"))
+
+            # Dynamic per-iteration content: just the current canvas.
+            images: list[tuple[bytes, str]] = [(canvas_image, "Current canvas")]
             logger.debug(
-                f"Attaching {len(images) - 1} stroke sample image(s) "
+                f"Attaching {len(cached_images)} stroke sample image(s) as cached prefix "
+                f"and 1 canvas image as dynamic content "
                 f"(allowed: {self.allowed_stroke_types or 'all'})"
             )
 
@@ -238,6 +246,7 @@ class StrokeVLMClient:
                 prompt=user_prompt,
                 images=images,
                 system_prompt=system_prompt,
+                cached_images=cached_images,
             )
 
             # Store raw response immediately so it is always available,

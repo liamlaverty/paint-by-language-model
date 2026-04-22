@@ -66,13 +66,12 @@ def test_sample_generator_initialized_at_init() -> None:
 
 
 def test_suggest_strokes_sends_sample_images() -> None:
-    """suggest_strokes() calls query_multimodal_multi_image with canvas + 9 sample images.
+    """suggest_strokes() routes stroke samples to cached_images and canvas to images.
 
     Verifies:
     - ``query_multimodal_multi_image`` is called (not ``query_multimodal``)
-        - The ``images`` argument contains exactly 11 entries (1 canvas + 10 samples)
-    - The first image label is ``"Current canvas""
-    - The remaining labels match the expected stroke sample names
+    - The ``images`` argument contains exactly 1 entry (the current canvas)
+    - The ``cached_images`` argument contains the 10 stroke sample entries
     - ``system_prompt`` keyword argument is passed
     """
     client = StrokeVLMClient()
@@ -107,22 +106,18 @@ def test_suggest_strokes_sends_sample_images() -> None:
     assert isinstance(call_kwargs["system_prompt"], str)
     assert len(call_kwargs["system_prompt"]) > 0
 
-    # Inspect the images argument (passed as keyword argument)
-    images: list[tuple[bytes, str]] = (
-        call_kwargs.get("images") or mock_multi.call_args.args[1]
-    )
+    # images = dynamic per-iteration content (just the canvas)
+    images: list[tuple[bytes, str]] = call_kwargs["images"]
+    assert len(images) == 1, f"Expected 1 image (canvas only), got {len(images)}"
+    assert images[0][1] == "Current canvas"
+    assert images[0][0] == b"fake_canvas_bytes"
 
-    assert len(images) == 11, (
-        f"Expected 11 images (1 canvas + 10 samples), got {len(images)}"
+    # cached_images = static prefix content (the 10 stroke samples)
+    cached_images: list[tuple[bytes, str]] = call_kwargs["cached_images"]
+    assert len(cached_images) == 10, (
+        f"Expected 10 stroke samples in cached_images, got {len(cached_images)}"
     )
-
-    # Last entry must be the current canvas
-    assert images[-1][1] == "Current canvas", (
-        f"Last image label should be 'Current canvas', got '{images[-1][1]}'"
-    )
-
-    # First 10 labels must be the stroke sample labels
-    sample_labels = {label for _, label in images[:-1]}
+    sample_labels = {label for _, label in cached_images}
     assert sample_labels == _EXPECTED_SAMPLE_LABELS, (
         f"Sample labels mismatch. Expected {_EXPECTED_SAMPLE_LABELS}, got {sample_labels}"
     )
@@ -234,9 +229,8 @@ def test_suggest_strokes_filters_samples_to_allowed_type() -> None:
     """suggest_strokes() only attaches sample images for allowed stroke types.
 
     When ``allowed_stroke_types=["line"]`` is set, exactly one sample image
-    (the LINE sample) should be appended beyond the canvas image, giving a total
-    of 2 entries in the ``images`` argument passed to
-    ``query_multimodal_multi_image``.
+    (the LINE sample) should appear in ``cached_images``. ``images`` always
+    contains only the current canvas.
     """
     client = StrokeVLMClient(allowed_stroke_types=["line"])
 
@@ -253,27 +247,25 @@ def test_suggest_strokes_filters_samples_to_allowed_type() -> None:
         )
 
     mock_multi.assert_called_once()
-    call_kwargs = mock_multi.call_args
-    images: list[tuple[bytes, str]] = (
-        call_kwargs.kwargs.get("images") or call_kwargs.args[1]
-    )
+    call_kwargs = mock_multi.call_args.kwargs
 
-    assert len(images) == 2, (
-        f"Expected 2 images (1 canvas + 1 allowed sample), got {len(images)}"
+    images: list[tuple[bytes, str]] = call_kwargs["images"]
+    assert len(images) == 1, f"Expected 1 image (canvas), got {len(images)}"
+    assert images[0][1] == "Current canvas"
+
+    cached_images: list[tuple[bytes, str]] = call_kwargs["cached_images"]
+    assert len(cached_images) == 1, (
+        f"Expected 1 sample in cached_images (LINE only), got {len(cached_images)}"
     )
-    assert images[0][1] == "LINE stroke sample", (
-        f"First image label should be 'LINE stroke sample', got '{images[0][1]}'"
-    )
-    assert images[-1][1] == "Current canvas", (
-        f"Last image label should be 'Current canvas', got '{images[-1][1]}'"
-    )
+    assert cached_images[0][1] == "LINE stroke sample"
 
 
 def test_suggest_strokes_sends_all_samples_when_allowed_none() -> None:
-    """suggest_strokes() attaches all sample images when allowed_stroke_types is None.
+    """suggest_strokes() attaches all sample images to cached_images when allowed is None.
 
     When no ``allowed_stroke_types`` restriction is set (the default), all ten
-    stroke sample images should be attached giving 11 total (canvas + 10 samples).
+    stroke sample images should appear in ``cached_images``. ``images`` contains
+    only the current canvas.
     """
     client = StrokeVLMClient()  # allowed_stroke_types defaults to None
 
@@ -290,15 +282,17 @@ def test_suggest_strokes_sends_all_samples_when_allowed_none() -> None:
         )
 
     mock_multi.assert_called_once()
-    call_kwargs = mock_multi.call_args
-    images: list[tuple[bytes, str]] = (
-        call_kwargs.kwargs.get("images") or call_kwargs.args[1]
-    )
+    call_kwargs = mock_multi.call_args.kwargs
 
-    assert len(images) == 11, (
-        f"Expected 11 images (1 canvas + 10 samples), got {len(images)}"
+    images: list[tuple[bytes, str]] = call_kwargs["images"]
+    assert len(images) == 1
+    assert images[0][1] == "Current canvas"
+
+    cached_images: list[tuple[bytes, str]] = call_kwargs["cached_images"]
+    assert len(cached_images) == 10, (
+        f"Expected 10 stroke samples in cached_images, got {len(cached_images)}"
     )
-    sample_labels = {label for _, label in images[:-1]}
+    sample_labels = {label for _, label in cached_images}
     assert sample_labels == _EXPECTED_SAMPLE_LABELS, (
         f"Sample labels mismatch. Expected {_EXPECTED_SAMPLE_LABELS}, got {sample_labels}"
     )

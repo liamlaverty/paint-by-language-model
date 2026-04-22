@@ -87,10 +87,13 @@ class VLMClient:
             payload (dict): Request body sent to the API
             response (requests.Response): The HTTP response received
         """
-        log_dir = Path(GLOBAL_PROMPT_LOG_DIR)
+        now = datetime.now()
+        log_dir = (
+            Path(GLOBAL_PROMPT_LOG_DIR) / f"{now.year:04d}" / f"{now.month:02d}" / f"{now.day:02d}"
+        )
         log_dir.mkdir(parents=True, exist_ok=True)
 
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
+        timestamp = now.strftime("%Y%m%d_%H%M%S_%f")
         log_path = log_dir / f"{timestamp}-request.log"
 
         # Mask sensitive header values
@@ -475,6 +478,7 @@ class VLMClient:
         max_tokens: int,
         *,
         system_prompt: str,
+        cached_images: list[tuple[bytes, str]] | None = None,
     ) -> dict:
         """
         Build request payload for a multi-image multimodal query.
@@ -482,20 +486,63 @@ class VLMClient:
         Each image is preceded by a text label block. A final text block
         containing the main prompt is appended after all image blocks.
 
+        When ``cached_images`` is provided, those (image_bytes, label) pairs are
+        prepended to the user message before the dynamic ``images``. On
+        Anthropic, ``cache_control: ephemeral`` is placed on the **last cached
+        image block**, telling Anthropic to cache the entire prompt prefix up
+        to and including that block (system prompt + all cached images). The
+        dynamic per-request ``images`` and the final prompt text follow and are
+        not cached.
+
         Args:
             prompt (str): The main text prompt appended after all images
-            images (list[tuple[bytes, str]]): List of (image_bytes, label) pairs
+            images (list[tuple[bytes, str]]): Dynamic per-request
+                (image_bytes, label) pairs that change between calls.
             max_tokens (int): Maximum tokens in the response
             system_prompt (str): System-level instructions; provider-agnostic.
                 Anthropic: placed in top-level ``system`` field as a content
                 block array with block-level ``cache_control``. OpenAI-compatible
                 providers: prepended as a ``role: system`` message.
+            cached_images (list[tuple[bytes, str]] | None): Optional list of
+                static (image_bytes, label) pairs that are byte-identical
+                across requests. Prepended to the user message before the
+                dynamic ``images``. On Anthropic, the **last** of these image
+                blocks carries ``cache_control: ephemeral`` to mark the cache
+                prefix boundary. On OpenAI-compatible providers, they are
+                still prepended (no cache marker — caching is Anthropic-only).
 
         Returns:
             dict: Request payload structure for the API
         """
         message_content: list[dict] = []
 
+        # Prepend cached static images (with cache_control on the last image
+        # block for Anthropic). Anthropic caches everything up to and
+        # including the marked block, so the system prefix + all of these
+        # images become the cache prefix.
+        cached_list = cached_images or []
+        for idx, (image_bytes, label) in enumerate(cached_list):
+            base64_image = base64.b64encode(image_bytes).decode("utf-8")
+            message_content.append({"type": "text", "text": label})
+            is_last_cached = idx == len(cached_list) - 1
+            if self.provider == "anthropic":
+                image_block: dict = {
+                    "type": "image",
+                    "source": {
+                        "type": "base64",
+                        "media_type": "image/png",
+                        "data": base64_image,
+                    },
+                }
+                if is_last_cached:
+                    image_block["cache_control"] = {"type": "ephemeral"}
+                message_content.append(image_block)
+            else:
+                # OpenAI-compatible: use data URL format, no cache support
+                data_url = f"data:image/png;base64,{base64_image}"
+                message_content.append({"type": "image_url", "image_url": {"url": data_url}})
+
+        # Append dynamic per-request images
         for image_bytes, label in images:
             base64_image = base64.b64encode(image_bytes).decode("utf-8")
             # Label block before each image
@@ -523,6 +570,11 @@ class VLMClient:
         payload["model"] = self.model
 
         if self.provider == "anthropic":
+            # When cached_images are present, the cache breakpoint lives on
+            # the last cached image block in the user message. The system
+            # block keeps its own breakpoint for text-only / fallback cases,
+            # which is harmless (Anthropic allows up to 4 breakpoints per
+            # request and caches the longest matching prefix).
             payload["system"] = [
                 {
                     "type": "text",
@@ -549,6 +601,7 @@ class VLMClient:
         max_tokens: int = MAX_TOKENS,
         *,
         system_prompt: str,
+        cached_images: list[tuple[bytes, str]] | None = None,
     ) -> str:
         """
         Send multiple labelled images and a text prompt to the VLM in one request.
@@ -559,13 +612,20 @@ class VLMClient:
 
         Args:
             prompt (str): The main text prompt sent after all images
-            images (list[tuple[bytes, str]]): List of (image_bytes, label) pairs
+            images (list[tuple[bytes, str]]): Dynamic per-request
+                (image_bytes, label) pairs that change between calls.
             max_tokens (int): Maximum tokens in response (default from config)
             system_prompt (str): System-level instructions sent to the model.
                 Required keyword-only argument. Anthropic: placed in the
                 top-level ``system`` field as a content block with
                 ``cache_control``. OpenAI-compatible providers: prepended as
                 the first ``role: system`` message.
+            cached_images (list[tuple[bytes, str]] | None): Optional list of
+                static images to include in the cached prompt prefix.
+                Prepended to the user message. On Anthropic, ``cache_control``
+                is placed on the last cached image block to mark the cache
+                boundary. Ignored as a cache marker on OpenAI-compatible
+                providers (still prepended for content parity).
 
         Returns:
             str: The VLM's response text
@@ -575,14 +635,22 @@ class VLMClient:
             ValueError: If image encoding fails
             requests.RequestException: For other HTTP errors
         """
+        cached_count = len(cached_images) if cached_images else 0
         total_bytes = sum(len(img_bytes) for img_bytes, _ in images)
+        cached_bytes = sum(len(img_bytes) for img_bytes, _ in cached_images) if cached_images else 0
         logger.info(
-            f"Sending multi-image query to VLM ({len(images)} images, {total_bytes} total bytes)"
+            f"Sending multi-image query to VLM "
+            f"({len(images)} dynamic images / {total_bytes} bytes; "
+            f"{cached_count} cached images / {cached_bytes} bytes)"
         )
 
         try:
             payload = self._build_multi_image_payload(
-                prompt, images, max_tokens, system_prompt=system_prompt
+                prompt,
+                images,
+                max_tokens,
+                system_prompt=system_prompt,
+                cached_images=cached_images,
             )
 
             # Retry loop for rate limiting
@@ -624,6 +692,7 @@ class VLMClient:
             response.raise_for_status()
 
             response_data = response.json()
+            self.last_usage = response_data.get("usage")
             response_text: str = self._extract_response_text(response_data)
 
             logger.info(f"Received VLM response ({len(response_text)} characters)")

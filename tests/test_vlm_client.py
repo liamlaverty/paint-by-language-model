@@ -960,3 +960,131 @@ def test_anthropic_multi_image_image_on_user_message() -> None:
     user_content = payload["messages"][0]["content"]
     image_blocks = [b for b in user_content if b["type"] == "image"]
     assert len(image_blocks) == 2
+
+
+# ============================================================================
+# cached_images Tests (Phase 27c)
+# ============================================================================
+
+
+def test_anthropic_cached_images_prepended_to_user_message() -> None:
+    """Anthropic: cached_images appear before dynamic images in the user message."""
+    client = VLMClient(provider="anthropic", base_url="https://api.anthropic.com/v1")
+    cached = [
+        (b"sample-1", "LINE stroke sample"),
+        (b"sample-2", "ARC stroke sample"),
+    ]
+    dynamic = [(b"canvas-bytes", "Current canvas")]
+    payload = client._build_multi_image_payload(
+        "user prompt",
+        dynamic,
+        max_tokens=100,
+        system_prompt="system text",
+        cached_images=cached,
+    )
+
+    content = payload["messages"][0]["content"]
+    # 2 cached × (label + image) + 1 dynamic × (label + image) + 1 prompt = 7 blocks
+    assert len(content) == 7
+    assert content[0] == {"type": "text", "text": "LINE stroke sample"}
+    assert content[1]["type"] == "image"
+    assert content[2] == {"type": "text", "text": "ARC stroke sample"}
+    assert content[3]["type"] == "image"
+    assert content[4] == {"type": "text", "text": "Current canvas"}
+    assert content[5]["type"] == "image"
+    assert content[6] == {"type": "text", "text": "user prompt"}
+
+
+def test_anthropic_cached_images_cache_control_on_last_cached_block() -> None:
+    """Anthropic: cache_control marker is on the last cached image block only."""
+    client = VLMClient(provider="anthropic", base_url="https://api.anthropic.com/v1")
+    cached = [
+        (b"s1", "L1"),
+        (b"s2", "L2"),
+        (b"s3", "L3"),
+    ]
+    payload = client._build_multi_image_payload(
+        "p",
+        [(b"canvas", "Current canvas")],
+        max_tokens=50,
+        system_prompt="sys",
+        cached_images=cached,
+    )
+
+    content = payload["messages"][0]["content"]
+    # Image blocks at indices 1, 3, 5 (cached) and 7 (canvas, dynamic)
+    cached_image_blocks = [content[1], content[3], content[5]]
+    dynamic_image_block = content[7]
+
+    # Only the LAST cached image block carries cache_control
+    assert "cache_control" not in cached_image_blocks[0]
+    assert "cache_control" not in cached_image_blocks[1]
+    assert cached_image_blocks[2]["cache_control"] == {"type": "ephemeral"}
+
+    # Dynamic canvas image must NOT carry cache_control
+    assert dynamic_image_block["type"] == "image"
+    assert "cache_control" not in dynamic_image_block
+
+
+def test_anthropic_cached_images_none_unchanged_behaviour() -> None:
+    """Anthropic: cached_images=None gives the original (dynamic-only) layout."""
+    client = VLMClient(provider="anthropic", base_url="https://api.anthropic.com/v1")
+    payload = client._build_multi_image_payload(
+        "prompt",
+        [(b"img", "label")],
+        max_tokens=100,
+        system_prompt="sys",
+        cached_images=None,
+    )
+
+    content = payload["messages"][0]["content"]
+    # Just label + image + prompt
+    assert len(content) == 3
+    assert content[0] == {"type": "text", "text": "label"}
+    assert content[1]["type"] == "image"
+    assert "cache_control" not in content[1]
+    assert content[2] == {"type": "text", "text": "prompt"}
+
+
+def test_openai_compat_cached_images_prepended_without_cache_control() -> None:
+    """Mistral/LMStudio: cached_images are prepended but carry no cache marker."""
+    client = VLMClient(provider="mistral", base_url="https://api.mistral.ai/v1")
+    cached = [(b"sample-1", "LINE stroke sample")]
+    payload = client._build_multi_image_payload(
+        "user prompt",
+        [(b"canvas", "Current canvas")],
+        max_tokens=100,
+        system_prompt="system text",
+        cached_images=cached,
+    )
+
+    # System lives in messages[0] for OpenAI-compat
+    assert payload["messages"][0]["role"] == "system"
+    assert payload["messages"][0]["content"] == "system text"
+
+    user_content = payload["messages"][1]["content"]
+    # cached label+image + dynamic label+image + prompt = 5 blocks
+    assert len(user_content) == 5
+    assert user_content[0] == {"type": "text", "text": "LINE stroke sample"}
+    assert user_content[1]["type"] == "image_url"
+    assert user_content[2] == {"type": "text", "text": "Current canvas"}
+    assert user_content[3]["type"] == "image_url"
+    assert user_content[4] == {"type": "text", "text": "user prompt"}
+
+    # OpenAI-compat image_url blocks have no cache_control field
+    for block in user_content:
+        assert "cache_control" not in block
+
+
+def test_anthropic_system_block_keeps_cache_control_with_cached_images() -> None:
+    """Anthropic: system block retains its own cache_control independent of cached_images."""
+    client = VLMClient(provider="anthropic", base_url="https://api.anthropic.com/v1")
+    payload = client._build_multi_image_payload(
+        "p",
+        [(b"c", "Current canvas")],
+        max_tokens=50,
+        system_prompt="sys",
+        cached_images=[(b"s", "Sample")],
+    )
+
+    assert payload["system"][0]["cache_control"] == {"type": "ephemeral"}
