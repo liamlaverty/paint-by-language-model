@@ -1088,3 +1088,111 @@ def test_anthropic_system_block_keeps_cache_control_with_cached_images() -> None
     )
 
     assert payload["system"][0]["cache_control"] == {"type": "ephemeral"}
+
+
+# ============================================================================
+# Temperature Gating Tests (Phase 28)
+# ============================================================================
+
+
+def test_supports_temperature_returns_true_for_standard_models() -> None:
+    """_supports_temperature() returns True for models that accept temperature."""
+    for model in (
+        "claude-sonnet-4-5",
+        "claude-haiku-4-5",
+        "mistral-large-latest",
+        "local-model",
+    ):
+        client = VLMClient(model=model)
+        assert client._supports_temperature() is True, (
+            f"Expected temperature to be supported for model={model}"
+        )
+
+
+def test_supports_temperature_returns_false_for_opus_4_7() -> None:
+    """_supports_temperature() returns False for claude-opus-4-7."""
+    client = VLMClient(model="claude-opus-4-7")
+    assert client._supports_temperature() is False
+
+
+def test_build_text_payload_omits_temperature_for_opus_4_7() -> None:
+    """_build_text_payload() excludes temperature key when model is claude-opus-4-7."""
+    client = VLMClient(
+        provider="anthropic",
+        base_url="https://api.anthropic.com/v1",
+        model="claude-opus-4-7",
+        temperature=0.7,
+    )
+    payload = client._build_text_payload("hello", max_tokens=100, system_prompt="sys")
+    assert "temperature" not in payload
+
+
+def test_build_text_payload_includes_temperature_for_supported_model() -> None:
+    """_build_text_payload() includes temperature key for models that support it."""
+    client = VLMClient(
+        provider="anthropic",
+        base_url="https://api.anthropic.com/v1",
+        model="claude-sonnet-4-5",
+        temperature=0.5,
+    )
+    payload = client._build_text_payload("hello", max_tokens=100, system_prompt="sys")
+    assert "temperature" in payload
+    assert payload["temperature"] == 0.5
+
+
+def test_build_multimodal_payload_omits_temperature_for_opus_4_7() -> None:
+    """_build_multimodal_payload() excludes temperature key for claude-opus-4-7."""
+    client = VLMClient(
+        provider="anthropic",
+        base_url="https://api.anthropic.com/v1",
+        model="claude-opus-4-7",
+        temperature=0.7,
+    )
+    payload = client._build_multimodal_payload(
+        "describe", b"imgbytes", max_tokens=100, system_prompt="sys"
+    )
+    assert "temperature" not in payload
+
+
+def test_build_multimodal_payload_includes_temperature_for_supported_model() -> None:
+    """_build_multimodal_payload() includes temperature key for supported models."""
+    client = VLMClient(
+        provider="anthropic",
+        base_url="https://api.anthropic.com/v1",
+        model="claude-sonnet-4-5",
+        temperature=0.3,
+    )
+    payload = client._build_multimodal_payload(
+        "describe", b"imgbytes", max_tokens=100, system_prompt="sys"
+    )
+    assert "temperature" in payload
+    assert payload["temperature"] == 0.3
+
+
+def test_build_multi_image_payload_omits_temperature_for_opus_4_7() -> None:
+    """_build_multi_image_payload() excludes temperature key for claude-opus-4-7."""
+    client = VLMClient(
+        provider="anthropic",
+        base_url="https://api.anthropic.com/v1",
+        model="claude-opus-4-7",
+        temperature=0.7,
+    )
+    payload = client._build_multi_image_payload(
+        "prompt", [(b"img", "label")], max_tokens=100, system_prompt="sys"
+    )
+    assert "temperature" not in payload
+
+
+def test_build_multi_image_payload_includes_temperature_for_supported_model() -> None:
+    """_build_multi_image_payload() includes temperature key for supported models."""
+    client = VLMClient(
+        provider="anthropic",
+        base_url="https://api.anthropic.com/v1",
+        model="claude-sonnet-4-5",
+        temperature=0.6,
+    )
+    payload = client._build_multi_image_payload(
+        "prompt", [(b"img", "label")], max_tokens=100, system_prompt="sys"
+    )
+    assert "temperature" in payload
+    assert payload["temperature"] == 0.6
