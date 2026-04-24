@@ -1,176 +1,23 @@
 [
   {
-    "artist": "Vincent van Gogh",
-    "subject": "A sunlit flower field of sunflowers and wildflowers under a swirling sky, rendered in thick impasto brushstrokes with intense yellows and blues",
-    "output-id": "vangogh-flower-field-001-mistral-large-2512",
-    "isComplete": true
-  },
-  {
-    "artist": "Children's book illustration",
-    "subject": "A patchwork elephant walking through a lush jungle, its body made of colourful fabric pieces, surrounded by oversized tropical leaves and friendly jungle animals peeking through the foliage",
-    "output-id": "patchwork-elephant-line-arc-polyline-circle-splatter-drybrush-chalk-mistral-large-2512",
-    "isComplete": true,
-    "stroke-types": "line,arc,polyline,circle,splatter,dry-brush,chalk"
-  },
-  {
-    "artist": "Children's book illustration",
-    "subject": "A patchwork elephant walking through a lush jungle, its body made of colourful fabric pieces, surrounded by oversized tropical leaves and friendly jungle animals peeking through the foliage",
-    "output-id": "patchwork-elephant-line-mistral-large-2512",
-    "isComplete": true,
-    "stroke-types": "line"
-  },
-  {
-    "artist": "Children's book illustration",
-    "subject": "A patchwork elephant walking through a lush jungle, its body made of colourful fabric pieces, surrounded by oversized tropical leaves and friendly jungle animals peeking through the foliage",
-    "output-id": "patchwork-elephant-line-arc-mistral-large-2512",
-    "isComplete": true,
-    "stroke-types": "line,arc"
-  },
-  {
-    "artist": "Children's book illustration",
-    "subject": "A patchwork elephant walking through a lush jungle, its body made of colourful fabric pieces, surrounded by oversized tropical leaves and friendly jungle animals peeking through the foliage",
-    "output-id": "patchwork-elephant-line-arc-polyline-mistral-large-2512",
-    "isComplete": true,
-    "stroke-types": "line,arc,polyline"
-  },
-  {
-    "artist": "Children's book illustration",
-    "subject": "A patchwork elephant walking through a lush jungle, its body made of colourful fabric pieces, surrounded by oversized tropical leaves and friendly jungle animals peeking through the foliage",
-    "output-id": "patchwork-elephant-line-arc-polyline-circle-mistral-large-2512",
-    "isComplete": true,
-    "stroke-types": "line,arc,polyline,circle"
-  },
-  {
-    "artist": "Children's book illustration",
-    "subject": "A patchwork elephant walking through a lush jungle, its body made of colourful fabric pieces, surrounded by oversized tropical leaves and friendly jungle animals peeking through the foliage",
-    "output-id": "patchwork-elephant-line-arc-polyline-circle-splatter-mistral-large-2512",
-    "isComplete": true,
-    "stroke-types": "line,arc,polyline,circle,splatter"
-  },
-  {
-    "artist": "Children's book illustration",
-    "subject": "A patchwork elephant walking through a lush jungle, its body made of colourful fabric pieces, surrounded by oversized tropical leaves and friendly jungle animals peeking through the foliage",
-    "output-id": "patchwork-elephant-line-arc-polyline-circle-splatter-drybrush-mistral-large-2512",
-    "isComplete": true,
-    "stroke-types": "line,arc,polyline,circle,splatter,dry-brush"
-  },
-  {
-    "artist": "Children's book illustration",
-    "subject": "A patchwork elephant walking through a lush jungle, its body made of colourful fabric pieces, surrounded by oversized tropical leaves and friendly jungle animals peeking through the foliage",
-    "output-id": "patchwork-elephant-line-arc-polyline-circle-splatter-drybrush-chalk-wetbrush-mistral-large-2512",
-    "isComplete": true,
-    "stroke-types": "line,arc,polyline,circle,splatter,dry-brush,chalk,wet-brush"
-  },
-  {
-    "artist": "Children's book illustration",
-    "subject": "A patchwork elephant walking through a lush jungle, its body made of colourful fabric pieces, surrounded by oversized tropical leaves and friendly jungle animals peeking through the foliage",
-    "output-id": "patchwork-elephant-line-arc-polyline-circle-splatter-drybrush-chalk-wetbrush-burn-mistral-large-2512",
-    "isComplete": true,
-    "stroke-types": "line,arc,polyline,circle,splatter,dry-brush,chalk,wet-brush,burn"
-  },
-  {
-    "artist": "Children's book illustration",
-    "subject": "A patchwork elephant walking through a lush jungle, its body made of colourful fabric pieces, surrounded by oversized tropical leaves and friendly jungle animals peeking through the foliage",
-    "output-id": "patchwork-elephant-all-strokes-mistral-large-2512",
-    "isComplete": true,
-    "stroke-types": "line,arc,polyline,circle,splatter,dry-brush,chalk,wet-brush,burn,dodge"
-  },
-  {
     "artist": "Claude Monet",
-    "subject": "La Corniche near Monaco at golden hour, with shimmering Mediterranean light on the sea, rocky cliffs, and lush coastal vegetation rendered in loose impressionist brushwork",
-    "output-id": "monet-corniche-001-mistral-large-2512",
-    "isComplete": true
-  },
-  {
-    "artist": "Frida Kahlo",
-    "subject": "Self-portrait with vibrant floral headdress, intense gaze, and symbolic Mexican iconography",
-    "output-id": "kahlo-self-portrait-001-mistral-large-2512",
-    "isComplete": true
-  },
-  {
-    "artist": "Vassily Kandinsky",
-    "subject": "Abstract composition of bold geometric shapes, vivid primary colours, dynamic diagonal lines, and floating circles evoking spiritual harmony",
-    "output-id": "kandinsky-abstract-001-mistral-large-2512",
-    "isComplete": true
-  },
-  {
-    "artist": "Marc Chagall",
-    "subject": "A dreamy floating village scene with a whimsical blue goat drifting above rooftops, surrounded by bouquets of flowers and lovers embracing under a crescent moon",
-    "output-id": "chagall-goat-001-mistral-large-2512",
-    "isComplete": true
-  },
-  {
-    "artist": "Katsushika Hokusai",
-    "subject": "The Great Wave off Kanagawa — a towering cresting wave with foamy claws looming over small fishing boats, Mount Fuji small and serene in the background, rendered in the ukiyo-e woodblock print style with deep Prussian blue and white",
-    "output-id": "hokusai-great-wave-001-mistral-large-2512",
-    "isComplete": true
-  },
-  {
-    "artist": "Gino Severini",
-    "subject": "A crowded dance hall alive with sequined figures and jazz musicians, fractured into shimmering mosaic rhythms of light, colour and sound",
-    "output-id": "dancehall-jazz-severini-futurist-mosaic-line-arc-polyline-circle-splatter-drybrush-chalk-mistral-large-2512",
+    "subject": "A tranquil afternoon landscape in the French countryside during late summer, where a modest lily pond rests in the middle distance, partially framed by a gentle curve of reeds and tall grasses in the foreground. Beyond the pond, a sloping meadow dotted with wildflowers — crimson poppies, pale yellow buttercups, and hints of lavender — rises toward a distant row of poplars whose elongated reflections shimmer faintly in the still water. A weathered wooden footbridge, half-hidden by overhanging willow branches, crosses a narrow stream that feeds the pond from the left. The lily pads float in loose, irregular clusters, their white and pale-pink blossoms catching dappled light filtering through a sky of broken clouds. The overall palette favors soft greens, warm ochres, and hazy violet shadows, with light rendered in broken, visible brushstrokes that dissolve form at the edges and suggest the gentle movement of air and water.",
+    "output-id": "monet-landscape-lilies-002-line-arc-polyline-circle-splatter-chalk",
     "isComplete": true,
-    "stroke-types": "line,arc,polyline,circle,splatter,dry-brush,chalk"
-  },
-  {
-    "artist": "Henri de Toulouse-Lautrec",
-    "subject": "A crowded dance hall alive with sequined figures and jazz musicians, rendered in bold flat colour and sinuous outlines, faces caught in gaslit glamour and shadow",
-    "output-id": "dancehall-jazz-lautrec-gaslit-flatcolour-line-arc-polyline-circle-splatter-drybrush-chalk-mistral-large-2512",
-    "isComplete": true,
-    "stroke-types": "line,arc,polyline,circle,splatter,dry-brush,chalk"
-  },
-  {
-    "artist": "Egon Schiele",
-    "subject": "A crowded dance hall alive with sequined figures and jazz musicians, bodies contorted in angular expressionist lines, raw emotion bleeding through scratched and frantic mark-making",
-    "output-id": "dancehall-jazz-schiele-expressionist-angular-line-arc-polyline-circle-splatter-drybrush-chalk-mistral-large-2512",
-    "isComplete": true,
-    "stroke-types": "line,arc,polyline,circle,splatter,dry-brush,chalk"
-  },
-  {
-    "artist": "Fernand Léger",
-    "subject": "A crowded dance hall alive with sequined figures and jazz musicians, bodies reduced to gleaming cylindrical forms and bold primary geometry against a mechanical backdrop",
-    "output-id": "dancehall-jazz-leger-tubist-geometry-mechanical-line-arc-polyline-circle-splatter-drybrush-chalk-mistral-large-2512",
-    "isComplete": true,
-    "stroke-types": "line,arc,polyline,circle,splatter,dry-brush,chalk"
-  },
-  {
-    "artist": "Ernst Ludwig Kirchner",
-    "subject": "A crowded dance hall alive with sequined figures and jazz musicians, slashed in acid greens and magentas with jagged brushwork, figures elongated and fevered under electric light",
-    "output-id": "dancehall-jazz-kirchner-expressionist-acid-electric-line-arc-polyline-circle-splatter-drybrush-chalk-mistral-large-2512",
-    "isComplete": true,
-    "stroke-types": "line,arc,polyline,circle,splatter,dry-brush,chalk"
-  },
-  {
-    "artist": "Stuart Davis",
-    "subject": "A crowded dance hall alive with sequined figures and jazz musicians, syncopated into flat jazz-age lettering, hot colour chords and bebop rhythms locked into sharp angular collage",
-    "output-id": "dancehall-jazz-davis-syncopated-collage-bebop-line-arc-polyline-circle-splatter-drybrush-chalk-mistral-large-2512",
-    "isComplete": true,
-    "stroke-types": "line,arc,polyline,circle,splatter,dry-brush,chalk"
-  },
-  {
-    "artist": "M.C. Escher",
-    "subject": "A crowded dance hall alive with sequined figures and jazz musicians, tessellating into impossible reflections and recursive staircases, dancers morphing into geometric tiles as the floor folds back into the ceiling",
-    "output-id": "dancehall-jazz-escher-tessellation-impossible-recursive-line-arc-polyline-circle-splatter-drybrush-chalk-mistral-large-2512",
-    "isComplete": true,
-    "stroke-types": "line,arc,polyline,circle,splatter,dry-brush,chalk"
-  },
-  {
-    "artist": "L.S. Lowry",
-    "subject": "A crowded dance hall alive with sequined figures and jazz musicians, rendered in Lowry's distinctive matchstick style with simplified forms and a muted industrial palette, capturing the gritty energy of urban nightlife",
-    "output-id": "dancehall-jazz-lowry-matchstick-style-muted-palette-line-arc-polyline-circle-splatter-drybrush-chalk-mistral-large-2512",
-    "isComplete": true,
-    "stroke-types": "line,arc,polyline,circle,splatter,dry-brush,chalk"
-  },
-  {
-    "artist": "Vassily Kandinsky",
-    "subject": "Abstract composition of bold geometric shapes, vivid primary colours, dynamic diagonal lines",
-    "output-id": "kandinsky-abstract-001-mistral-large-2512",
-    "isComplete": true
+    "stroke-types": "line,arc,polyline,circle,splatter,chalk"
   },
   {
     "artist": "Vassily Kandinsky",
     "subject": "Abstract composition of bold geometric shapes, vivid primary colours, dynamic diagonal lines",
     "output-id": "kandinsky-abstract-001-claude-haiku-3-5",
-    "isComplete": false
+    "isComplete": true,
+    "stroke-types": "line,arc,polyline,circle,splatter,dry-brush,chalk"
+  },
+  {
+    "artist": "Children's book illustration",
+    "subject": "A patchwork elephant walking through a lush jungle, its body made of colourful fabric pieces, surrounded by oversized tropical leaves and friendly jungle animals peeking through the foliage",
+    "output-id": "patchwork-elephant-line-arc-polyline-circle-claude-opus-4-7",
+    "isComplete": true,
+    "stroke-types": "line,arc,polyline,circle,splatter,chalk"
   }
 ]

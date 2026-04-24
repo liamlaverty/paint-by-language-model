@@ -145,6 +145,21 @@ class VLMClient:
                 headers["Authorization"] = f"Bearer {self.api_key}"
         return headers
 
+    def _supports_temperature(self) -> bool:
+        """
+        Check whether the current model accepts a temperature parameter.
+
+        Some Anthropic models (e.g. ``claude-opus-4-7``) do not accept a
+        ``temperature`` field and will return a 400 Bad Request if it is
+        included. This helper centralises the check so all payload-building
+        methods can guard the field consistently.
+
+        Returns:
+            bool: True if temperature is supported, False otherwise
+        """
+        unsupported_models = {"claude-opus-4-7"}
+        return self.model not in unsupported_models
+
     def _build_text_payload(self, prompt: str, max_tokens: int, *, system_prompt: str) -> dict:
         """
         Build request payload for text-only query based on provider.
@@ -181,7 +196,8 @@ class VLMClient:
             ]
 
         payload["max_tokens"] = max_tokens
-        payload["temperature"] = self.temperature
+        if self._supports_temperature():
+            payload["temperature"] = self.temperature
 
         return payload
 
@@ -363,7 +379,8 @@ class VLMClient:
             ]
 
         payload["max_tokens"] = max_tokens
-        payload["temperature"] = self.temperature
+        if self._supports_temperature():
+            payload["temperature"] = self.temperature
 
         return payload
 
@@ -590,7 +607,8 @@ class VLMClient:
             ]
 
         payload["max_tokens"] = max_tokens
-        payload["temperature"] = self.temperature
+        if self._supports_temperature():
+            payload["temperature"] = self.temperature
 
         return payload
 
