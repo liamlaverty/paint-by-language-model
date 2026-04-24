@@ -1,121 +1,23 @@
 [
   {
     "artist": "Claude Monet",
-    "subject": "La Corniche near Monaco at golden hour, with shimmering Mediterranean light on the sea, rocky cliffs, and lush coastal vegetation rendered in loose impressionist brushwork",
-    "output-id": "monet-corniche-001",
-    "isComplete": true
-  },
-  {
-    "artist": "Claude Monet",
-    "subject": "La Corniche near Monaco at golden hour, with shimmering Mediterranean light on the sea, rocky cliffs, and lush coastal vegetation rendered in loose impressionist brushwork",
-    "output-id": "monet-corniche-002-mistral",
-    "isComplete": true
-  },
-  {
-    "artist": "Frida Kahlo",
-    "subject": "Self-portrait with vibrant floral headdress, intense gaze, and symbolic Mexican iconography",
-    "output-id": "kahlo-self-portrait-001",
-    "isComplete": true
+    "subject": "A tranquil afternoon landscape in the French countryside during late summer, where a modest lily pond rests in the middle distance, partially framed by a gentle curve of reeds and tall grasses in the foreground. Beyond the pond, a sloping meadow dotted with wildflowers — crimson poppies, pale yellow buttercups, and hints of lavender — rises toward a distant row of poplars whose elongated reflections shimmer faintly in the still water. A weathered wooden footbridge, half-hidden by overhanging willow branches, crosses a narrow stream that feeds the pond from the left. The lily pads float in loose, irregular clusters, their white and pale-pink blossoms catching dappled light filtering through a sky of broken clouds. The overall palette favors soft greens, warm ochres, and hazy violet shadows, with light rendered in broken, visible brushstrokes that dissolve form at the edges and suggest the gentle movement of air and water.",
+    "output-id": "monet-landscape-lilies-002-line-arc-polyline-circle-splatter-chalk",
+    "isComplete": true,
+    "stroke-types": "line,arc,polyline,circle,splatter,chalk"
   },
   {
     "artist": "Vassily Kandinsky",
-    "subject": "Abstract composition of bold geometric shapes, vivid primary colours, dynamic diagonal lines, and floating circles evoking spiritual harmony",
-    "output-id": "kandinsky-abstract-001",
-    "isComplete": true
-  },
-  {
-    "artist": "Vincent van Gogh",
-    "subject": "A sunlit flower field of sunflowers and wildflowers under a swirling sky, rendered in thick impasto brushstrokes with intense yellows and blues",
-    "output-id": "vangogh-flower-field-001",
-    "isComplete": true
-  },
-  {
-    "artist": "Children's book illustration",
-    "subject": "A patchwork elephant walking through a lush jungle, its body made of colourful fabric pieces, surrounded by oversized tropical leaves and friendly jungle animals peeking through the foliage",
-    "output-id": "patchwork-elephant-line-arc-polyline-circle-splatter-drybrush-chalk-claude-4-6",
+    "subject": "Abstract composition of bold geometric shapes, vivid primary colours, dynamic diagonal lines",
+    "output-id": "kandinsky-abstract-001-claude-haiku-3-5",
     "isComplete": true,
     "stroke-types": "line,arc,polyline,circle,splatter,dry-brush,chalk"
   },
   {
-    "artist": "Marc Chagall",
-    "subject": "A dreamy floating village scene with a whimsical blue goat drifting above rooftops, surrounded by bouquets of flowers and lovers embracing under a crescent moon",
-    "output-id": "chagall-goat-001",
-    "isComplete": true
-  },
-  {
-    "artist": "Katsushika Hokusai",
-    "subject": "The Great Wave off Kanagawa — a towering cresting wave with foamy claws looming over small fishing boats, Mount Fuji small and serene in the background, rendered in the ukiyo-e woodblock print style with deep Prussian blue and white",
-    "output-id": "hokusai-great-wave-001",
-    "isComplete": true
-  },
-  {
     "artist": "Children's book illustration",
     "subject": "A patchwork elephant walking through a lush jungle, its body made of colourful fabric pieces, surrounded by oversized tropical leaves and friendly jungle animals peeking through the foliage",
-    "output-id": "patchwork-elephant-line-claude-4-6",
+    "output-id": "patchwork-elephant-line-arc-polyline-circle-claude-opus-4-7",
     "isComplete": true,
-    "stroke-types": "line"
-  },
-  {
-    "artist": "Children's book illustration",
-    "subject": "A patchwork elephant walking through a lush jungle, its body made of colourful fabric pieces, surrounded by oversized tropical leaves and friendly jungle animals peeking through the foliage",
-    "output-id": "patchwork-elephant-line-arc-claude-4-6",
-    "isComplete": true,
-    "stroke-types": "line,arc"
-  },
-  {
-    "artist": "Children's book illustration",
-    "subject": "A patchwork elephant walking through a lush jungle, its body made of colourful fabric pieces, surrounded by oversized tropical leaves and friendly jungle animals peeking through the foliage",
-    "output-id": "patchwork-elephant-line-arc-polyline-claude-4-6",
-    "isComplete": true,
-    "stroke-types": "line,arc,polyline"
-  },
-  {
-    "artist": "Children's book illustration",
-    "subject": "A patchwork elephant walking through a lush jungle, its body made of colourful fabric pieces, surrounded by oversized tropical leaves and friendly jungle animals peeking through the foliage",
-    "output-id": "patchwork-elephant-line-arc-polyline-circle-claude-4-6",
-    "isComplete": true,
-    "stroke-types": "line,arc,polyline,circle"
-  },
-  {
-    "artist": "Children's book illustration",
-    "subject": "A patchwork elephant walking through a lush jungle, its body made of colourful fabric pieces, surrounded by oversized tropical leaves and friendly jungle animals peeking through the foliage",
-    "output-id": "patchwork-elephant-line-arc-polyline-circle-splatter-claude-4-6",
-    "isComplete": true,
-    "stroke-types": "line,arc,polyline,circle,splatter"
-  },
-  {
-    "artist": "Children's book illustration",
-    "subject": "A patchwork elephant walking through a lush jungle, its body made of colourful fabric pieces, surrounded by oversized tropical leaves and friendly jungle animals peeking through the foliage",
-    "output-id": "patchwork-elephant-line-arc-polyline-circle-splatter-drybrush-claude-4-6",
-    "isComplete": true,
-    "stroke-types": "line,arc,polyline,circle,splatter,dry-brush"
-  },
-  {
-    "artist": "Children's book illustration",
-    "subject": "A patchwork elephant walking through a lush jungle, its body made of colourful fabric pieces, surrounded by oversized tropical leaves and friendly jungle animals peeking through the foliage",
-    "output-id": "patchwork-elephant-line-arc-polyline-circle-splatter-drybrush-chalk-wetbrush-claude-4-6",
-    "isComplete": true,
-    "stroke-types": "line,arc,polyline,circle,splatter,dry-brush,chalk,wet-brush"
-  },
-  {
-    "artist": "Children's book illustration",
-    "subject": "A patchwork elephant walking through a lush jungle, its body made of colourful fabric pieces, surrounded by oversized tropical leaves and friendly jungle animals peeking through the foliage",
-    "output-id": "patchwork-elephant-line-arc-polyline-circle-splatter-drybrush-chalk-wetbrush-burn-claude-4-6",
-    "isComplete": true,
-    "stroke-types": "line,arc,polyline,circle,splatter,dry-brush,chalk,wet-brush,burn"
-  },
-  {
-    "artist": "Children's book illustration",
-    "subject": "A patchwork elephant walking through a lush jungle, its body made of colourful fabric pieces, surrounded by oversized tropical leaves and friendly jungle animals peeking through the foliage",
-    "output-id": "patchwork-elephant-all-strokes-claude-4-6",
-    "isComplete": true,
-    "stroke-types": "line,arc,polyline,circle,splatter,dry-brush,chalk,wet-brush,burn,dodge"
-  },
-  {
-    "artist": "Children's book illustration",
-    "subject": "A patchwork elephant walking through a lush jungle, its body made of colourful fabric pieces, surrounded by oversized tropical leaves and friendly jungle animals peeking through the foliage",
-    "output-id": "patchwork-elephant-line-arc-polyline-circle-claude-opus-4-6",
-    "isComplete": true,
-    "stroke-types": "line,arc,polyline,circle,chalk"
+    "stroke-types": "line,arc,polyline,circle,splatter,chalk"
   }
 ]

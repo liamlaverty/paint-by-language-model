@@ -42,111 +42,111 @@ class TestPromptConstruction:
     def test_prompt_includes_artist_name(
         self, planner_client: PlannerLLMClient
     ) -> None:
-        """Test that prompt includes artist name."""
-        prompt = planner_client._build_planning_prompt(
+        """Test that user prompt includes artist name."""
+        _, user_prompt = planner_client._build_planning_prompts(
             artist_name="Vincent van Gogh",
             subject="Starry Night",
             expanded_subject=None,
             stroke_types=["line", "arc"],
         )
 
-        assert "Vincent van Gogh" in prompt
+        assert "Vincent van Gogh" in user_prompt
 
     def test_prompt_includes_subject(self, planner_client: PlannerLLMClient) -> None:
-        """Test that prompt includes subject."""
-        prompt = planner_client._build_planning_prompt(
+        """Test that user prompt includes subject."""
+        _, user_prompt = planner_client._build_planning_prompts(
             artist_name="Claude Monet",
             subject="Water Lilies",
             expanded_subject=None,
             stroke_types=["line", "arc"],
         )
 
-        assert "Water Lilies" in prompt
+        assert "Water Lilies" in user_prompt
 
     def test_prompt_includes_stroke_types(
         self, planner_client: PlannerLLMClient
     ) -> None:
-        """Test that prompt includes stroke types."""
-        prompt = planner_client._build_planning_prompt(
+        """Test that user prompt includes stroke types."""
+        _, user_prompt = planner_client._build_planning_prompts(
             artist_name="Test Artist",
             subject="Test Subject",
             expanded_subject=None,
             stroke_types=["line", "arc", "splatter"],
         )
 
-        assert "line" in prompt
-        assert "arc" in prompt
-        assert "splatter" in prompt
+        assert "line" in user_prompt
+        assert "arc" in user_prompt
+        assert "splatter" in user_prompt
 
     def test_prompt_includes_canvas_dimensions(
         self, planner_client: PlannerLLMClient
     ) -> None:
-        """Test that prompt includes canvas dimensions."""
-        prompt = planner_client._build_planning_prompt(
+        """Test that user prompt includes canvas dimensions."""
+        _, user_prompt = planner_client._build_planning_prompts(
             artist_name="Test Artist",
             subject="Test Subject",
             expanded_subject=None,
             stroke_types=["line"],
         )
 
-        assert str(CANVAS_WIDTH) in prompt
-        assert str(CANVAS_HEIGHT) in prompt
+        assert str(CANVAS_WIDTH) in user_prompt
+        assert str(CANVAS_HEIGHT) in user_prompt
 
     def test_prompt_includes_expanded_subject_when_provided(
         self, planner_client: PlannerLLMClient
     ) -> None:
-        """Test that prompt includes expanded subject when provided."""
+        """Test that user prompt includes expanded subject when provided."""
         expanded = "A detailed serene pond with floating water lilies"
-        prompt = planner_client._build_planning_prompt(
+        _, user_prompt = planner_client._build_planning_prompts(
             artist_name="Claude Monet",
             subject="Water Lilies",
             expanded_subject=expanded,
             stroke_types=["line"],
         )
 
-        assert expanded in prompt
-        assert "Expanded description:" in prompt
+        assert expanded in user_prompt
+        assert "Expanded description:" in user_prompt
 
     def test_prompt_omits_expanded_subject_when_none(
         self, planner_client: PlannerLLMClient
     ) -> None:
-        """Test that prompt omits expanded subject section when None."""
-        prompt = planner_client._build_planning_prompt(
+        """Test that user prompt omits expanded subject section when None."""
+        _, user_prompt = planner_client._build_planning_prompts(
             artist_name="Test Artist",
             subject="Test Subject",
             expanded_subject=None,
             stroke_types=["line"],
         )
 
-        assert "Expanded description:" not in prompt
+        assert "Expanded description:" not in user_prompt
 
     def test_prompt_requests_json_only_response(
         self, planner_client: PlannerLLMClient
     ) -> None:
-        """Test that prompt requests JSON-only response."""
-        prompt = planner_client._build_planning_prompt(
+        """Test that system prompt requests JSON-only response."""
+        system_prompt, _ = planner_client._build_planning_prompts(
             artist_name="Test Artist",
             subject="Test Subject",
             expanded_subject=None,
             stroke_types=["line"],
         )
 
-        assert "RESPONSE FORMAT (JSON only)" in prompt
-        assert "IMPORTANT: Respond ONLY with valid JSON" in prompt
+        assert "RESPONSE FORMAT (JSON only)" in system_prompt
+        assert "IMPORTANT: Respond ONLY with valid JSON" in system_prompt
 
     def test_prompt_includes_minimum_iterations_per_layer(
         self, planner_client: PlannerLLMClient
     ) -> None:
-        """Test that prompt includes the minimum iterations per layer line."""
-        prompt = planner_client._build_planning_prompt(
+        """Test that user prompt includes the minimum iterations per layer line."""
+        _, user_prompt = planner_client._build_planning_prompts(
             artist_name="Test Artist",
             subject="Test Subject",
             expanded_subject=None,
             stroke_types=["line"],
         )
 
-        assert "Minimum iterations per layer:" in prompt
-        assert str(MIN_STROKES_PER_LAYER) in prompt
+        assert "Minimum iterations per layer:" in user_prompt
+        assert str(MIN_STROKES_PER_LAYER) in user_prompt
 
 
 class TestResponseParsingValid:
@@ -642,7 +642,7 @@ class TestGeneratePlan:
     def test_generate_plan_calls_vlm_client_query(
         self, planner_client: PlannerLLMClient, mock_vlm_client: Mock
     ) -> None:
-        """Test that generate_plan calls VLMClient.query."""
+        """Test that generate_plan calls VLMClient.query with system_prompt kwarg."""
         mock_vlm_client.query.return_value = json.dumps(
             {
                 "artist_name": "Test Artist",
@@ -673,6 +673,13 @@ class TestGeneratePlan:
         )
 
         mock_vlm_client.query.assert_called_once()
+        call_kwargs = mock_vlm_client.query.call_args
+        assert "system_prompt" in call_kwargs.kwargs, (
+            "VLMClient.query must be called with keyword argument system_prompt="
+        )
+        assert call_kwargs.kwargs["system_prompt"] != "", (
+            "system_prompt must not be empty"
+        )
 
     def test_generate_plan_stores_raw_response(
         self, planner_client: PlannerLLMClient, mock_vlm_client: Mock

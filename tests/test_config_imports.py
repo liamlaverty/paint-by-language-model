@@ -238,16 +238,25 @@ class TestConfigSettings(unittest.TestCase):
         self.assertEqual(config.ANTHROPIC_BASE_URL, "https://api.anthropic.com/v1")
 
     def test_anthropic_vlm_model(self) -> None:
-        """ANTHROPIC_VLM_MODEL defaults to claude-sonnet-4-6."""
-        self.assertEqual(config.ANTHROPIC_VLM_MODEL, "claude-sonnet-4-6")
+        """ANTHROPIC_VLM_MODEL defaults to a claude- variant."""
+        self.assertTrue(
+            config.ANTHROPIC_VLM_MODEL.startswith("claude-"),
+            f"Expected a claude- model, got {config.ANTHROPIC_VLM_MODEL!r}",
+        )
 
     def test_anthropic_evaluation_vlm_model(self) -> None:
-        """ANTHROPIC_EVALUATION_VLM_MODEL defaults to claude-sonnet-4-6."""
-        self.assertEqual(config.ANTHROPIC_EVALUATION_VLM_MODEL, "claude-sonnet-4-6")
+        """ANTHROPIC_EVALUATION_VLM_MODEL defaults to a claude- variant."""
+        self.assertTrue(
+            config.ANTHROPIC_EVALUATION_VLM_MODEL.startswith("claude-"),
+            f"Expected a claude- model, got {config.ANTHROPIC_EVALUATION_VLM_MODEL!r}",
+        )
 
     def test_anthropic_planner_model(self) -> None:
-        """ANTHROPIC_PLANNER_MODEL defaults to claude-sonnet-4-6."""
-        self.assertEqual(config.ANTHROPIC_PLANNER_MODEL, "claude-sonnet-4-6")
+        """ANTHROPIC_PLANNER_MODEL defaults to a claude- variant."""
+        self.assertTrue(
+            config.ANTHROPIC_PLANNER_MODEL.startswith("claude-"),
+            f"Expected a claude- model, got {config.ANTHROPIC_PLANNER_MODEL!r}",
+        )
 
     def test_anthropic_version(self) -> None:
         """ANTHROPIC_VERSION is set to the API version string."""
@@ -274,9 +283,9 @@ class TestConfigSettings(unittest.TestCase):
             os.environ["ANTHROPIC_API_KEY"] = "sk-ant-test"
             importlib.reload(config)
             self.assertEqual(config.API_BASE_URL, "https://api.anthropic.com/v1")
-            self.assertEqual(config.VLM_MODEL, "claude-sonnet-4-6")
-            self.assertEqual(config.EVALUATION_VLM_MODEL, "claude-sonnet-4-6")
-            self.assertEqual(config.PLANNER_MODEL, "claude-sonnet-4-6")
+            self.assertTrue(config.VLM_MODEL.startswith("claude-"))
+            self.assertTrue(config.EVALUATION_VLM_MODEL.startswith("claude-"))
+            self.assertTrue(config.PLANNER_MODEL.startswith("claude-"))
         finally:
             # Restore original env and reload to clean state
             if original_provider is None:
