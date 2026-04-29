@@ -7,6 +7,54 @@
     "stroke-types": "line,arc,polyline,circle,splatter,chalk"
   },
   {
+    "artist": "Marc Chagall",
+    "subject": "A dreaming fiddler floats above a moonlit Russian village, his body tilted at an impossible angle as if weightless, a glowing green rooster perched on his shoulder. Below, small cottages with amber-lit windows dot a snow-dusted hillside; a bride and groom drift upward from a doorway, hand in hand, past an upside-down cow grazing among the rooftops. A crescent moon hangs large and close, its face serene. The composition is structured around overlapping circular motifs — the moon, the fiddler's arc, a distant onion dome — all rendered in vivid jewel tones of cobalt, emerald, crimson, and gold against a deep indigo sky, with flat, folk-art figures whose forms blur and interpenetrate in the Chagallian dreamlike manner.",
+    "output-id": "chagall-fiddler-village-001",
+    "isComplete": true,
+    "stroke-types": "line,arc,polyline,circle,splatter,chalk"
+  },
+  {
+    "artist": "Marc Chagall",
+    "subject": "A dreaming fiddler floats above a moonlit Russian village, his body tilted at an impossible angle as if weightless, a glowing green rooster perched on his shoulder. Below, small cottages with amber-lit windows dot a snow-dusted hillside; a bride and groom drift upward from a doorway, hand in hand, past an upside-down cow grazing among the rooftops. A crescent moon hangs large and close, its face serene. The composition is structured around overlapping circular motifs — the moon, the fiddler's arc, a distant onion dome — all rendered in vivid jewel tones of cobalt, emerald, crimson, and gold against a deep indigo sky, with flat, folk-art figures whose forms blur and interpenetrate in the Chagallian dreamlike manner.",
+    "output-id": "chagall-fiddler-village-002-claude-haiku-4-5",
+    "isComplete": true,
+    "planner-model": "claude-haiku-4-5",
+    "stroke-types": "line,arc,polyline,circle,splatter,chalk"
+  },
+  {
+    "artist": "Marc Chagall",
+    "subject": "A dreaming fiddler floats above a moonlit Russian village, his body tilted at an impossible angle as if weightless, a glowing green rooster perched on his shoulder. Below, small cottages with amber-lit windows dot a snow-dusted hillside; a bride and groom drift upward from a doorway, hand in hand, past an upside-down cow grazing among the rooftops. A crescent moon hangs large and close, its face serene. The composition is structured around overlapping circular motifs — the moon, the fiddler's arc, a distant onion dome — all rendered in vivid jewel tones of cobalt, emerald, crimson, and gold against a deep indigo sky, with flat, folk-art figures whose forms blur and interpenetrate in the Chagallian dreamlike manner.",
+    "output-id": "chagall-fiddler-village-003-claude-sonnet-4-6",
+    "isComplete": true,
+    "planner-model": "claude-sonnet-4-6",
+    "stroke-types": "line,arc,polyline,circle,splatter,chalk"
+  },
+  {
+    "artist": "Marc Chagall",
+    "subject": "A dreaming fiddler floats above a moonlit Russian village, his body tilted at an impossible angle as if weightless, a glowing green rooster perched on his shoulder. Below, small cottages with amber-lit windows dot a snow-dusted hillside; a bride and groom drift upward from a doorway, hand in hand, past an upside-down cow grazing among the rooftops. A crescent moon hangs large and close, its face serene. The composition is structured around overlapping circular motifs — the moon, the fiddler's arc, a distant onion dome — all rendered in vivid jewel tones of cobalt, emerald, crimson, and gold against a deep indigo sky, with flat, folk-art figures whose forms blur and interpenetrate in the Chagallian dreamlike manner.",
+    "output-id": "chagall-fiddler-village-004-mistral-large-2512",
+    "isComplete": true,
+    "planner-model": "mistral-large-2512",
+    "stroke-types": "line,arc,polyline,circle,splatter,chalk"
+  },
+  {
+    "artist": "Marc Chagall",
+    "subject": "A dreaming fiddler floats above a moonlit Russian village, his body tilted at an impossible angle as if weightless, a glowing green rooster perched on his shoulder. Below, small cottages with amber-lit windows dot a snow-dusted hillside; a bride and groom drift upward from a doorway, hand in hand, past an upside-down cow grazing among the rooftops. A crescent moon hangs large and close, its face serene. The composition is structured around overlapping circular motifs — the moon, the fiddler's arc, a distant onion dome — all rendered in vivid jewel tones of cobalt, emerald, crimson, and gold against a deep indigo sky, with flat, folk-art figures whose forms blur and interpenetrate in the Chagallian dreamlike manner.",
+    "output-id": "chagall-fiddler-village-005-mistral-small-2506",
+    "isComplete": true,
+    "planner-model": "mistral-small-2506",
+    "stroke-types": "line,arc,polyline,circle,splatter,chalk"
+  },
+  {
+    "artist": "Marc Chagall",
+    "subject": "A dreaming fiddler floats above a moonlit Russian village, his body tilted at an impossible angle as if weightless, a glowing green rooster perched on his shoulder. Below, small cottages with amber-lit windows dot a snow-dusted hillside; a bride and groom drift upward from a doorway, hand in hand, past an upside-down cow grazing among the rooftops. A crescent moon hangs large and close, its face serene. The composition is structured around overlapping circular motifs — the moon, the fiddler's arc, a distant onion dome — all rendered in vivid jewel tones of cobalt, emerald, crimson, and gold against a deep indigo sky, with flat, folk-art figures whose forms blur and interpenetrate in the Chagallian dreamlike manner.",
+    "output-id": "chagall-fiddler-village-005-gpt-5_4-mini",
+    "isComplete": false,
+    "planner-model": "gpt-5.4-mini",
+    "stroke-types": "line,arc,polyline,circle,splatter,chalk"
+  },
+
+  {
     "artist": "Vassily Kandinsky",
     "subject": "Abstract composition of bold geometric shapes, vivid primary colours, dynamic diagonal lines",
     "output-id": "kandinsky-abstract-001-claude-haiku-3-5",
