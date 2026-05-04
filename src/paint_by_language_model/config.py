@@ -50,7 +50,7 @@ PROVIDER = os.getenv("PROVIDER", "mistral")
 # Mistral API settings
 MISTRAL_BASE_URL = "https://api.mistral.ai/v1"
 MISTRAL_API_KEY = os.getenv("MISTRAL_API_KEY", "")
-MISTRAL_DEFAULT_MODEL = "mistral-small-latest"
+MISTRAL_DEFAULT_MODEL = "mistral-large-latest"
 MISTRAL_VLM_MODEL = "mistral-large-latest"
 MISTRAL_EVALUATION_VLM_MODEL = "mistral-large-latest"
 
