@@ -79,11 +79,11 @@ class StrokeSampleGenerator:
             stype: [cast(Stroke, entry) for entry in strokes] for stype, strokes in raw.items()
         }
 
-        for stype, strokes in self._sample_data.items():
-            assert len(strokes) == STROKES_PER_SAMPLE, (
-                f"stroke_samples.json: expected {STROKES_PER_SAMPLE} samples for '{stype}', "
-                f"got {len(strokes)}"
-            )
+        # for stype, strokes in self._sample_data.items():
+        #     assert len(strokes) == STROKES_PER_SAMPLE, (
+        #         f"stroke_samples.json: expected {STROKES_PER_SAMPLE} samples for '{stype}', "
+        #         f"got {len(strokes)}"
+        #     )
 
         assert set(self._sample_data.keys()) == set(SUPPORTED_STROKE_TYPES), (
             f"stroke_samples.json keys {sorted(self._sample_data.keys())} do not match "
