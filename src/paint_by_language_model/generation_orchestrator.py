@@ -309,6 +309,7 @@ class GenerationOrchestrator:
 
             logger.info(f"Received {len(strokes_batch)} strokes from VLM")
             if batch_reasoning:
+                batch_reasoning = str(batch_reasoning) if batch_reasoning else ""
                 logger.info(f"Batch reasoning: {batch_reasoning[:100]}...")
 
             # Update statistics
